@@ -9,18 +9,23 @@ sealed class Failure implements Exception {
 }
 
 /// La API respondió con un error controlado: {"error": "...", "mensaje": "..."}.
-class ServerFailure extends Failure {
+final class ServerFailure extends Failure {
   const ServerFailure(super.mensaje, {required this.statusCode, this.codigo});
   final int statusCode;
   final String? codigo;
 }
 
 /// Token ausente, vencido o revocado (HTTP 401).
-class UnauthorizedFailure extends Failure {
+final class UnauthorizedFailure extends Failure {
   const UnauthorizedFailure([super.mensaje = 'Su sesión ha expirado. Inicie sesión nuevamente.']);
 }
 
 /// Sin conexión, timeout o servidor caído.
-class NetworkFailure extends Failure {
+final class NetworkFailure extends Failure {
   const NetworkFailure([super.mensaje = 'No se pudo conectar con el servidor.']);
+}
+
+/// La API respondió con un formato inesperado.
+final class InvalidResponseFailure extends Failure {
+  const InvalidResponseFailure([super.mensaje = 'El servidor envió una respuesta no válida.']);
 }

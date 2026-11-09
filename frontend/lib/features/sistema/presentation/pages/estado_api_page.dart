@@ -1,39 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../config/app_config.dart';
-import '../di/providers.dart';
+import '../../../../core/config/app_config.dart';
+import '../providers/sistema_providers.dart';
 
-/// Pantalla temporal: verifica que el frontend se comunica con la API (/health).
+/// Pantalla temporal que verifica la comunicación con la API.
 /// Se reemplazará por el Login cuando se implemente la feature `auth`.
-final _healthProvider = FutureProvider.autoDispose<Map<String, dynamic>>(
-  (ref) async => await ref.watch(apiClientProvider).get('/health') as Map<String, dynamic>,
-);
-
 class EstadoApiPage extends ConsumerWidget {
   const EstadoApiPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final health = ref.watch(_healthProvider);
+    final estado = ref.watch(estadoServicioProvider);
+    void reintentar() => ref.invalidate(estadoServicioProvider);
+
     return Scaffold(
       appBar: AppBar(title: const Text(AppConfig.appName)),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: health.when(
+          child: estado.when(
             loading: () => const CircularProgressIndicator(),
-            error: (e, _) => _Estado(
+            error: (error, _) => _EstadoView(
               icon: Icons.cloud_off,
               color: Theme.of(context).colorScheme.error,
-              texto: 'API no disponible\n$e',
-              onRetry: () => ref.invalidate(_healthProvider),
+              texto: 'API no disponible\n$error',
+              onRetry: reintentar,
             ),
-            data: (d) => _Estado(
-              icon: Icons.cloud_done,
-              color: Colors.green,
-              texto: 'API conectada: ${d['servicio']} (${d['estado']})',
-              onRetry: () => ref.invalidate(_healthProvider),
+            data: (e) => _EstadoView(
+              icon: e.disponible ? Icons.cloud_done : Icons.cloud_off,
+              color: e.disponible ? Colors.green : Theme.of(context).colorScheme.error,
+              texto: e.disponible ? 'API conectada: ${e.servicio}' : 'API con problemas: ${e.servicio}',
+              onRetry: reintentar,
             ),
           ),
         ),
@@ -42,8 +40,14 @@ class EstadoApiPage extends ConsumerWidget {
   }
 }
 
-class _Estado extends StatelessWidget {
-  const _Estado({required this.icon, required this.color, required this.texto, required this.onRetry});
+class _EstadoView extends StatelessWidget {
+  const _EstadoView({
+    required this.icon,
+    required this.color,
+    required this.texto,
+    required this.onRetry,
+  });
+
   final IconData icon;
   final Color color;
   final String texto;
