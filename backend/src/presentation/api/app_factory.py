@@ -15,7 +15,7 @@ API_PREFIX = "/api"
 
 SWAGGER_TEMPLATE = {
     "info": {
-        "title": "API Reservas de Vuelos (SOA)",
+        "title": "Kuntur EC · API de Reservas de Vuelos (SOA)",
         "description": "Servicios REST: usuarios, autenticación, vuelos y reservas.",
         "version": "1.0.0",
     },

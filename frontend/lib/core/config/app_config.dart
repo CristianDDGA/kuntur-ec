@@ -9,5 +9,5 @@ class AppConfig {
   );
 
   static const Duration requestTimeout = Duration(seconds: 15);
-  static const String appName = 'Reservas de Vuelos';
+  static const String appName = 'Kuntur EC';
 }

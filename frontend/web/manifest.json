@@ -1,6 +1,6 @@
 {
-    "name": "vuelos_app",
-    "short_name": "vuelos_app",
+    "name": "Kuntur EC",
+    "short_name": "Kuntur EC",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

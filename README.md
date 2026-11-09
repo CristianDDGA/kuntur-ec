@@ -1,4 +1,9 @@
-# APE 4 · Sistema distribuido de reservas de vuelos (SOA)
+# Kuntur EC ✈️
+
+> Sistema distribuido de reservas de vuelos basado en **Arquitectura Orientada a Servicios (SOA)**.
+> *Kuntur* significa **cóndor** en kichwa: el ave que domina los cielos de los Andes ecuatorianos.
+
+**Stack:** Flask (API REST · Clean Architecture · JWT · JSON/XML) · Flutter web · Supabase (PostgreSQL)
 
 Aplicación distribuida basada en Arquitectura Orientada a Servicios (SOA) para la asignatura
 **Aplicaciones Distribuidas** (UTA, ciclo julio–diciembre 2026).

@@ -1,4 +1,4 @@
-# APE 4 – Sistema de Reservas de Vuelos (SOA) · Planificación
+# Kuntur EC · Planificación (APE 4 – Sistema de Reservas de Vuelos SOA)
 
 ## 1. Qué nos piden (fuentes: `APE4_AD.pdf` + `APE4.png`)
 

@@ -17,6 +17,6 @@ def health():
         description: El servicio está disponible.
     """
     return respond(
-        {"estado": "ok", "servicio": "api-reservas-vuelos", "hora": datetime.now(timezone.utc)},
+        {"estado": "ok", "servicio": "kuntur-ec-api", "hora": datetime.now(timezone.utc)},
         root="salud",
     )
