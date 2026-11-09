@@ -1,0 +1,12 @@
+# Política del proyecto: se fija la ANTEPENÚLTIMA versión estable de cada dependencia.
+Flask==3.1.1
+flask-cors==6.0.2
+PyJWT==2.14.0
+bcrypt==4.2.1
+psycopg[binary]==3.3.6
+psycopg-pool==3.3.1
+python-dotenv==1.2.2
+# EXCEPCIÓN: la antepenúltima de flasgger (0.9.4, año 2020) no es compatible con Flask 3
+# (ImportError: Markup). 0.9.7.1 es la única versión que lo soporta.
+flasgger==0.9.7.1
+pytest==9.1.0
