@@ -1,0 +1,10 @@
+# Contrato del servicio auth: Cerrar sesión (revoca el token)
+summary: "Cerrar sesión (revoca el token)"
+tags: [Autenticación]
+security: [{Bearer: []}]
+produces: [application/json, application/xml]
+responses:
+  200:
+    description: Sesión cerrada; el token ya no sirve.
+  401:
+    description: Sin token, token inválido, expirado o ya revocado.

@@ -10,9 +10,11 @@ class AppError(Exception):
 
     code = "error_negocio"
 
-    def __init__(self, mensaje: str):
+    def __init__(self, mensaje: str, **detalles: object):
         super().__init__(mensaje)
         self.mensaje = mensaje
+        # Datos extra para el cliente, p. ej. version_actual en un conflicto de versión.
+        self.detalles = detalles
 
 
 class ValidationError(AppError):

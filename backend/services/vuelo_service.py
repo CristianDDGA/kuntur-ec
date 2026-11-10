@@ -14,7 +14,7 @@ from utils.excepciones import ConflictError, NotFoundError, ValidationError
 
 _COLUMNAS = (
     "id, codigo, origen, destino, fecha, hora_salida, hora_llegada, "
-    "precio, capacidad, asientos_disponibles"
+    "precio, capacidad, asientos_disponibles, version"
 )
 MAX_LARGO_CODIGO = 10
 MAX_LARGO_CIUDAD = 80

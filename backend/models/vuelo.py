@@ -18,6 +18,7 @@ class Vuelo(Modelo):
     precio: Decimal
     capacidad: int
     asientos_disponibles: int
+    version: int = 1  # control de concurrencia optimista
 
     def tiene_asientos(self, cantidad: int) -> bool:
         return 0 < cantidad <= self.asientos_disponibles

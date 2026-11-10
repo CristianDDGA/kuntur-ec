@@ -1,0 +1,10 @@
+# Contrato del servicio auth: Datos del usuario autenticado
+summary: "Datos del usuario autenticado"
+tags: [Autenticación]
+security: [{Bearer: []}]
+produces: [application/json, application/xml]
+responses:
+  200:
+    description: Usuario dueño del token.
+  401:
+    description: Sin token, token inválido, expirado o revocado.

@@ -1,8 +1,10 @@
 """Rutas de estado del servicio."""
 from datetime import datetime, timezone
 
+from flasgger import swag_from
 from flask import Blueprint, current_app
 
+from utils.documentacion import contrato
 from utils.respuestas import respond
 
 health_bp = Blueprint("health", __name__)
@@ -15,15 +17,13 @@ def _estado_base_datos() -> str:
     return "conectada" if db.disponible() else "no_disponible"
 
 
-@health_bp.get("/health")
+# =============================
+# GET - Estado del servicio
+# =============================
+
+@health_bp.route("/health", methods=["GET"])
+@swag_from(contrato("sistema", "health"))
 def health():
-    """Estado del servicio y de la base de datos
-    ---
-    tags: [Sistema]
-    responses:
-      200:
-        description: El servicio está disponible (base_datos = conectada | no_disponible | sin_configurar).
-    """
     return respond(
         {
             "estado": "ok",

@@ -32,6 +32,7 @@ class Reserva(Modelo):
     total: Decimal
     estado: EstadoReserva
     fecha_reserva: datetime | None
+    version: int = 1  # control de concurrencia optimista
 
     @classmethod
     def nueva(cls, usuario_id: int, vuelo: Vuelo, cantidad: int, tarifa: TarifaIva) -> Self:

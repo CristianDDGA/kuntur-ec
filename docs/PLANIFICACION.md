@@ -57,11 +57,11 @@
 | Vuelos | GET | `/api/vuelos?origen=&destino=&fecha=` | – | Lista/filtra vuelos desde hoy → `{total, vuelos}` · 400 fecha inválida |
 | Vuelos | GET | `/api/vuelos/{id}` | – | Detalle de vuelo → 200 · 404 |
 | Vuelos | POST | `/api/vuelos` | JWT admin | Crea vuelo → 201 · 400 · 401 · 403 · 409 código repetido |
-| Reservas | POST | `/api/reservas` | JWT | Crea reserva `{vuelo_id, cantidad}` |
+| Reservas | POST | `/api/reservas` | JWT | Crea reserva `{vuelo_id, cantidad}` (1–10) → 201 · 400 · 404 · 409 sin asientos |
 | Reservas | GET | `/api/reservas` | JWT | Historial del usuario |
 | Reservas | GET | `/api/reservas/{id}` | JWT | Detalle |
-| Reservas | PUT | `/api/reservas/{id}` | JWT | Modifica cantidad |
-| Reservas | DELETE | `/api/reservas/{id}` | JWT | Cancela (estado = `cancelada`, devuelve asientos) |
+| Reservas | PUT | `/api/reservas/{id}` | JWT | Modifica cantidad `{cantidad, version}` (mismo precio e IVA) → 200 · 409 "Ya actualizaron este registro" + `version_actual` |
+| Reservas | DELETE | `/api/reservas/{id}` | JWT | Cancela (estado = `cancelada`, devuelve asientos) → 200 · 409 ya cancelada |
 | Reservas | GET | `/api/reservas/{id}/comprobante` | JWT | Factura en **XML** (subtotal, IVA 15 %, total) |
 
 Ejemplo (de la infografía): `POST /api/reservas {"usuario_id":1,"vuelo_id":10,"cantidad":2}` → `200 {"mensaje":"Reserva creada","reserva_id":58,"total":336.00,"estado":"confirmada"}`.
@@ -80,8 +80,8 @@ Formato de error uniforme: `{"error": "codigo", "mensaje": "texto"}` con 400 / 4
 Basado en la infografía, con ajustes (marcados con ★):
 
 - **usuarios**(id PK, nombre, correo UNIQUE, password_hash, ★rol `cliente|admin`, fecha_registro)
-- **vuelos**(id PK, ★codigo, origen, destino, fecha, hora_salida, hora_llegada, precio, ★capacidad, asientos_disponibles CHECK ≥ 0)
-- **reservas**(id PK, usuario_id FK, vuelo_id FK, cantidad_asientos CHECK > 0, ★subtotal, ★iva_porcentaje, ★iva_valor, total, estado `confirmada|cancelada`, fecha_reserva)
+- **vuelos**(id PK, ★codigo, origen, destino, fecha, hora_salida, hora_llegada, precio, ★capacidad, asientos_disponibles CHECK ≥ 0, ★version)
+- **reservas**(id PK, usuario_id FK, vuelo_id FK, cantidad_asientos CHECK > 0, ★subtotal, ★iva_porcentaje, ★iva_valor, total, estado `confirmada|cancelada`, fecha_reserva, ★version)
 - **tokens**(id PK, usuario_id FK, token, expiracion, estado `activo|revocado`)
 - ★**tarifas_iva**(id PK, porcentaje, vigente_desde, vigente_hasta NULL)
 
@@ -91,8 +91,18 @@ Relaciones: usuarios 1–N reservas, vuelos 1–N reservas, usuarios 1–N token
 es insertar una tarifa nueva en `tarifas_iva` con su fecha de vigencia. Cada reserva guarda el
 subtotal, el porcentaje y el valor del IVA aplicados, así las facturas antiguas no cambian.
 
-**Concurrencia:** descuento atómico en una transacción
-`UPDATE vuelos SET asientos_disponibles = asientos_disponibles - :n WHERE id = :id AND asientos_disponibles >= :n` → si afecta 0 filas, responder 409.
+**Concurrencia (implementado en B6, `services/reserva_service.py`).** Se aplican las tres técnicas vistas en clase (práctica `practica-sql-azure`), pero dentro de la BD, porque un `threading.Lock` solo protege a un proceso y la API puede correr en varios servidores:
+
+| Técnica de clase | En Kuntur EC |
+|---|---|
+| UPDATE con condición | Descuento de asientos `WHERE asientos_disponibles >= n` (abajo) |
+| Bloqueo (`threading.Lock`) | Bloqueo en la BD: `SELECT … FOR UPDATE` al modificar/cancelar |
+| Versión (`WHERE id = ? AND version = ?` → 409) | Columna `version` en `vuelos` y `reservas`; `PUT /api/reservas/{id}` exige la versión leída |
+
+Descuento atómico en una transacción
+`UPDATE vuelos SET asientos_disponibles = asientos_disponibles - :n WHERE id = :id AND asientos_disponibles >= :n` → si afecta 0 filas, responder 409. Modificar y cancelar bloquean la reserva con `SELECT … FOR UPDATE`.
+Verificado contra Supabase: 20 clientes reservando a la vez un vuelo de 5 asientos → 5 reservas (201) y 15 rechazos (409), 0 asientos libres; 5 cancelaciones simultáneas de la misma reserva → 1 cancelación y 4 rechazos (409), asientos devueltos una sola vez; 5 modificaciones simultáneas con la misma `version: 1` → 1 aceptada (version 2) y 4 × 409 "Ya actualizaron este registro" con `version_actual: 2`.
+Una reserva ajena responde 404 (no se revela que existe).
 
 ## 6. Frontend Flutter (pantallas)
 
@@ -134,8 +144,8 @@ Excepción documentada: `flasgger==0.9.7.1` (la 0.9.4 no funciona con Flask 3).
 | B3 | Servicio Usuarios (registro, bcrypt) | ✅ Hecho |
 | B4 | Servicio Auth (login/logout JWT, tabla tokens) | ✅ Hecho |
 | B5 | Servicio Vuelos (búsqueda, detalle, crear admin) | ✅ Hecho |
-| B6 | Servicio Reservas (crear, listar, modificar, cancelar, concurrencia) | ⏳ Siguiente |
-| B7 | Comprobante XML + Swagger completo + colección Postman | Pendiente |
+| B6 | Servicio Reservas (crear, listar, modificar, cancelar, concurrencia) | ✅ Hecho |
+| B7 | Comprobante XML + Swagger completo + colección Postman | ⏳ Siguiente |
 | F1–F4 | Frontend: auth, vuelos, reservas, comprobante | Pendiente |
 | P | Pruebas funcionales y capturas | Pendiente |
 | D | Diagrama SOA + informe PDF | Pendiente |

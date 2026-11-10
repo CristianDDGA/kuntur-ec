@@ -1,0 +1,29 @@
+# Contrato del servicio auth: Iniciar sesión y obtener un JWT
+summary: "Iniciar sesión y obtener un JWT"
+tags: [Autenticación]
+consumes: [application/json]
+produces: [application/json, application/xml]
+parameters:
+  - in: body
+    name: body
+    required: true
+    schema:
+      type: object
+      required: [correo, password]
+      properties:
+        correo: {type: string, example: "ana@correo.com"}
+        password: {type: string, example: "Clave2026"}
+responses:
+  200:
+    description: Sesión iniciada. Use el token en la cabecera "Authorization Bearer token".
+    schema:
+      type: object
+      properties:
+        token: {type: string}
+        tipo: {type: string, example: Bearer}
+        expira: {type: string, format: date-time}
+        usuario: {type: object}
+  400:
+    description: Falta el correo o la contraseña.
+  401:
+    description: Correo o contraseña incorrectos.

@@ -1,0 +1,20 @@
+# Contrato del servicio vuelos: Buscar vuelos (desde hoy en adelante)
+summary: "Buscar vuelos (desde hoy en adelante)"
+tags: [Vuelos]
+produces: [application/json, application/xml]
+parameters:
+  - {in: query, name: origen, type: string, required: false, example: Quito}
+  - {in: query, name: destino, type: string, required: false, example: Guayaquil}
+  - {in: query, name: fecha, type: string, format: date, required: false, example: "2026-12-01", description: "AAAA-MM-DD"}
+responses:
+  200:
+    description: Lista de vuelos ordenada por fecha y hora (puede estar vacía).
+    schema:
+      type: object
+      properties:
+        total: {type: integer, example: 1}
+        vuelos:
+          type: array
+          items: {$ref: "#/definitions/Vuelo"}
+  400:
+    description: La fecha no tiene el formato AAAA-MM-DD.

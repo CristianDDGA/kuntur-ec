@@ -1,6 +1,23 @@
-"""Documentación OpenAPI (Swagger UI) de los contratos de servicio."""
+"""Documentación OpenAPI (Swagger UI) de los contratos de servicio.
+
+Cada endpoint tiene su contrato en `docs/swagger/<servicio>/<operacion>.yml` y la ruta
+lo enlaza con `@swag_from(contrato("servicio", "operacion"))`: así los controladores
+quedan cortos y la documentación vive aparte.
+"""
+from pathlib import Path
+
 from flasgger import Swagger
 from flask import Flask
+
+CARPETA_CONTRATOS = Path(__file__).resolve().parent.parent / "docs" / "swagger"
+
+
+def contrato(servicio: str, operacion: str) -> str:
+    """Ruta del archivo .yml con el contrato Swagger de una operación."""
+    ruta = CARPETA_CONTRATOS / servicio / f"{operacion}.yml"
+    if not ruta.is_file():
+        raise FileNotFoundError(f"No existe el contrato Swagger {ruta}")
+    return str(ruta)
 
 _TEMPLATE = {
     "info": {
@@ -22,8 +39,37 @@ _TEMPLATE = {
                 "precio": {"type": "string", "example": "89.00", "description": "Monto con 2 decimales"},
                 "capacidad": {"type": "integer", "example": 120},
                 "asientos_disponibles": {"type": "integer", "example": 120},
+                "version": {"type": "integer", "example": 1, "description": "Control de concurrencia"},
             },
-        }
+        },
+        "Reserva": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer", "example": 58},
+                "usuario_id": {"type": "integer", "example": 2},
+                "vuelo_id": {"type": "integer", "example": 1},
+                "cantidad_asientos": {"type": "integer", "example": 2},
+                "subtotal": {"type": "string", "example": "178.00"},
+                "iva_porcentaje": {"type": "string", "example": "15.00"},
+                "iva_valor": {"type": "string", "example": "26.70"},
+                "total": {"type": "string", "example": "204.70"},
+                "estado": {"type": "string", "enum": ["confirmada", "cancelada"]},
+                "fecha_reserva": {"type": "string", "format": "date-time"},
+                "version": {"type": "integer", "example": 1, "description": "Enviarla al modificar (PUT)"},
+                "vuelo": {
+                    "type": "object",
+                    "description": "Resumen del vuelo reservado",
+                    "properties": {
+                        "codigo": {"type": "string", "example": "KT101"},
+                        "origen": {"type": "string", "example": "Quito"},
+                        "destino": {"type": "string", "example": "Guayaquil"},
+                        "fecha": {"type": "string", "format": "date"},
+                        "hora_salida": {"type": "string"},
+                        "hora_llegada": {"type": "string"},
+                    },
+                },
+            },
+        },
     },
     "securityDefinitions": {
         "Bearer": {

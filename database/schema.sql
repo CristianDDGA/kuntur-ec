@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS vuelos (
     precio                NUMERIC(10,2) NOT NULL CHECK (precio > 0),
     capacidad             INTEGER       NOT NULL CHECK (capacidad > 0),
     asientos_disponibles  INTEGER       NOT NULL,
+    version               INTEGER       NOT NULL DEFAULT 1 CHECK (version >= 1),
     CONSTRAINT ck_vuelos_ruta     CHECK (lower(btrim(origen)) <> lower(btrim(destino))),
     -- Nunca negativos ni más que la capacidad: protege contra sobreventa.
     CONSTRAINT ck_vuelos_asientos CHECK (asientos_disponibles BETWEEN 0 AND capacidad)
@@ -73,6 +74,7 @@ CREATE TABLE IF NOT EXISTS reservas (
     estado             VARCHAR(12)   NOT NULL DEFAULT 'confirmada'
                                      CHECK (estado IN ('confirmada', 'cancelada')),
     fecha_reserva      TIMESTAMPTZ   NOT NULL DEFAULT now(),
+    version            INTEGER       NOT NULL DEFAULT 1 CHECK (version >= 1),
     CONSTRAINT ck_reservas_total CHECK (total = subtotal + iva_valor)
 );
 
@@ -92,6 +94,16 @@ CREATE TABLE IF NOT EXISTS tokens (
 );
 
 CREATE INDEX IF NOT EXISTS ix_tokens_usuario ON tokens (usuario_id);
+
+-- ---------------------------------------------------------------------
+-- Control de concurrencia optimista (columna version)
+-- Cada UPDATE hace `version = version + 1`. Quien modifica envía la versión
+-- que leyó; si otro la cambió antes, el UPDATE ... WHERE version = ? no
+-- afecta filas y la API responde 409 "Ya actualizaron este registro".
+-- (ADD COLUMN IF NOT EXISTS: agrega la columna en bases creadas antes.)
+-- ---------------------------------------------------------------------
+ALTER TABLE vuelos   ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1 CHECK (version >= 1);
+ALTER TABLE reservas ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1 CHECK (version >= 1);
 
 -- ---------------------------------------------------------------------
 -- Seguridad de Supabase
