@@ -123,8 +123,8 @@ Excepción documentada: `flasgger==0.9.7.1` (la 0.9.4 no funciona con Flask 3).
 | 0 | Repositorio + arquitectura back/front | ✅ Hecho |
 | A | Cambio de arquitectura a MVC | ✅ Hecho |
 | B1 | Modelos: Usuario, Vuelo, Reserva, Token, TarifaIva | ✅ Hecho |
-| B2 | Base de datos Supabase: `schema.sql`, `seed.sql`, conexión | ⏳ Siguiente |
-| B3 | Servicio Usuarios (registro, bcrypt) | Pendiente |
+| B2 | Base de datos Supabase: `schema.sql`, `seed.sql`, conexión | ✅ Hecho |
+| B3 | Servicio Usuarios (registro, bcrypt) | ⏳ Siguiente |
 | B4 | Servicio Auth (login/logout JWT, tabla tokens) | Pendiente |
 | B5 | Servicio Vuelos (búsqueda, detalle, crear admin) | Pendiente |
 | B6 | Servicio Reservas (crear, listar, modificar, cancelar, concurrencia) | Pendiente |
@@ -136,6 +136,5 @@ Excepción documentada: `flasgger==0.9.7.1` (la 0.9.4 no funciona con Flask 3).
 ## 9. Decisiones pendientes
 
 - Nombre de la aplicación y datos de los integrantes del grupo.
-- ¿Cuenta de Supabase ya creada? (se necesitan URL y cadena de conexión en `.env`, nunca en el código).
 - ¿Desplegar la API en la nube (p. ej. Render) o solo local para la demo?
 - ¿Incluir extras (selección de asientos como el ejemplo, Docker)?

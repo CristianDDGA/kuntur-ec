@@ -22,7 +22,7 @@ utils/formatos.py (V)  representa la respuesta en JSON o XML según la cabecera 
 |---|---|---|
 | `app.py` | `create_app()`: ensambla todo; punto de entrada | Tener rutas ni lógica |
 | `config.py` | Configuración desde `.env` (estricta fuera de desarrollo) | — |
-| `database.py` *(sección B2)* | Pool de conexiones a Supabase | — |
+| `database.py` | Pool de conexiones a Supabase; `transaccion()` (COMMIT/ROLLBACK) y `python database.py` para aplicar `database/*.sql` | Tener reglas de negocio |
 | `models/` | Dataclasses por tabla: `Usuario`, `Vuelo`, `Reserva`, `Token`, `TarifaIva` (base común en `base.py`) | Tener SQL ni HTTP |
 | `services/` | Reglas de negocio y consultas; lanzan excepciones de `utils/excepciones.py` | Conocer Flask (`request`, `jsonify`) |
 | `routes/` | Rutas `/api/...` agrupadas por servicio | Escribir SQL |
@@ -78,3 +78,18 @@ copy .env.example .env
 python app.py                 # http://localhost:5000/api/health  ·  Swagger: /api/docs/
 pytest -q
 ```
+
+## Base de datos (Supabase)
+
+1. Copiar `.env.example` como `.env` y pegar en `DATABASE_URL` la cadena del **Session pooler** de Supabase.
+2. Crear las tablas y cargar los datos iniciales (se puede repetir sin duplicar nada):
+
+   ```bash
+   python database.py
+   ```
+
+3. Comprobar: `GET /api/health` debe responder `"base_datos": "conectada"`.
+
+Los scripts están en `database/schema.sql` (5 tablas con restricciones y RLS) y `database/seed.sql`
+(historial de IVA, un administrador de desarrollo y vuelos de ejemplo).
+Las pruebas de `tests/integration/test_database_real.py` usan la BD real y se omiten si no hay `DATABASE_URL`.

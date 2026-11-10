@@ -12,6 +12,7 @@ from flask import Flask
 from flask_cors import CORS
 
 from config import Settings
+from database import Database
 from routes.health_routes import health_bp
 from utils.documentacion import init_docs
 from utils.formatos import JsonFormato, XmlFormato
@@ -21,12 +22,15 @@ from utils.respuestas import ContentNegotiator
 API_PREFIX = "/api"
 
 
-def create_app(settings: Settings | None = None) -> Flask:
+def create_app(settings: Settings | None = None, db: Database | None = None) -> Flask:
     settings = settings or Settings.from_env()
+    if db is None and settings.database_url:
+        db = Database.from_settings(settings)
 
     app = Flask(__name__)
     app.config["TESTING"] = settings.is_testing
     app.extensions["settings"] = settings
+    app.extensions["db"] = db  # None si no hay DATABASE_URL (p. ej. en pruebas)
 
     ContentNegotiator(
         formatos=(JsonFormato(), XmlFormato()), default_mimetype=JsonFormato.mimetype
