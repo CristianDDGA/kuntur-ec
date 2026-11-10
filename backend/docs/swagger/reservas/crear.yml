@@ -1,0 +1,32 @@
+# Contrato del servicio reservas: Crear una reserva
+summary: "Crear una reserva"
+tags: [Reservas]
+security: [{Bearer: []}]
+consumes: [application/json]
+produces: [application/json, application/xml]
+parameters:
+  - in: body
+    name: body
+    required: true
+    schema:
+      type: object
+      required: [vuelo_id, cantidad]
+      properties:
+        vuelo_id: {type: integer, example: 1}
+        cantidad: {type: integer, example: 2, description: "Entre 1 y 10 asientos"}
+responses:
+  201:
+    description: Reserva confirmada; los asientos se descuentan del vuelo y se aplica el IVA vigente.
+    schema:
+      type: object
+      properties:
+        mensaje: {type: string, example: "Reserva creada correctamente."}
+        reserva: {$ref: "#/definitions/Reserva"}
+  400:
+    description: Datos inválidos o el vuelo ya partió.
+  401:
+    description: Sin token o sesión cerrada.
+  404:
+    description: El vuelo no existe.
+  409:
+    description: No hay suficientes asientos disponibles.

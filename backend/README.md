@@ -30,11 +30,33 @@ utils/formatos.py (V)  representa la respuesta en JSON o XML según la cabecera 
 | `utils/respuestas.py` | `respond()` y negociación de contenido | — |
 | `utils/excepciones.py` | Excepciones de negocio (`NotFoundError`, `ConflictError`, …) | — |
 | `utils/manejador_errores.py` | Traduce excepciones a `{"error","mensaje"}` + código HTTP | — |
-| `utils/documentacion.py` | Swagger en `/api/docs/` | — |
+| `utils/documentacion.py` | Swagger en `/api/docs/`; `contrato(servicio, operacion)` ubica el `.yml` de cada endpoint | — |
+| `docs/swagger/<servicio>/<operacion>.yml` | Contrato Swagger de cada endpoint (parámetros, respuestas, ejemplos) | — |
 | `utils/seguridad.py` | `CifradorContrasenas` (bcrypt), `EmisorTokens` (JWT) y `huella_token` | — |
+| `services/reserva_service.py` | Reservas en transacciones atómicas (UPDATE condicional de asientos, `FOR UPDATE`) | Conocer Flask |
 | `services/vuelo_service.py` | Búsqueda con filtros, detalle y creación de vuelos | Conocer Flask |
 | `utils/peticiones.py` | `cuerpo_json()`: lee el JSON de la petición o responde 400 | — |
 | `utils/autenticacion.py` | Decoradores `@token_requerido`, `@rol_requerido(Rol.ADMIN)` y `sesion_actual()` | Repetir la validación en cada ruta |
+
+## Cómo se escribe un endpoint
+
+Mismo estilo que en clase (`@route` con `methods`, separadores), con el contrato Swagger en un `.yml`:
+
+```python
+# =============================
+# DELETE - Cancelar reserva
+# =============================
+
+@reservas_bp.route("/<int:reserva_id>", methods=["DELETE"])
+@swag_from(contrato("reservas", "cancelar"))   # docs/swagger/reservas/cancelar.yml
+@token_requerido                              # 401 si no hay sesión válida
+def cancelar(reserva_id):
+    detalle = _servicio().cancelar(sesion_actual(), reserva_id)
+    return respond({"mensaje": "Reserva cancelada correctamente.", "reserva": detalle.to_dict()})
+```
+
+Los errores no se capturan en cada ruta: el servicio lanza `NotFoundError`, `ConflictError`…
+y `utils/manejador_errores.py` responde `{"error", "mensaje"}` con el código HTTP, sin exponer detalles internos.
 
 ## Buenas prácticas aplicadas
 
@@ -94,4 +116,7 @@ pytest -q
 
 Los scripts están en `database/schema.sql` (5 tablas con restricciones y RLS) y `database/seed.sql`
 (historial de IVA, un administrador de desarrollo y vuelos de ejemplo).
-Las pruebas de `tests/integration/test_database_real.py` usan la BD real y se omiten si no hay `DATABASE_URL`.
+Las pruebas `tests/integration/test_*_real.py` usan la BD real y se omiten si no hay `DATABASE_URL`.
+
+> El Session pooler del plan gratuito de Supabase admite **15 conexiones** a la vez. Cada proceso de la API usa
+> un pool de hasta 5, así que no conviene levantar más de 2–3 instancias contra la misma base.

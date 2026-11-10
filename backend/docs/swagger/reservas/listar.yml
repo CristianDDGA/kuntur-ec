@@ -1,0 +1,17 @@
+# Contrato del servicio reservas: Historial de reservas del usuario
+summary: "Historial de reservas del usuario"
+tags: [Reservas]
+security: [{Bearer: []}]
+produces: [application/json, application/xml]
+responses:
+  200:
+    description: Reservas del usuario, de la más reciente a la más antigua.
+    schema:
+      type: object
+      properties:
+        total: {type: integer}
+        reservas:
+          type: array
+          items: {$ref: "#/definitions/Reserva"}
+  401:
+    description: Sin token o sesión cerrada.

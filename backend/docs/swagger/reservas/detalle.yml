@@ -1,0 +1,15 @@
+# Contrato del servicio reservas: Detalle de una reserva propia
+summary: "Detalle de una reserva propia"
+tags: [Reservas]
+security: [{Bearer: []}]
+produces: [application/json, application/xml]
+parameters:
+  - {in: path, name: reserva_id, type: integer, required: true}
+responses:
+  200:
+    description: Datos de la reserva.
+    schema: {$ref: "#/definitions/Reserva"}
+  401:
+    description: Sin token o sesión cerrada.
+  404:
+    description: La reserva no existe o pertenece a otro usuario.

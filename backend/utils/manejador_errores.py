@@ -63,7 +63,9 @@ def register_error_handlers(app: Flask) -> None:
     @app.errorhandler(AppError)
     def handle_domain_error(error: AppError):
         return respond(
-            {"error": error.code, "mensaje": error.mensaje}, _status_for(error), root="error"
+            {"error": error.code, "mensaje": error.mensaje, **error.detalles},
+            _status_for(error),
+            root="error",
         )
 
     @app.errorhandler(HTTPException)

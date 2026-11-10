@@ -1,0 +1,40 @@
+# Contrato del servicio reservas: Modificar la cantidad de asientos
+summary: "Modificar la cantidad de asientos"
+description: >
+  Control de concurrencia optimista: envíe la `version` que obtuvo al consultar la reserva.
+  Si otra petición la modificó antes, responde 409 "Ya actualizaron este registro" con la
+  `version_actual`; vuelva a consultar la reserva y reintente con esa versión.
+tags: [Reservas]
+security: [{Bearer: []}]
+consumes: [application/json]
+produces: [application/json, application/xml]
+parameters:
+  - {in: path, name: reserva_id, type: integer, required: true}
+  - in: body
+    name: body
+    required: true
+    schema:
+      type: object
+      required: [cantidad, version]
+      properties:
+        cantidad: {type: integer, example: 3, description: "Nueva cantidad total (1 a 10)"}
+        version: {type: integer, example: 1, description: "Versión de la reserva que se leyó"}
+responses:
+  200:
+    description: Reserva actualizada (version + 1); se recalculan los montos con el precio y el IVA originales.
+  400:
+    description: Cantidad o versión inválidas, o el vuelo ya partió.
+  401:
+    description: Sin token o sesión cerrada.
+  404:
+    description: La reserva no existe o pertenece a otro usuario.
+  409:
+    description: >
+      Ya actualizaron este registro (incluye version_actual), la reserva está cancelada
+      o no hay asientos para ampliarla.
+    schema:
+      type: object
+      properties:
+        error: {type: string, example: conflicto}
+        mensaje: {type: string, example: "Ya actualizaron este registro. Consulte la reserva y vuelva a intentarlo."}
+        version_actual: {type: integer, example: 2}
