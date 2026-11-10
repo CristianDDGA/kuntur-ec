@@ -31,7 +31,8 @@ utils/formatos.py (V)  representa la respuesta en JSON o XML según la cabecera 
 | `utils/excepciones.py` | Excepciones de negocio (`NotFoundError`, `ConflictError`, …) | — |
 | `utils/manejador_errores.py` | Traduce excepciones a `{"error","mensaje"}` + código HTTP | — |
 | `utils/documentacion.py` | Swagger en `/api/docs/` | — |
-| `utils/seguridad.py` *(sección B3)* | bcrypt y JWT | — |
+| `utils/seguridad.py` | `CifradorContrasenas` (bcrypt); JWT en la sección B4 | — |
+| `utils/peticiones.py` | `cuerpo_json()`: lee el JSON de la petición o responde 400 | — |
 | `utils/autenticacion.py` *(sección B4)* | Decoradores `@token_requerido`, `@rol_requerido` | — |
 
 ## Buenas prácticas aplicadas

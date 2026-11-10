@@ -40,3 +40,22 @@ def test_las_filas_se_convierten_en_modelos(db):
 def test_la_bd_impide_asientos_negativos(db):
     with pytest.raises(Exception), db.transaccion() as cur:
         cur.execute("UPDATE vuelos SET asientos_disponibles = -1 WHERE codigo = 'KT101'")
+
+
+def test_registro_real_cifra_con_bcrypt_y_rechaza_correo_repetido(db):
+    from services.usuario_service import UsuarioService
+    from utils.excepciones import ConflictError
+    from utils.seguridad import CifradorContrasenas
+
+    servicio = UsuarioService(db, CifradorContrasenas(costo=4))
+    correo = "prueba.automatica@kuntur.test"
+    try:
+        usuario = servicio.registrar({"nombre": "Prueba", "correo": correo, "password": "Clave2026"})
+        guardado = servicio.buscar_por_correo(correo.upper())
+        assert guardado.id == usuario.id
+        assert CifradorContrasenas().verificar("Clave2026", guardado.password_hash)
+        with pytest.raises(ConflictError):
+            servicio.registrar({"nombre": "Otra", "correo": correo.upper(), "password": "Clave2026"})
+    finally:
+        with db.transaccion() as cur:
+            cur.execute("DELETE FROM usuarios WHERE correo = %s", (correo,))
