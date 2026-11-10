@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../services/auth_service.dart';
 import '../services/http_rest_client.dart';
 import '../services/rest_client.dart';
 import '../services/sistema_service.dart';
@@ -36,6 +37,10 @@ final restClientProvider = Provider<RestClient>(
 );
 
 // ---- Servicios (uno por servicio SOA de la API) ----
+
+final authServiceProvider = Provider<AuthService>(
+  (ref) => AuthService(ref.watch(restClientProvider), ref.watch(tokenStorageProvider)),
+);
 
 final sistemaServiceProvider = Provider<SistemaService>(
   (ref) => SistemaService(ref.watch(restClientProvider)),

@@ -26,7 +26,6 @@ class KunturApp extends ConsumerWidget {
       title: AppConfig.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
       routerConfig: ref.watch(appRouterProvider),
     );
   }

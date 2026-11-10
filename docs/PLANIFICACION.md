@@ -110,6 +110,9 @@ Una reserva ajena responde 404 (no se revela que existe).
 
 ## 6. Frontend Flutter (pantallas)
 
+**Diseño:** estructura de APE8 (tarjeta centrada sobre fondo suave) con paleta de Ecuador sobria: azul de la bandera como color de marca, amarillo como acento, franja tricolor fina y un cóndor (kuntur) como logo. Detalles en `frontend/README.md`.
+
+
 Login · Registro · Lista/búsqueda de vuelos · Detalle + reservar (cantidad) · Carrito/resumen (subtotal, IVA 15 %, total) · Mis reservas (ver, modificar, cancelar) · Comprobante XML · (Admin) crear vuelo.
 Se ejecuta como **web** (`flutter run -d chrome`) y también puede compilarse a Android.
 Paquetes: `flutter_riverpod` (estado + DI), `go_router`, `http`, `shared_preferences` (JWT), `xml`.
@@ -151,7 +154,8 @@ Excepción documentada: `flasgger==0.9.7.1` (la 0.9.4 no funciona con Flask 3).
 | B6 | Servicio Reservas (crear, listar, modificar, cancelar, concurrencia) | ✅ Hecho |
 | B7 | Comprobante XML + Swagger completo + colección Postman | ✅ Hecho |
 | B8 | Robustez: validaciones de entrada, errores HTTP, límites = BD y base caída | ✅ Hecho |
-| F1–F4 | Frontend: auth, vuelos, reservas, comprobante | ⏳ Siguiente |
+| F1 | Frontend: tema Ecuador, login, registro, sesión persistente y rutas protegidas | ✅ Hecho |
+| F2–F4 | Frontend: vuelos, reservas, factura XML | ⏳ Siguiente (F2) |
 | P | Pruebas funcionales y capturas | Pendiente |
 | D | Diagrama SOA + informe PDF | Pendiente |
 
