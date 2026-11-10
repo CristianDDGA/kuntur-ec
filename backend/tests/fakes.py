@@ -15,6 +15,10 @@ class CursorFalso:
         if self._error:
             raise self._error
 
+    def fetchall(self) -> list[dict[str, Any]]:
+        filas, self._filas = [f for f in self._filas if f is not None], []
+        return filas
+
     def fetchone(self) -> dict[str, Any] | None:
         return self._filas.pop(0) if self._filas else None
 

@@ -8,6 +8,23 @@ _TEMPLATE = {
         "description": "Servicios REST: usuarios, autenticación, vuelos y reservas.",
         "version": "1.0.0",
     },
+    "definitions": {
+        "Vuelo": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer", "example": 1},
+                "codigo": {"type": "string", "example": "KT101"},
+                "origen": {"type": "string", "example": "Quito"},
+                "destino": {"type": "string", "example": "Guayaquil"},
+                "fecha": {"type": "string", "format": "date", "example": "2026-12-01"},
+                "hora_salida": {"type": "string", "example": "07:00:00"},
+                "hora_llegada": {"type": "string", "example": "07:50:00"},
+                "precio": {"type": "string", "example": "89.00", "description": "Monto con 2 decimales"},
+                "capacidad": {"type": "integer", "example": 120},
+                "asientos_disponibles": {"type": "integer", "example": 120},
+            },
+        }
+    },
     "securityDefinitions": {
         "Bearer": {
             "type": "apiKey",
