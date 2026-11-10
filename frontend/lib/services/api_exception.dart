@@ -29,3 +29,8 @@ final class NetworkFailure extends Failure {
 final class InvalidResponseFailure extends Failure {
   const InvalidResponseFailure([super.mensaje = 'El servidor envió una respuesta no válida.']);
 }
+
+/// Texto para mostrar al usuario. Los [Failure] ya traen un mensaje en español;
+/// cualquier otra excepción se oculta tras un mensaje genérico (sin detalles técnicos).
+String mensajeDeError(Object error) =>
+    error is Failure ? error.mensaje : 'Ocurrió un error inesperado. Intente nuevamente.';
