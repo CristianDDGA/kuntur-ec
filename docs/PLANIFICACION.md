@@ -73,7 +73,9 @@ Reglas de la sesión: JWT HS256 firmado con `JWT_SECRET_KEY`, válido `JWT_EXPIR
 
 Reglas de vuelos: la búsqueda no distingue mayúsculas y solo muestra vuelos desde hoy; al crear, el código se guarda en mayúsculas y es único, la fecha no puede ser pasada, horas en `HH:MM`, precio con máximo 2 decimales, capacidad entera de 1 a 900 y `asientos_disponibles = capacidad`.
 
-Formato de error uniforme: `{"error": "codigo", "mensaje": "texto"}` con 400 / 401 / 403 / 404 / 409 (sin asientos).
+Formato de error uniforme: `{"error": "codigo", "mensaje": "texto"}` con 400 / 401 / 403 / 404 / 409 (sin asientos) y, para casos de operación, 413 (cuerpo > 64 KB), 415 (no es JSON), 429 (límite de logins, con `Retry-After`), 500 (genérico, sin detalles internos) y 503 (base de datos caída). Tabla completa y reglas de validación en `backend/README.md`.
+
+**Validación y robustez (B8):** lista blanca de caracteres (sin emojis, símbolos ni caracteres de control en nombres, ciudades, correos y códigos), rangos numéricos, ids seguros y límites de largo idénticos a los `VARCHAR` de la base (verificado por una prueba contra `schema.sql` y contra Supabase). Auditoría con 95 casos hostiles: de 29 fallos a 0. Con la base caída la API responde 503 en 5 s y se recupera sola en 2–5 s al volver.
 
 ## 5. Modelo de datos (Supabase/PostgreSQL)
 
@@ -148,6 +150,7 @@ Excepción documentada: `flasgger==0.9.7.1` (la 0.9.4 no funciona con Flask 3).
 | B5 | Servicio Vuelos (búsqueda, detalle, crear admin) | ✅ Hecho |
 | B6 | Servicio Reservas (crear, listar, modificar, cancelar, concurrencia) | ✅ Hecho |
 | B7 | Comprobante XML + Swagger completo + colección Postman | ✅ Hecho |
+| B8 | Robustez: validaciones de entrada, errores HTTP, límites = BD y base caída | ✅ Hecho |
 | F1–F4 | Frontend: auth, vuelos, reservas, comprobante | ⏳ Siguiente |
 | P | Pruebas funcionales y capturas | Pendiente |
 | D | Diagrama SOA + informe PDF | Pendiente |

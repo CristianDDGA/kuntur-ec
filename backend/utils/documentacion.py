@@ -22,7 +22,11 @@ def contrato(servicio: str, operacion: str) -> str:
 _TEMPLATE = {
     "info": {
         "title": "Kuntur EC · API de Reservas de Vuelos (SOA)",
-        "description": "Servicios REST: usuarios, autenticación, vuelos y reservas.",
+        "description": (
+            "Servicios REST: usuarios, autenticación, vuelos y reservas. Los errores responden siempre "
+            "{error, mensaje}: 400 datos inválidos, 401 sin sesión, 403 sin permiso, 404 no existe, 409 conflicto, "
+            "413 cuerpo muy grande, 415 no es JSON, 429 demasiados intentos, 500 error interno y 503 base de datos no disponible."
+        ),
         "version": "1.0.0",
     },
     # Un tag por servicio SOA (proveedor); el consumidor es el cliente Flutter.

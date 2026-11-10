@@ -22,6 +22,7 @@ from services.auth_service import AuthService
 from services.reserva_service import ReservaService
 from services.usuario_service import UsuarioService
 from services.vuelo_service import VueloService
+from utils.convertidores import IdConverter
 from utils.documentacion import init_docs
 from utils.formatos import JsonFormato, XmlFormato
 from utils.manejador_errores import register_error_handlers
@@ -29,6 +30,18 @@ from utils.respuestas import ContentNegotiator
 from utils.seguridad import EmisorTokens
 
 API_PREFIX = "/api"
+MAX_BYTES_CUERPO = 64 * 1024  # los cuerpos reales pesan menos de 1 KB: lo demás es abuso (413)
+
+
+def _agregar_cabeceras_seguras(app: Flask) -> None:
+    @app.after_request
+    def cabeceras(respuesta):
+        # El navegador no debe "adivinar" otro tipo de contenido distinto al declarado.
+        respuesta.headers.setdefault("X-Content-Type-Options", "nosniff")
+        # Los datos de la API (reservas, facturas, sesión) no deben quedar en cachés compartidas.
+        if respuesta.mimetype in (JsonFormato.mimetype, XmlFormato.mimetype):
+            respuesta.headers.setdefault("Cache-Control", "no-store")
+        return respuesta
 
 
 def _registrar_servicios(app: Flask, settings: Settings, db: Database | None) -> None:
@@ -52,6 +65,8 @@ def create_app(settings: Settings | None = None, db: Database | None = None) -> 
 
     app = Flask(__name__)
     app.config["TESTING"] = settings.is_testing
+    app.config["MAX_CONTENT_LENGTH"] = MAX_BYTES_CUERPO
+    app.url_map.converters["id"] = IdConverter  # <id:reserva_id>: entero positivo que cabe en la BD
     app.extensions["settings"] = settings
     app.extensions["db"] = db  # None si no hay DATABASE_URL (p. ej. en pruebas)
     _registrar_servicios(app, settings, db)
@@ -62,6 +77,7 @@ def create_app(settings: Settings | None = None, db: Database | None = None) -> 
     CORS(app, resources={rf"{API_PREFIX}/*": {"origins": list(settings.cors_origins)}})
     init_docs(app, API_PREFIX)
     register_error_handlers(app)
+    _agregar_cabeceras_seguras(app)
 
     app.register_blueprint(health_bp, url_prefix=API_PREFIX)
     app.register_blueprint(usuarios_bp, url_prefix=f"{API_PREFIX}/usuarios")

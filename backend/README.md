@@ -59,6 +59,56 @@ def cancelar(reserva_id):
 Los errores no se capturan en cada ruta: el servicio lanza `NotFoundError`, `ConflictError`…
 y `utils/manejador_errores.py` responde `{"error", "mensaje"}` con el código HTTP, sin exponer detalles internos.
 
+## Validaciones y manejo de errores
+
+**Entrada (lista blanca, en `utils/validaciones.py`):** se define qué SÍ se acepta; lo demás se rechaza con 400.
+
+| Campo | Se acepta | Se rechaza (ejemplos) |
+|---|---|---|
+| Nombre de persona / ciudad | Letras (con tildes, ñ), espacios, `'`, `.`, `-`; mín. 2 letras | Emojis 😀, números, `<script>`, comillas SQL, `#$%`, saltos de línea, caracteres invisibles |
+| Correo | ASCII `a-z 0-9 . _ % + -` + dominio válido, en minúsculas | Emojis, espacios, `ana@-.com`, `..`, dos `@` |
+| Contraseña | 8–128 caracteres con letras y números (emojis y símbolos permitidos) | Caracteres de control (NUL, `\n`, `\t`), más de 72 bytes |
+| Código de vuelo | `A-Z 0-9 -`, 2 a 10 caracteres (se guarda en mayúsculas) | Emojis, símbolos |
+| Precio | Mayor a 0, hasta 10 000, máximo 2 decimales | Negativos, 0, `NaN`, `Infinity`, `1e12`, 3 decimales |
+| Enteros (cantidad, capacidad, versión) | Entero dentro de su rango | Texto, decimales, `true`, negativos, `10^30` |
+| Ids (en la ruta y en el cuerpo) | Entero positivo de hasta 18 dígitos (`<id:...>`) | `-1`, `0`, `007`, `1e5`, ids gigantes → 404 |
+| Fechas / horas | `AAAA-MM-DD` / `HH:MM` estrictos; vuelos hasta 2 años adelante | `01/12/2026`, `20261201`, `2026-02-30`, `25:00` |
+| Cualquier texto del JSON | Sin caracteres de control (NUL, saltos…), JSON de máx. 4 niveles | NUL (`\x00`), JSON anidado 5000 niveles, `NaN` |
+
+**Los límites de largo son los de la base de datos** (`utils/limites.py`): `nombre` 100, `correo` 150,
+`codigo` 10, `origen`/`destino` 80, igual que sus `VARCHAR` en `schema.sql`. La prueba
+`tests/unit/test_limites_bd.py` los compara con `schema.sql` y con la BD real, y falla si se desincronizan
+o si alguien agrega una columna `VARCHAR` sin límite en el código.
+
+**Errores de la API:** siempre `{"error": "<codigo>", "mensaje": "<texto en español>"}` en JSON o XML.
+
+| HTTP | `error` | Cuándo |
+|---|---|---|
+| 400 | `datos_invalidos` | Datos que no cumplen las validaciones, JSON mal formado o no objeto |
+| 401 | `no_autenticado` | Sin token, token inválido/expirado/revocado, credenciales incorrectas |
+| 403 | `sin_permiso` | Cliente intentando una acción de administrador |
+| 404 | `no_encontrado` | Ruta o recurso inexistente, id fuera de rango, reserva ajena |
+| 405 | `metodo_no_permitido` | Método HTTP no soportado en esa ruta |
+| 409 | `conflicto` | Correo o código repetido, sin asientos, versión vieja (`version_actual`), reserva cancelada |
+| 413 | `cuerpo_demasiado_grande` | Cuerpo de más de 64 KB |
+| 415 | `formato_no_soportado` | Cuerpo que no es `application/json` |
+| 429 | `demasiados_intentos` | 5 logins fallidos por IP + correo en 15 min (cabecera `Retry-After`) |
+| 500 | `error_interno` | Error inesperado: mensaje genérico, el detalle solo va al log del servidor |
+| 503 | `servicio_no_disponible` | Base de datos sin respuesta (cabecera `Retry-After: 5`) |
+
+**Nunca se filtran detalles internos** (SQL, trazas, nombres de tablas): `utils/manejador_errores.py` captura
+todo; además traduce por sí solo los errores de PostgreSQL que ningún servicio previó
+(dato fuera de rango → 400, violación de integridad → 409, conexión perdida → 503).
+
+**Si la base de datos se cae** (`database.py`): la petición espera como máximo 5 s y responde 503 en lugar de
+quedarse colgada; el pool reintenta en segundo plano y **la API se recupera sola en pocos segundos** cuando la
+base vuelve, sin reiniciar. Cada consulta tiene un tiempo máximo de 10 s (`statement_timeout`).
+`/api/health` sigue respondiendo y marca `"base_datos": "no_disponible"`.
+
+Otras protecciones: cabeceras `X-Content-Type-Options: nosniff` y `Cache-Control: no-store` en la API; el login
+responde igual si el correo existe o no y no ejecuta bcrypt cuando ya está bloqueado.
+Alcance conocido: el límite de logins se cuenta en la memoria de cada servidor.
+
 ## Buenas prácticas aplicadas
 
 - **SRP:** cada módulo tiene una sola razón para cambiar; un archivo por recurso.

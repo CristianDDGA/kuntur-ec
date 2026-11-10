@@ -9,25 +9,19 @@ from psycopg.errors import UniqueViolation
 from database import Database
 from models import Rol, Usuario
 from utils.excepciones import ConflictError, ValidationError
+from utils.limites import CONTRASENA as MAX_LARGO_CONTRASENA  # bcrypt además solo admite 72 bytes
+from utils.limites import NOMBRE_PERSONA as MAX_LARGO_NOMBRE
 from utils.seguridad import LIMITE_BYTES_BCRYPT, CifradorContrasenas
+from utils.validaciones import correo as validar_correo
+from utils.validaciones import nombre_propio, texto_obligatorio
 
 MIN_LARGO_CONTRASENA = 8
-MAX_LARGO_NOMBRE = 100
-MAX_LARGO_CORREO = 150
-_CORREO = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 _COLUMNAS = "id, nombre, correo, password_hash, rol, fecha_registro"
 
 
 class Cifrador(Protocol):
     def cifrar(self, contrasena: str) -> str: ...
-
-
-def _texto(datos: dict, campo: str) -> str:
-    valor = datos.get(campo)
-    if not isinstance(valor, str) or not valor.strip():
-        raise ValidationError(f"El campo '{campo}' es obligatorio.")
-    return valor
 
 
 def validar_contrasena(contrasena: str) -> None:
@@ -46,14 +40,9 @@ class UsuarioService:
 
     def registrar(self, datos: dict) -> Usuario:
         """Crea un usuario con rol cliente. El rol nunca se toma de la petición."""
-        nombre = " ".join(_texto(datos, "nombre").split())
-        correo = _texto(datos, "correo").strip().lower()
-        contrasena = _texto(datos, "password")
-
-        if len(nombre) > MAX_LARGO_NOMBRE:
-            raise ValidationError(f"El nombre no puede superar {MAX_LARGO_NOMBRE} caracteres.")
-        if len(correo) > MAX_LARGO_CORREO or not _CORREO.match(correo):
-            raise ValidationError("El correo no es válido.")
+        nombre = nombre_propio(datos, "nombre", MAX_LARGO_NOMBRE)
+        correo = validar_correo(datos)
+        contrasena = texto_obligatorio(datos, "password", MAX_LARGO_CONTRASENA, normalizar=False)
         validar_contrasena(contrasena)
 
         try:
