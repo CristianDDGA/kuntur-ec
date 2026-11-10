@@ -80,7 +80,8 @@ CREATE INDEX IF NOT EXISTS ix_reservas_usuario ON reservas (usuario_id, fecha_re
 CREATE INDEX IF NOT EXISTS ix_reservas_vuelo   ON reservas (vuelo_id);
 
 -- ---------------------------------------------------------------------
--- tokens: JWT emitidos, para revocarlos en el logout
+-- tokens: sesiones emitidas, para revocarlas en el logout.
+-- `token` guarda la huella SHA-256 del JWT (64 caracteres), nunca el JWT.
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS tokens (
     id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
