@@ -35,3 +35,15 @@ class UnauthorizedError(AppError):
 
 class ForbiddenError(AppError):
     code = "sin_permiso"
+
+
+class TooManyRequestsError(AppError):
+    """Demasiados intentos (p. ej. logins fallidos). Se responde 429 con Retry-After."""
+
+    code = "demasiados_intentos"
+
+
+class ServiceUnavailableError(AppError):
+    """Un recurso necesario (la base de datos) no responde. Se responde 503 con Retry-After."""
+
+    code = "servicio_no_disponible"

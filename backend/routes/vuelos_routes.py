@@ -35,7 +35,7 @@ def buscar():
 # GET - Obtener vuelo por ID
 # =============================
 
-@vuelos_bp.route("/<int:vuelo_id>", methods=["GET"])
+@vuelos_bp.route("/<id:vuelo_id>", methods=["GET"])
 @swag_from(contrato("vuelos", "detalle"))
 def detalle(vuelo_id: int):
     return respond(_servicio().obtener(vuelo_id).to_dict(), root="vuelo")

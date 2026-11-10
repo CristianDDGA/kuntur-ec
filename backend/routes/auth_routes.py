@@ -1,6 +1,6 @@
 """Servicio SOA de Autenticación."""
 from flasgger import swag_from
-from flask import Blueprint, current_app
+from flask import Blueprint, current_app, request
 
 from services.auth_service import AuthService
 from utils.autenticacion import sesion_actual, token_requerido
@@ -22,7 +22,7 @@ def _servicio() -> AuthService:
 @auth_bp.route("/login", methods=["POST"])
 @swag_from(contrato("auth", "login"))
 def login():
-    return respond(_servicio().login(cuerpo_json()), root="sesion")
+    return respond(_servicio().login(cuerpo_json(), origen=request.remote_addr or ""), root="sesion")
 
 
 # =============================

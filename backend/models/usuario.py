@@ -1,13 +1,11 @@
 """Tabla `usuarios`."""
-import re
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 from typing import ClassVar
 
 from models.base import Modelo, requerir, texto_presente
-
-_CORREO = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+from utils.validaciones import es_correo
 
 
 class Rol(StrEnum):
@@ -33,6 +31,6 @@ class Usuario(Modelo):
 
     def _validar(self) -> None:
         requerir(texto_presente(self.nombre), "El nombre es obligatorio.")
-        requerir(bool(_CORREO.match(self.correo or "")), "El correo no es válido.")
+        requerir(es_correo(self.correo or ""), "El correo no es válido.")
         requerir(texto_presente(self.password_hash), "La contraseña cifrada es obligatoria.")
         requerir(isinstance(self.rol, Rol), "El rol no es válido.")

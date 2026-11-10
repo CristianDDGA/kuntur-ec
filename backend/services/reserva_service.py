@@ -31,8 +31,8 @@ from database import Database
 from models import EstadoReserva, Reserva, TarifaIva, Vuelo
 from services.auth_service import Sesion
 from utils.excepciones import ConflictError, NotFoundError, ValidationError
-
-MAX_ASIENTOS_POR_RESERVA = 10
+from utils.limites import ASIENTOS_POR_RESERVA as MAX_ASIENTOS_POR_RESERVA
+from utils.validaciones import MAX_VERSION, entero, identificador
 
 _COLUMNAS_VUELO = (
     "id, codigo, origen, destino, fecha, hora_salida, hora_llegada, "
@@ -57,18 +57,8 @@ class ReservaDetalle:
         return self.reserva.to_dict() | {"vuelo": {k: getattr(self.vuelo, k) for k in _RESUMEN_VUELO}}
 
 
-def _entero(datos: dict, campo: str) -> int:
-    valor = datos.get(campo)
-    if isinstance(valor, bool) or not isinstance(valor, int):
-        raise ValidationError(f"El campo '{campo}' es obligatorio y debe ser un número entero.")
-    return valor
-
-
 def _cantidad(datos: dict) -> int:
-    cantidad = _entero(datos, "cantidad")
-    if not 1 <= cantidad <= MAX_ASIENTOS_POR_RESERVA:
-        raise ValidationError(f"La cantidad debe estar entre 1 y {MAX_ASIENTOS_POR_RESERVA} asientos.")
-    return cantidad
+    return entero(datos, "cantidad", 1, MAX_ASIENTOS_POR_RESERVA)
 
 
 class ReservaService:
@@ -78,7 +68,7 @@ class ReservaService:
     # ------------------------------------------------------------ crear
 
     def crear(self, sesion: Sesion, datos: dict) -> ReservaDetalle:
-        vuelo_id = _entero(datos, "vuelo_id")
+        vuelo_id = identificador(datos, "vuelo_id")
         cantidad = _cantidad(datos)
 
         with self._db.transaccion() as cur:
@@ -127,7 +117,7 @@ class ReservaService:
 
     def modificar(self, sesion: Sesion, reserva_id: int, datos: dict) -> ReservaDetalle:
         nueva_cantidad = _cantidad(datos)
-        version = _entero(datos, "version")
+        version = entero(datos, "version", 1, MAX_VERSION)
         with self._db.transaccion() as cur:
             actual = self._buscar_propia(cur, sesion, reserva_id, bloquear=True)
             if actual.reserva.version != version:

@@ -93,7 +93,7 @@ def test_crear_normaliza_datos_y_empieza_con_todos_los_asientos_libres():
         ({"precio": 0}, "mayor a 0"),
         ({"precio": "10.555"}, "2 decimales"),
         ({"capacidad": "80"}, "entero"),
-        ({"capacidad": 0}, "mayor a 0"),
+        ({"capacidad": 0}, "entre 1 y 900"),
         ({"capacidad": 901}, "900"),
         ({"codigo": "K" * 11}, "10 caracteres"),
     ],

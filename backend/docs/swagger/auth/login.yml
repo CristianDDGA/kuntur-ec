@@ -25,5 +25,7 @@ responses:
         usuario: {type: object}
   400:
     description: Falta el correo o la contraseña.
+  429:
+    description: Demasiados intentos fallidos (5 en 15 minutos por IP y correo). Ver cabecera Retry-After.
   401:
     description: Correo o contraseña incorrectos.

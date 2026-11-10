@@ -44,7 +44,7 @@ def listar():
 # GET - Obtener reserva por ID
 # =============================
 
-@reservas_bp.route("/<int:reserva_id>", methods=["GET"])
+@reservas_bp.route("/<id:reserva_id>", methods=["GET"])
 @swag_from(contrato("reservas", "detalle"))
 @token_requerido
 def detalle(reserva_id: int):
@@ -55,7 +55,7 @@ def detalle(reserva_id: int):
 # PUT - Modificar reserva (con versión)
 # ===================================
 
-@reservas_bp.route("/<int:reserva_id>", methods=["PUT"])
+@reservas_bp.route("/<id:reserva_id>", methods=["PUT"])
 @swag_from(contrato("reservas", "modificar"))
 @token_requerido
 def modificar(reserva_id: int):
@@ -67,7 +67,7 @@ def modificar(reserva_id: int):
 # GET - Factura (comprobante) en XML
 # ===================================
 
-@reservas_bp.route("/<int:reserva_id>/comprobante", methods=["GET"])
+@reservas_bp.route("/<id:reserva_id>/comprobante", methods=["GET"])
 @swag_from(contrato("reservas", "comprobante"))
 @token_requerido
 def comprobante(reserva_id: int):
@@ -86,7 +86,7 @@ def comprobante(reserva_id: int):
 # DELETE - Cancelar reserva
 # =============================
 
-@reservas_bp.route("/<int:reserva_id>", methods=["DELETE"])
+@reservas_bp.route("/<id:reserva_id>", methods=["DELETE"])
 @swag_from(contrato("reservas", "cancelar"))
 @token_requerido
 def cancelar(reserva_id: int):

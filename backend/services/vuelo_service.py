@@ -1,71 +1,45 @@
 """Servicio Vuelos: búsqueda, detalle y creación (solo administrador)."""
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
-from datetime import date, datetime, time
-from decimal import Decimal, InvalidOperation
-from typing import Any
+from datetime import date, timedelta
 
 from psycopg.errors import UniqueViolation
 
 from database import Database
 from models import Vuelo
 from utils.excepciones import ConflictError, NotFoundError, ValidationError
+from utils.limites import CAPACIDAD_MAXIMA as MAX_CAPACIDAD
+from utils.limites import CIUDAD as MAX_LARGO_CIUDAD
+from utils.limites import CODIGO_VUELO as MAX_LARGO_CODIGO
+from utils.validaciones import (
+    entero,
+    fecha_iso,
+    hora_hhmm,
+    nombre_propio,
+    precio,
+    revisar_texto,
+    texto_obligatorio,
+)
 
 _COLUMNAS = (
     "id, codigo, origen, destino, fecha, hora_salida, hora_llegada, "
     "precio, capacidad, asientos_disponibles, version"
 )
-MAX_LARGO_CODIGO = 10
-MAX_LARGO_CIUDAD = 80
-MAX_CAPACIDAD = 900
+MAX_DIAS_ADELANTE = 730  # no se programan vuelos a más de 2 años
+_CODIGO = re.compile(rf"^[A-Z0-9-]{{2,{MAX_LARGO_CODIGO}}}$")
 
 
-# ---------------------------------------------------------------- lectura de datos
-
-
-def _texto(datos: dict, campo: str, maximo: int) -> str:
-    valor = datos.get(campo)
-    if not isinstance(valor, str) or not valor.strip():
-        raise ValidationError(f"El campo '{campo}' es obligatorio.")
-    valor = " ".join(valor.split())
-    if len(valor) > maximo:
-        raise ValidationError(f"El campo '{campo}' no puede superar {maximo} caracteres.")
-    return valor
-
-
-def leer_fecha(valor: Any, campo: str = "fecha") -> date:
-    try:
-        return date.fromisoformat(str(valor).strip())
-    except ValueError:
-        raise ValidationError(f"El campo '{campo}' debe tener el formato AAAA-MM-DD.") from None
-
-
-def _hora(datos: dict, campo: str) -> time:
-    try:
-        return datetime.strptime(str(datos.get(campo, "")).strip(), "%H:%M").time()
-    except ValueError:
-        raise ValidationError(f"El campo '{campo}' debe tener el formato HH:MM.") from None
-
-
-def _precio(datos: dict) -> Decimal:
-    valor = datos.get("precio")
-    if isinstance(valor, bool) or not isinstance(valor, (int, float, str)):
-        raise ValidationError("El campo 'precio' es obligatorio y debe ser numérico.")
-    try:
-        precio = Decimal(str(valor).strip())
-    except InvalidOperation:
-        raise ValidationError("El campo 'precio' debe ser numérico.") from None
-    if not precio.is_finite() or precio.as_tuple().exponent < -2:  # type: ignore[operator]
-        raise ValidationError("El precio admite como máximo 2 decimales.")
-    return precio
-
-
-def _entero(datos: dict, campo: str) -> int:
-    valor = datos.get(campo)
-    if isinstance(valor, bool) or not isinstance(valor, int):
-        raise ValidationError(f"El campo '{campo}' debe ser un número entero.")
-    return valor
+def _filtro(valor: str | None, campo: str) -> str | None:
+    """Filtro de búsqueda opcional: sin caracteres de control y de largo acotado."""
+    if not valor or not valor.strip():
+        return None
+    revisar_texto(valor, campo)
+    limpio = " ".join(valor.split())
+    if len(limpio) > MAX_LARGO_CIUDAD:
+        raise ValidationError(f"El filtro '{campo}' no puede superar {MAX_LARGO_CIUDAD} caracteres.")
+    return limpio
 
 
 # ---------------------------------------------------------------- servicio
@@ -79,15 +53,15 @@ class VueloService:
     def buscar(self, origen: str | None = None, destino: str | None = None, fecha: str | None = None) -> list[Vuelo]:
         """Vuelos desde hoy en adelante, filtrados por origen, destino y/o fecha (sin distinguir mayúsculas)."""
         condiciones, params = ["fecha >= %s"], [self._hoy()]
-        if origen and origen.strip():
+        if (origen := _filtro(origen, "origen")):
             condiciones.append("lower(origen) = lower(%s)")
-            params.append(" ".join(origen.split()))
-        if destino and destino.strip():
+            params.append(origen)
+        if (destino := _filtro(destino, "destino")):
             condiciones.append("lower(destino) = lower(%s)")
-            params.append(" ".join(destino.split()))
-        if fecha and fecha.strip():
+            params.append(destino)
+        if (fecha := _filtro(fecha, "fecha")):
             condiciones.append("fecha = %s")
-            params.append(leer_fecha(fecha))
+            params.append(fecha_iso(fecha))
 
         with self._db.transaccion() as cur:
             cur.execute(
@@ -106,23 +80,26 @@ class VueloService:
         return Vuelo.from_row(fila)
 
     def crear(self, datos: dict) -> Vuelo:
-        capacidad = _entero(datos, "capacidad")
-        if capacidad > MAX_CAPACIDAD:
-            raise ValidationError(f"La capacidad no puede superar {MAX_CAPACIDAD} asientos.")
-        vuelo = Vuelo(  # el modelo valida origen ≠ destino, precio > 0, capacidad > 0
+        capacidad = entero(datos, "capacidad", 1, MAX_CAPACIDAD)
+        codigo = texto_obligatorio(datos, "codigo", MAX_LARGO_CODIGO).upper().replace(" ", "")
+        if not _CODIGO.match(codigo):
+            raise ValidationError(f"El campo 'codigo' solo admite letras, números y guiones (de 2 a {MAX_LARGO_CODIGO} caracteres).")
+        vuelo = Vuelo(  # el modelo valida además origen ≠ destino y asientos entre 0 y la capacidad
             id=None,
-            codigo=_texto(datos, "codigo", MAX_LARGO_CODIGO).upper().replace(" ", ""),
-            origen=_texto(datos, "origen", MAX_LARGO_CIUDAD),
-            destino=_texto(datos, "destino", MAX_LARGO_CIUDAD),
-            fecha=leer_fecha(datos.get("fecha")),
-            hora_salida=_hora(datos, "hora_salida"),
-            hora_llegada=_hora(datos, "hora_llegada"),
-            precio=_precio(datos),
+            codigo=codigo,
+            origen=nombre_propio(datos, "origen", MAX_LARGO_CIUDAD),
+            destino=nombre_propio(datos, "destino", MAX_LARGO_CIUDAD),
+            fecha=fecha_iso(datos.get("fecha")),
+            hora_salida=hora_hhmm(datos.get("hora_salida"), "hora_salida"),
+            hora_llegada=hora_hhmm(datos.get("hora_llegada"), "hora_llegada"),
+            precio=precio(datos),
             capacidad=capacidad,
             asientos_disponibles=capacidad,  # un vuelo nuevo empieza con todos sus asientos libres
         )
         if vuelo.fecha < self._hoy():
             raise ValidationError("No se puede crear un vuelo con fecha pasada.")
+        if vuelo.fecha > self._hoy() + timedelta(days=MAX_DIAS_ADELANTE):
+            raise ValidationError("La fecha del vuelo no puede superar los 2 años desde hoy.")
         if vuelo.hora_llegada == vuelo.hora_salida:
             raise ValidationError("La hora de llegada debe ser distinta a la de salida.")
 

@@ -15,7 +15,7 @@ class AuthFalso:
     def __init__(self):
         self.revocados = set()
 
-    def login(self, datos):
+    def login(self, datos, origen=""):
         if datos.get("password") != "Clave2026":
             raise UnauthorizedError("Correo o contraseña incorrectos.")
         return {"token": "tok-cliente", "tipo": "Bearer", "usuario": TOKENS["tok-cliente"].to_dict()}

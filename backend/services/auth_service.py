@@ -8,7 +8,10 @@ from database import Database
 from models import EstadoToken, Rol, Usuario
 from services.usuario_service import UsuarioService
 from utils.excepciones import UnauthorizedError, ValidationError
+from utils.limitador import LimitadorIntentos
+from utils.limites import CONTRASENA as MAX_LARGO_CONTRASENA_LOGIN
 from utils.seguridad import CifradorContrasenas, EmisorTokens, huella_token
+from utils.validaciones import MAX_LARGO_CORREO, revisar_texto
 
 _CREDENCIALES_INVALIDAS = "Correo o contraseña incorrectos."
 _SESION_CERRADA = "La sesión fue cerrada. Inicie sesión nuevamente."
@@ -41,21 +44,33 @@ class AuthService:
         usuarios: UsuarioService,
         emisor: EmisorTokens,
         cifrador: CifradorContrasenas | None = None,
+        limitador: LimitadorIntentos | None = None,
     ):
         self._db = db
         self._usuarios = usuarios
         self._emisor = emisor
         self._cifrador = cifrador or CifradorContrasenas()
+        self._limitador = limitador or LimitadorIntentos()
 
-    def login(self, datos: dict) -> dict[str, Any]:
+    def login(self, datos: dict, origen: str = "") -> dict[str, Any]:
+        """`origen` (la IP) junto con el correo identifica los intentos fallidos para el límite."""
         correo, contrasena = datos.get("correo"), datos.get("password")
         if not isinstance(correo, str) or not isinstance(contrasena, str) or not correo.strip() or not contrasena:
             raise ValidationError("El correo y la contraseña son obligatorios.")
+        if len(correo) > MAX_LARGO_CORREO or len(contrasena) > MAX_LARGO_CONTRASENA_LOGIN:
+            raise ValidationError("El correo o la contraseña superan el largo permitido.")
+        revisar_texto(correo, "correo")
+        revisar_texto(contrasena, "password")
+
+        clave = f"{origen}|{correo.strip().lower()}"
+        self._limitador.verificar(clave)  # 429 antes de gastar tiempo en bcrypt
 
         usuario = self._usuarios.buscar_por_correo(correo)
         hash_guardado = usuario.password_hash if usuario else _HASH_SEÑUELO
         if not self._cifrador.verificar(contrasena, hash_guardado) or usuario is None:
+            self._limitador.registrar_fallo(clave)
             raise UnauthorizedError(_CREDENCIALES_INVALIDAS)
+        self._limitador.limpiar(clave)
 
         emitido = self._emisor.emitir(usuario.id, usuario.rol.value)  # type: ignore[arg-type]
         with self._db.transaccion() as cur:
