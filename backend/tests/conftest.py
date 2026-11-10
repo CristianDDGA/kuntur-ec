@@ -1,7 +1,7 @@
 import pytest
 
-from src.infrastructure.config.settings import Settings
-from src.presentation.api.app_factory import create_app
+from app import create_app
+from config import Settings
 
 
 @pytest.fixture

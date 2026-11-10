@@ -88,19 +88,23 @@ Login · Registro · Lista/búsqueda de vuelos · Detalle + reservar (cantidad) 
 Se ejecuta como **web** (`flutter run -d chrome`) y también puede compilarse a Android.
 Paquetes: `flutter_riverpod` (estado + DI), `go_router`, `http`, `shared_preferences` (JWT), `xml`.
 
-## 7. Estructura del repositorio (Clean Architecture + SOLID)
+## 7. Estructura del repositorio (MVC + buenas prácticas)
+
+Inspirada en la organización de otros grupos (APE8: `models`, `services`, `pages`, `widgets`…),
+mejorada con controladores explícitos, inyección de dependencias, errores tipados y pruebas.
 
 ```
 APE4-Distribuidas/
 ├─ backend/                 # Flask · ver backend/README.md
-│  ├─ src/domain/           # entidades, interfaces de repositorio, excepciones
-│  ├─ src/application/      # casos de uso, DTOs, ports
-│  ├─ src/infrastructure/   # config, PostgreSQL (Supabase), bcrypt, JWT
-│  ├─ src/presentation/api/ # blueprints por servicio, JSON/XML, errores, Swagger
-│  ├─ src/container.py      # inyección de dependencias
-│  ├─ sql/  tests/{unit,integration}/
+│  ├─ app.py  config.py     # create_app + configuración
+│  ├─ models/               # M: dataclasses por tabla
+│  ├─ services/             # reglas de negocio + SQL parametrizado
+│  ├─ routes/               # C: un Blueprint por servicio SOA
+│  ├─ utils/                # V: formatos JSON/XML · errores · Swagger · seguridad
+│  └─ tests/{unit,integration}/
 ├─ frontend/                # Flutter · ver frontend/README.md
-│  └─ lib/{core, features/{auth,vuelos,reservas}/{data,domain,presentation}}
+│  └─ lib/{config, models, services, controllers, pages, widgets}
+├─ database/                # schema.sql, seed.sql (Supabase)
 └─ docs/                    # planificación, referencias, diagramas, capturas, informe
 ```
 
@@ -112,7 +116,8 @@ Excepción documentada: `flasgger==0.9.7.1` (la 0.9.4 no funciona con Flask 3).
 | # | Sección | Estado |
 |---|---|---|
 | 0 | Repositorio + arquitectura back/front | ✅ Hecho |
-| B1 | Dominio: entidades, interfaces de repositorio | ⏳ Siguiente |
+| A | Cambio de arquitectura a MVC | ✅ Hecho |
+| B1 | Modelos: Usuario, Vuelo, Reserva, Token | ⏳ Siguiente |
 | B2 | Base de datos Supabase: `schema.sql`, `seed.sql`, conexión | Pendiente |
 | B3 | Servicio Usuarios (registro, bcrypt) | Pendiente |
 | B4 | Servicio Auth (login/logout JWT, tabla tokens) | Pendiente |

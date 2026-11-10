@@ -1,68 +1,69 @@
-# Backend · API REST (Flask + Clean Architecture)
+# Backend · API REST (Flask + MVC)
 
-## Capas y regla de dependencias
+## Patrón MVC
 
 ```
-presentation  ──▶  application  ──▶  domain  ◀──  infrastructure
- (Flask, HTTP)     (casos de uso)    (núcleo)      (PostgreSQL, bcrypt, JWT)
+Petición HTTP
+     │
+     ▼
+routes/      (C)  un Blueprint por servicio SOA: lee la petición, llama al servicio y responde
+     │
+     ▼
+services/         reglas de negocio + acceso a Supabase con SQL parametrizado
+     │
+     ▼
+models/      (M)  dataclasses que representan las tablas (from_row / to_dict)
+     │
+     ▼
+utils/formatos.py (V)  representa la respuesta en JSON o XML según la cabecera Accept
 ```
 
-Las flechas indican “depende de”. **El dominio no importa nada de las otras capas.**
+| Archivo / carpeta | Responsabilidad | No debe |
+|---|---|---|
+| `app.py` | `create_app()`: ensambla todo; punto de entrada | Tener rutas ni lógica |
+| `config.py` | Configuración desde `.env` (estricta fuera de desarrollo) | — |
+| `database.py` *(sección B2)* | Pool de conexiones a Supabase | — |
+| `models/` | Dataclasses por tabla: `Usuario`, `Vuelo`, `Reserva`, `Token` | Tener SQL ni HTTP |
+| `services/` | Reglas de negocio y consultas; lanzan excepciones de `utils/excepciones.py` | Conocer Flask (`request`, `jsonify`) |
+| `routes/` | Rutas `/api/...` agrupadas por servicio | Escribir SQL |
+| `utils/formatos.py` | Vista: `JsonFormato`, `XmlFormato`, `to_primitive` | — |
+| `utils/respuestas.py` | `respond()` y negociación de contenido | — |
+| `utils/excepciones.py` | Excepciones de negocio (`NotFoundError`, `ConflictError`, …) | — |
+| `utils/manejador_errores.py` | Traduce excepciones a `{"error","mensaje"}` + código HTTP | — |
+| `utils/documentacion.py` | Swagger en `/api/docs/` | — |
+| `utils/seguridad.py` *(sección B3)* | bcrypt y JWT | — |
+| `utils/autenticacion.py` *(sección B4)* | Decoradores `@token_requerido`, `@rol_requerido` | — |
 
-| Capa | Carpeta | Contiene | No puede |
-|---|---|---|---|
-| Dominio | `src/domain/` | Entidades (`Usuario`, `Vuelo`, `Reserva`, `Token`), reglas de negocio, interfaces de repositorios, excepciones | Importar Flask, psycopg, bcrypt… |
-| Aplicación | `src/application/` | Casos de uso (1 clase = 1 acción), DTOs de entrada/salida, *ports* (`PasswordHasher`, `TokenProvider`, `UnitOfWork`) | Conocer HTTP o SQL |
-| Infraestructura | `src/infrastructure/` | Configuración, conexión a Supabase, repositorios PostgreSQL, bcrypt, JWT | Contener reglas de negocio |
-| Presentación | `src/presentation/api/` | Blueprints por servicio, validación de entrada, serializadores JSON/XML, manejo de errores, Swagger | Acceder a la BD directamente |
-| Composition root | `src/container.py` | Conecta implementaciones concretas con casos de uso | — |
+## Buenas prácticas aplicadas
 
-## SOLID aplicado
-
-- **SRP:** `RegistrarUsuario`, `IniciarSesion`, `CrearReserva`… cada uno hace una sola cosa.
-- **OCP:** formatos de respuesta como estrategias (`JsonSerializer`, `XmlSerializer`) que se inyectan en el `ContentNegotiator` desde `create_app`; agregar uno no modifica código existente.
-- **LSP:** `PostgresUsuarioRepository` y `InMemoryUsuarioRepository` (pruebas) son intercambiables.
-- **ISP:** una interfaz de repositorio por agregado, con solo los métodos necesarios.
-- **DIP:** los casos de uso reciben abstracciones por constructor; `container.py` inyecta las concretas.
+- **SRP:** cada módulo tiene una sola razón para cambiar; un archivo por recurso.
+- **OCP:** los formatos JSON/XML se registran en `create_app`; agregar uno no modifica código existente.
+- **DIP:** los servicios reciben sus dependencias (conexión, utilidades) por constructor, así se prueban con *fakes*.
+- **Sin duplicación:** normalización de tipos única, manejo de errores centralizado, autenticación en un decorador en vez de repetirla en cada ruta.
+- **Seguridad:** bcrypt (no SHA256), JWT con PyJWT, secretos solo en `.env`, sin `print` de datos sensibles y sin exponer detalles internos en los errores.
 
 ## Estructura
 
 ```
 backend/
-├─ run.py                      # punto de entrada
+├─ app.py                    # create_app + arranque
+├─ config.py
 ├─ requirements.txt  .env.example  pytest.ini
-├─ sql/                        # schema.sql, seed.sql (Supabase)
-├─ src/
-│  ├─ container.py             # inyección de dependencias
-│  ├─ domain/
-│  │  ├─ entities/             # dataclasses con reglas de negocio
-│  │  ├─ repositories/         # interfaces (ABC)
-│  │  └─ exceptions.py
-│  ├─ application/
-│  │  ├─ dtos/
-│  │  ├─ ports/                # PasswordHasher, TokenProvider, UnitOfWork
-│  │  └─ use_cases/{usuarios,auth,vuelos,reservas}/
-│  ├─ infrastructure/
-│  │  ├─ config/settings.py    # falla al arrancar si faltan secretos fuera de desarrollo
-│  │  ├─ persistence/          # conexión + repositories/ (PostgreSQL)
-│  │  └─ security/             # bcrypt, JWT
-│  └─ presentation/api/
-│     ├─ app_factory.py        # create_app: solo ensambla piezas
-│     ├─ docs.py               # Swagger / OpenAPI
-│     ├─ routes/               # un Blueprint por servicio SOA
-│     ├─ schemas/              # validación de requests
-│     ├─ serializers/          # primitives.py (normalización única) + JSON / XML
-│     ├─ responses.py          # ContentNegotiator (Accept) + respond()
-│     └─ error_handlers.py     # {"error","mensaje"} en español + código HTTP
+├─ models/
+├─ services/
+├─ routes/                   # health_routes.py, ...
+├─ utils/                    # formatos, respuestas, excepciones, manejador_errores, documentacion
 └─ tests/
-   ├─ unit/                    # casos de uso con repos en memoria
-   └─ integration/             # endpoints con el cliente de Flask
+   ├─ unit/                  # servicios con fakes, formatos, configuración
+   └─ integration/           # endpoints con el cliente de pruebas de Flask
 ```
+
+Los scripts de la base de datos están en [`../database/`](../database/).
 
 ## Convenciones
 
-- Montos (`Decimal`) se envían como texto con 2 decimales (`"204.70"`) en JSON y XML, para no perder precisión.
-- Errores siempre con el formato `{"error": "<codigo>", "mensaje": "<texto>"}` y códigos en español
+- Montos (`Decimal`) se envían como texto con 2 decimales (`"204.70"`) en JSON y XML.
+- Errores: `{"error": "<codigo>", "mensaje": "<texto>"}` con códigos en español
   (`datos_invalidos`, `no_autenticado`, `sin_permiso`, `no_encontrado`, `conflicto`, `error_interno`…).
 - `APP_ENV` distinto de `development`/`testing` exige `DATABASE_URL` y `JWT_SECRET_KEY`.
 
@@ -73,6 +74,6 @@ python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 copy .env.example .env
-python run.py                 # http://localhost:5000/api/health  ·  Swagger: /api/docs/
+python app.py                 # http://localhost:5000/api/health  ·  Swagger: /api/docs/
 pytest -q
 ```

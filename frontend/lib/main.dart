@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'core/config/app_config.dart';
-import 'core/di/providers.dart';
-import 'core/router/app_router.dart';
-import 'core/theme/app_theme.dart';
+import 'config/app_config.dart';
+import 'config/app_router.dart';
+import 'config/app_theme.dart';
+import 'config/providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

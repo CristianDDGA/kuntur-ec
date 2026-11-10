@@ -1,5 +1,5 @@
-import 'package:vuelos_app/core/network/rest_client.dart';
-import 'package:vuelos_app/core/storage/token_storage.dart';
+import 'package:vuelos_app/services/rest_client.dart';
+import 'package:vuelos_app/services/token_storage.dart';
 
 class InMemoryTokenStorage implements TokenStorage {
   InMemoryTokenStorage([this._token]);
@@ -44,3 +44,9 @@ class FakeRestClient implements RestClient {
   @override
   Future<String> getXml(String path) => _responder(path, respuesta?.toString() ?? '');
 }
+
+const healthOk = {
+  'estado': 'ok',
+  'servicio': 'kuntur-ec-api',
+  'hora': '2026-11-09T14:41:11+00:00',
+};
