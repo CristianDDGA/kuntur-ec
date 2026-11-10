@@ -14,6 +14,8 @@ from flask_cors import CORS
 from config import Settings
 from database import Database
 from routes.health_routes import health_bp
+from routes.usuarios_routes import usuarios_bp
+from services.usuario_service import UsuarioService
 from utils.documentacion import init_docs
 from utils.formatos import JsonFormato, XmlFormato
 from utils.manejador_errores import register_error_handlers
@@ -31,6 +33,8 @@ def create_app(settings: Settings | None = None, db: Database | None = None) -> 
     app.config["TESTING"] = settings.is_testing
     app.extensions["settings"] = settings
     app.extensions["db"] = db  # None si no hay DATABASE_URL (p. ej. en pruebas)
+    # Servicios inyectados: las rutas los leen de app.extensions y las pruebas los reemplazan por fakes.
+    app.extensions["usuario_service"] = UsuarioService(db) if db is not None else None
 
     ContentNegotiator(
         formatos=(JsonFormato(), XmlFormato()), default_mimetype=JsonFormato.mimetype
@@ -40,7 +44,8 @@ def create_app(settings: Settings | None = None, db: Database | None = None) -> 
     register_error_handlers(app)
 
     app.register_blueprint(health_bp, url_prefix=API_PREFIX)
-    # Próximas secciones: usuarios_bp, auth_bp, vuelos_bp, reservas_bp
+    app.register_blueprint(usuarios_bp, url_prefix=f"{API_PREFIX}/usuarios")
+    # Próximas secciones: auth_bp, vuelos_bp, reservas_bp
 
     return app
 
