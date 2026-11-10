@@ -70,14 +70,19 @@ Formato de error uniforme: `{"error": "codigo", "mensaje": "texto"}` con 400 / 4
 
 ## 5. Modelo de datos (Supabase/PostgreSQL)
 
-Basado en la infografía, con dos ajustes (marcados con ★):
+Basado en la infografía, con ajustes (marcados con ★):
 
 - **usuarios**(id PK, nombre, correo UNIQUE, password_hash, ★rol `cliente|admin`, fecha_registro)
 - **vuelos**(id PK, ★codigo, origen, destino, fecha, hora_salida, hora_llegada, precio, ★capacidad, asientos_disponibles CHECK ≥ 0)
-- **reservas**(id PK, usuario_id FK, vuelo_id FK, cantidad_asientos CHECK > 0, total, estado `confirmada|cancelada`, fecha_reserva)
+- **reservas**(id PK, usuario_id FK, vuelo_id FK, cantidad_asientos CHECK > 0, ★subtotal, ★iva_porcentaje, ★iva_valor, total, estado `confirmada|cancelada`, fecha_reserva)
 - **tokens**(id PK, usuario_id FK, token, expiracion, estado `activo|revocado`)
+- ★**tarifas_iva**(id PK, porcentaje, vigente_desde, vigente_hasta NULL)
 
 Relaciones: usuarios 1–N reservas, vuelos 1–N reservas, usuarios 1–N tokens.
+
+**IVA variable:** el porcentaje no está en el código ni en `.env`. Cambiarlo (p. ej. de 15 % a 12 %)
+es insertar una tarifa nueva en `tarifas_iva` con su fecha de vigencia. Cada reserva guarda el
+subtotal, el porcentaje y el valor del IVA aplicados, así las facturas antiguas no cambian.
 
 **Concurrencia:** descuento atómico en una transacción
 `UPDATE vuelos SET asientos_disponibles = asientos_disponibles - :n WHERE id = :id AND asientos_disponibles >= :n` → si afecta 0 filas, responder 409.
@@ -117,8 +122,8 @@ Excepción documentada: `flasgger==0.9.7.1` (la 0.9.4 no funciona con Flask 3).
 |---|---|---|
 | 0 | Repositorio + arquitectura back/front | ✅ Hecho |
 | A | Cambio de arquitectura a MVC | ✅ Hecho |
-| B1 | Modelos: Usuario, Vuelo, Reserva, Token | ⏳ Siguiente |
-| B2 | Base de datos Supabase: `schema.sql`, `seed.sql`, conexión | Pendiente |
+| B1 | Modelos: Usuario, Vuelo, Reserva, Token, TarifaIva | ✅ Hecho |
+| B2 | Base de datos Supabase: `schema.sql`, `seed.sql`, conexión | ⏳ Siguiente |
 | B3 | Servicio Usuarios (registro, bcrypt) | Pendiente |
 | B4 | Servicio Auth (login/logout JWT, tabla tokens) | Pendiente |
 | B5 | Servicio Vuelos (búsqueda, detalle, crear admin) | Pendiente |

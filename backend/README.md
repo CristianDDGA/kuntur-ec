@@ -23,7 +23,7 @@ utils/formatos.py (V)  representa la respuesta en JSON o XML según la cabecera 
 | `app.py` | `create_app()`: ensambla todo; punto de entrada | Tener rutas ni lógica |
 | `config.py` | Configuración desde `.env` (estricta fuera de desarrollo) | — |
 | `database.py` *(sección B2)* | Pool de conexiones a Supabase | — |
-| `models/` | Dataclasses por tabla: `Usuario`, `Vuelo`, `Reserva`, `Token` | Tener SQL ni HTTP |
+| `models/` | Dataclasses por tabla: `Usuario`, `Vuelo`, `Reserva`, `Token`, `TarifaIva` (base común en `base.py`) | Tener SQL ni HTTP |
 | `services/` | Reglas de negocio y consultas; lanzan excepciones de `utils/excepciones.py` | Conocer Flask (`request`, `jsonify`) |
 | `routes/` | Rutas `/api/...` agrupadas por servicio | Escribir SQL |
 | `utils/formatos.py` | Vista: `JsonFormato`, `XmlFormato`, `to_primitive` | — |
@@ -65,6 +65,7 @@ Los scripts de la base de datos están en [`../database/`](../database/).
 - Montos (`Decimal`) se envían como texto con 2 decimales (`"204.70"`) en JSON y XML.
 - Errores: `{"error": "<codigo>", "mensaje": "<texto>"}` con códigos en español
   (`datos_invalidos`, `no_autenticado`, `sin_permiso`, `no_encontrado`, `conflicto`, `error_interno`…).
+- El IVA se lee de la tabla `tarifas_iva` (historial con vigencias); cada reserva guarda el IVA aplicado.
 - `APP_ENV` distinto de `development`/`testing` exige `DATABASE_URL` y `JWT_SECRET_KEY`.
 
 ## Comandos
