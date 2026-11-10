@@ -62,7 +62,7 @@
 | Reservas | GET | `/api/reservas/{id}` | JWT | Detalle |
 | Reservas | PUT | `/api/reservas/{id}` | JWT | Modifica cantidad `{cantidad, version}` (mismo precio e IVA) → 200 · 409 "Ya actualizaron este registro" + `version_actual` |
 | Reservas | DELETE | `/api/reservas/{id}` | JWT | Cancela (estado = `cancelada`, devuelve asientos) → 200 · 409 ya cancelada |
-| Reservas | GET | `/api/reservas/{id}/comprobante` | JWT | Factura en **XML** (subtotal, IVA 15 %, total) |
+| Reservas | GET | `/api/reservas/{id}/comprobante` | JWT | Factura en **XML** siempre, armada como en la práctica de clase (`practica-xml`): JSON de la factura → XML con `ElementTree` (`factura/cabecera/cliente/Detalle/producto/Totales/Estado`). Los montos salen de la reserva, no del cliente → 200 · 401 · 404 |
 
 Ejemplo (de la infografía): `POST /api/reservas {"usuario_id":1,"vuelo_id":10,"cantidad":2}` → `200 {"mensaje":"Reserva creada","reserva_id":58,"total":336.00,"estado":"confirmada"}`.
 > Mejora: el `usuario_id` se toma del JWT, no del cuerpo (evita reservar a nombre de otro).
@@ -103,6 +103,8 @@ Descuento atómico en una transacción
 `UPDATE vuelos SET asientos_disponibles = asientos_disponibles - :n WHERE id = :id AND asientos_disponibles >= :n` → si afecta 0 filas, responder 409. Modificar y cancelar bloquean la reserva con `SELECT … FOR UPDATE`.
 Verificado contra Supabase: 20 clientes reservando a la vez un vuelo de 5 asientos → 5 reservas (201) y 15 rechazos (409), 0 asientos libres; 5 cancelaciones simultáneas de la misma reserva → 1 cancelación y 4 rechazos (409), asientos devueltos una sola vez; 5 modificaciones simultáneas con la misma `version: 1` → 1 aceptada (version 2) y 4 × 409 "Ya actualizaron este registro" con `version_actual: 2`.
 Una reserva ajena responde 404 (no se revela que existe).
+
+**Pruebas funcionales:** `docs/postman/KunturEC.postman_collection.json` (36 peticiones en 6 carpetas, una por servicio, con casos de éxito y error 400/401/403/404/409 y pruebas `pm.test`). Ejecutar en orden con el *Collection Runner* de Postman; verificada contra Supabase: 36/36.
 
 ## 6. Frontend Flutter (pantallas)
 
@@ -145,8 +147,8 @@ Excepción documentada: `flasgger==0.9.7.1` (la 0.9.4 no funciona con Flask 3).
 | B4 | Servicio Auth (login/logout JWT, tabla tokens) | ✅ Hecho |
 | B5 | Servicio Vuelos (búsqueda, detalle, crear admin) | ✅ Hecho |
 | B6 | Servicio Reservas (crear, listar, modificar, cancelar, concurrencia) | ✅ Hecho |
-| B7 | Comprobante XML + Swagger completo + colección Postman | ⏳ Siguiente |
-| F1–F4 | Frontend: auth, vuelos, reservas, comprobante | Pendiente |
+| B7 | Comprobante XML + Swagger completo + colección Postman | ✅ Hecho |
+| F1–F4 | Frontend: auth, vuelos, reservas, comprobante | ⏳ Siguiente |
 | P | Pruebas funcionales y capturas | Pendiente |
 | D | Diagrama SOA + informe PDF | Pendiente |
 

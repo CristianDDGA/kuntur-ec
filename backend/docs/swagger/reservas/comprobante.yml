@@ -1,0 +1,47 @@
+# Contrato del servicio reservas: Factura (comprobante) de la reserva en XML
+summary: "Factura (comprobante) de la reserva en XML"
+description: >
+  Siempre responde en XML (application/xml), sin importar la cabecera Accept.
+  Se arma igual que en la práctica de clase: primero un JSON de la factura y con él
+  el XML (ElementTree, sección por sección). Los montos salen de la reserva guardada:
+  no los envía el cliente y no cambian si después cambia el IVA.
+tags: [Reservas]
+security: [{Bearer: []}]
+produces: [application/xml]
+parameters:
+  - {in: path, name: reserva_id, type: integer, required: true}
+responses:
+  200:
+    description: Factura en XML.
+    examples:
+      application/xml: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <factura>
+          <cabecera>
+            <numero>KEC-00000058</numero>
+            <fecha>2026-11-10</fecha>
+          </cabecera>
+          <cliente>
+            <nombre>Ana Torres</nombre>
+            <correo>ana@correo.com</correo>
+          </cliente>
+          <Detalle>
+            <producto>
+              <Nombre>Pasaje KT101 Quito - Guayaquil (2026-12-01 07:00)</Nombre>
+              <Cantidad>2</Cantidad>
+              <PrecioUnitario>89.00</PrecioUnitario>
+              <Subtotal>178.00</Subtotal>
+            </producto>
+          </Detalle>
+          <Totales>
+            <Subtotal>178.00</Subtotal>
+            <PorcentajeIVA>15.00</PorcentajeIVA>
+            <IVA>26.70</IVA>
+            <Total>204.70</Total>
+          </Totales>
+          <Estado>Confirmada</Estado>
+        </factura>
+  401:
+    description: Sin token o sesión cerrada.
+  404:
+    description: La reserva no existe o pertenece a otro usuario.

@@ -1,10 +1,11 @@
 """Servicio SOA de Reservas. Todas las rutas requieren sesión; el usuario sale del token, no del cuerpo."""
 from flasgger import swag_from
-from flask import Blueprint, current_app
+from flask import Blueprint, Response, current_app
 
 from services.reserva_service import ReservaService
 from utils.autenticacion import sesion_actual, token_requerido
 from utils.documentacion import contrato
+from utils.factura_xml import armar_datos_factura, generar_factura_xml
 from utils.peticiones import cuerpo_json
 from utils.respuestas import respond
 
@@ -60,6 +61,25 @@ def detalle(reserva_id: int):
 def modificar(reserva_id: int):
     detalle = _servicio().modificar(sesion_actual(), reserva_id, cuerpo_json())
     return respond({"mensaje": "Reserva modificada correctamente.", "reserva": detalle.to_dict()}, root="reserva")
+
+
+# ===================================
+# GET - Factura (comprobante) en XML
+# ===================================
+
+@reservas_bp.route("/<int:reserva_id>/comprobante", methods=["GET"])
+@swag_from(contrato("reservas", "comprobante"))
+@token_requerido
+def comprobante(reserva_id: int):
+    sesion = sesion_actual()
+    detalle = _servicio().obtener(sesion, reserva_id)
+    datos_factura = armar_datos_factura(detalle, sesion.usuario)  # 1. JSON de la factura
+    xml = generar_factura_xml(datos_factura)                      # 2. XML a partir del JSON
+    return Response(
+        xml,
+        mimetype="application/xml",  # siempre XML: es el comprobante que pide el sistema
+        headers={"Content-Disposition": f'inline; filename="factura-{reserva_id}.xml"'},
+    )
 
 
 # =============================
