@@ -32,6 +32,7 @@ utils/formatos.py (V)  representa la respuesta en JSON o XML según la cabecera 
 | `utils/manejador_errores.py` | Traduce excepciones a `{"error","mensaje"}` + código HTTP | — |
 | `utils/documentacion.py` | Swagger en `/api/docs/` | — |
 | `utils/seguridad.py` | `CifradorContrasenas` (bcrypt), `EmisorTokens` (JWT) y `huella_token` | — |
+| `services/vuelo_service.py` | Búsqueda con filtros, detalle y creación de vuelos | Conocer Flask |
 | `utils/peticiones.py` | `cuerpo_json()`: lee el JSON de la petición o responde 400 | — |
 | `utils/autenticacion.py` | Decoradores `@token_requerido`, `@rol_requerido(Rol.ADMIN)` y `sesion_actual()` | Repetir la validación en cada ruta |
 
