@@ -1,0 +1,1649 @@
+{
+  "info": {
+    "name": "Kuntur EC · API de Reservas de Vuelos (SOA)",
+    "description": "Pruebas funcionales por servicio (éxito y errores). Ejecutar en orden con el Collection Runner: cada petición guarda las variables que usa la siguiente (token, ids, versión).\n\nRequisitos: backend corriendo en {{base_url}} con la base de Supabase cargada (python database.py).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000/api"
+    },
+    {
+      "key": "admin_correo",
+      "value": "admin@kuntur.ec",
+      "description": "Administrador de desarrollo (database/seed.sql)"
+    },
+    {
+      "key": "admin_password",
+      "value": "KunturAdmin2026",
+      "description": "Contraseña de desarrollo (database/seed.sql)"
+    },
+    {
+      "key": "cliente_correo",
+      "value": ""
+    },
+    {
+      "key": "cliente_password",
+      "value": "Clave2026"
+    },
+    {
+      "key": "token_cliente",
+      "value": ""
+    },
+    {
+      "key": "token_admin",
+      "value": ""
+    },
+    {
+      "key": "vuelo_id",
+      "value": ""
+    },
+    {
+      "key": "vuelo_codigo",
+      "value": ""
+    },
+    {
+      "key": "reserva_id",
+      "value": ""
+    },
+    {
+      "key": "reserva_version",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Sistema",
+      "description": "Estado del servicio.",
+      "item": [
+        {
+          "name": "Health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Base de datos conectada\", () => { const json = pm.response.json(); pm.expect(json.base_datos).to.eql(\"conectada\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Usuarios",
+      "description": "Servicio de Usuarios: registro.",
+      "item": [
+        {
+          "name": "Registro correcto (201)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"cliente_correo\", `cliente.${Date.now()}@kuntur.test`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Rol cliente y sin contraseña\", () => { const json = pm.response.json(); pm.expect(json.usuario.rol).to.eql(\"cliente\"); pm.expect(json.usuario).to.not.have.property(\"password_hash\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios/registro",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios",
+                "registro"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Cliente Postman\",\n  \"correo\": \"{{cliente_correo}}\",\n  \"password\": \"{{cliente_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Correo repetido (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Error uniforme 'conflicto'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"conflicto\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios/registro",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios",
+                "registro"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Otra\",\n  \"correo\": \"{{cliente_correo}}\",\n  \"password\": \"{{cliente_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Contraseña débil (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error uniforme 'datos_invalidos'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"datos_invalidos\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios/registro",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios",
+                "registro"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Ana\",\n  \"correo\": \"debil@kuntur.test\",\n  \"password\": \"123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Falta un campo (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error uniforme 'datos_invalidos'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"datos_invalidos\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios/registro",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios",
+                "registro"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"x@kuntur.test\",\n  \"password\": \"Clave2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Cuerpo que no es JSON (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error uniforme 'datos_invalidos'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"datos_invalidos\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios/registro",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios",
+                "registro"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "[1, 2, 3]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Autenticación",
+      "description": "Servicio de Autenticación: login y perfil (el logout está al final).",
+      "item": [
+        {
+          "name": "Login con contraseña incorrecta (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Error uniforme 'no_autenticado'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"no_autenticado\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{cliente_correo}}\",\n  \"password\": \"Incorrecta1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Login cliente (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Devuelve token Bearer\", () => { const json = pm.response.json(); pm.expect(json.tipo).to.eql(\"Bearer\"); pm.collectionVariables.set(\"token_cliente\", json.token); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{cliente_correo}}\",\n  \"password\": \"{{cliente_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Login admin (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Rol admin\", () => { const json = pm.response.json(); pm.expect(json.usuario.rol).to.eql(\"admin\"); pm.collectionVariables.set(\"token_admin\", json.token); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{admin_correo}}\",\n  \"password\": \"{{admin_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Perfil sin token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Error uniforme 'no_autenticado'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"no_autenticado\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/perfil",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "perfil"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Perfil con token (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Es el cliente\", () => { const json = pm.response.json(); pm.expect(json.usuario.correo).to.eql(pm.collectionVariables.get(\"cliente_correo\")); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/perfil",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "perfil"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Vuelos",
+      "description": "Servicio de Vuelos: búsqueda pública y alta solo para administradores.",
+      "item": [
+        {
+          "name": "Buscar todos (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Lista con total\", () => { const json = pm.response.json(); pm.expect(json.vuelos).to.be.an(\"array\"); pm.expect(json.total).to.eql(json.vuelos.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/vuelos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vuelos"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Buscar Quito → Guayaquil (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Solo esa ruta\", () => { const json = pm.response.json(); json.vuelos.forEach(v => { pm.expect(v.origen).to.eql(\"Quito\"); pm.expect(v.destino).to.eql(\"Guayaquil\"); }); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/vuelos?origen=quito&destino=Guayaquil",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vuelos"
+              ],
+              "query": [
+                {
+                  "key": "origen",
+                  "value": "quito"
+                },
+                {
+                  "key": "destino",
+                  "value": "Guayaquil"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Fecha con formato inválido (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error uniforme 'datos_invalidos'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"datos_invalidos\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/vuelos?fecha=01/12/2026",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vuelos"
+              ],
+              "query": [
+                {
+                  "key": "fecha",
+                  "value": "01/12/2026"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Detalle de vuelo (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Precio con 2 decimales\", () => { const json = pm.response.json(); pm.expect(json.precio).to.match(/^\\d+\\.\\d{2}$/); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/vuelos/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vuelos",
+                "1"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Vuelo inexistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Error uniforme 'no_encontrado'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"no_encontrado\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/vuelos/999999",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vuelos",
+                "999999"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Crear vuelo sin token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Error uniforme 'no_autenticado'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"no_autenticado\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/vuelos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vuelos"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"PM000\",\n  \"origen\": \"Quito\",\n  \"destino\": \"Loja\",\n  \"fecha\": \"2026-12-30\",\n  \"hora_salida\": \"08:00\",\n  \"hora_llegada\": \"09:00\",\n  \"precio\": 99.9,\n  \"capacidad\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Crear vuelo como cliente (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Error uniforme 'sin_permiso'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"sin_permiso\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/vuelos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vuelos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"PM000\",\n  \"origen\": \"Quito\",\n  \"destino\": \"Loja\",\n  \"fecha\": \"2026-12-30\",\n  \"hora_salida\": \"08:00\",\n  \"hora_llegada\": \"09:00\",\n  \"precio\": 99.9,\n  \"capacidad\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Crear vuelo como admin (201)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"vuelo_codigo\", \"PM\" + String(Date.now()).slice(-6));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Todos los asientos libres\", () => { const json = pm.response.json(); pm.expect(json.vuelo.asientos_disponibles).to.eql(json.vuelo.capacidad); pm.collectionVariables.set(\"vuelo_id\", json.vuelo.id); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/vuelos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vuelos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"{{vuelo_codigo}}\",\n  \"origen\": \"Quito\",\n  \"destino\": \"Loja\",\n  \"fecha\": \"2026-12-30\",\n  \"hora_salida\": \"08:00\",\n  \"hora_llegada\": \"09:00\",\n  \"precio\": 99.9,\n  \"capacidad\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Crea un vuelo de 2 asientos para probar las reservas y la falta de asientos."
+          }
+        },
+        {
+          "name": "Código de vuelo repetido (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Error uniforme 'conflicto'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"conflicto\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/vuelos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vuelos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"{{vuelo_codigo}}\",\n  \"origen\": \"Quito\",\n  \"destino\": \"Loja\",\n  \"fecha\": \"2026-12-30\",\n  \"hora_salida\": \"08:00\",\n  \"hora_llegada\": \"09:00\",\n  \"precio\": 99.9,\n  \"capacidad\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Reservas",
+      "description": "Servicio de Reservas: flujo completo, control de concurrencia por versión y comprobante XML.",
+      "item": [
+        {
+          "name": "Crear reserva (201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"IVA aplicado y total = subtotal + IVA\", () => { const json = pm.response.json(); const r = json.reserva; pm.expect(Number(r.total)).to.be.closeTo(Number(r.subtotal) + Number(r.iva_valor), 0.001); pm.expect(r.version).to.eql(1); pm.collectionVariables.set(\"reserva_id\", r.id); pm.collectionVariables.set(\"reserva_version\", r.version); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reservas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vuelo_id\": {{vuelo_id}},\n  \"cantidad\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Más asientos de los disponibles (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Error uniforme 'conflicto'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"conflicto\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reservas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vuelo_id\": {{vuelo_id}},\n  \"cantidad\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "El vuelo tiene 2 asientos y ya se reservó 1."
+          }
+        },
+        {
+          "name": "Cantidad fuera de rango (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error uniforme 'datos_invalidos'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"datos_invalidos\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reservas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vuelo_id\": {{vuelo_id}},\n  \"cantidad\": 11\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Reservar sin token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Error uniforme 'no_autenticado'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"no_autenticado\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reservas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vuelo_id\": 1,\n  \"cantidad\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Mis reservas (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Incluye la reserva creada\", () => { const json = pm.response.json(); pm.expect(json.reservas.map(r => r.id)).to.include(Number(pm.collectionVariables.get(\"reserva_id\"))); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/reservas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Detalle de reserva (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Trae el resumen del vuelo\", () => { const json = pm.response.json(); pm.expect(json.vuelo.codigo).to.eql(pm.collectionVariables.get(\"vuelo_codigo\")); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/reservas/{{reserva_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reservas",
+                "{{reserva_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reserva ajena (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Error uniforme 'no_encontrado'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"no_encontrado\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/reservas/{{reserva_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reservas",
+                "{{reserva_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "El admin no es dueño de la reserva: no se revela que existe."
+          }
+        },
+        {
+          "name": "Factura XML (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Es XML\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/xml\"));",
+                  "pm.test(\"Estructura de factura: cabecera, cliente, Detalle, Totales, Estado\", () => { const f = xml2Json(pm.response.text()).factura; pm.expect(f.cabecera.numero).to.match(/^KEC-\\d{8}$/); pm.expect(f.Detalle.producto.Cantidad).to.eql(\"1\"); pm.expect(f.Totales.Total).to.match(/^\\d+\\.\\d{2}$/); pm.expect(f.Estado).to.eql(\"Confirmada\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/reservas/{{reserva_id}}/comprobante",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reservas",
+                "{{reserva_id}}",
+                "comprobante"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Modificar con la versión correcta (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"La versión sube a 2\", () => { const json = pm.response.json(); pm.expect(json.reserva.cantidad_asientos).to.eql(2); pm.expect(json.reserva.version).to.eql(2); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reservas/{{reserva_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reservas",
+                "{{reserva_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cantidad\": 2,\n  \"version\": {{reserva_version}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Modificar con versión vieja (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Error uniforme 'conflicto'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"conflicto\"); pm.expect(json.mensaje).to.be.a(\"string\"); });",
+                  "pm.test(\"Ya actualizaron este registro + version_actual\", () => { const json = pm.response.json(); pm.expect(json.mensaje).to.include(\"Ya actualizaron este registro\"); pm.expect(json.version_actual).to.eql(2); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reservas/{{reserva_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reservas",
+                "{{reserva_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cantidad\": 1,\n  \"version\": {{reserva_version}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Se reenvía la versión 1 que se leyó antes: otra petición ya la cambió."
+          }
+        },
+        {
+          "name": "Cancelar reserva (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Queda cancelada\", () => { const json = pm.response.json(); pm.expect(json.reserva.estado).to.eql(\"cancelada\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/reservas/{{reserva_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reservas",
+                "{{reserva_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cancelar otra vez (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Error uniforme 'conflicto'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"conflicto\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/reservas/{{reserva_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reservas",
+                "{{reserva_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Asientos devueltos al vuelo (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Vuelve a tener 2 asientos\", () => { const json = pm.response.json(); pm.expect(json.asientos_disponibles).to.eql(2); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/vuelos/{{vuelo_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vuelos",
+                "{{vuelo_id}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Cierre de sesión",
+      "description": "Logout: el token queda revocado.",
+      "item": [
+        {
+          "name": "Logout (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Perfil con token revocado (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Error uniforme 'no_autenticado'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"no_autenticado\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/perfil",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "perfil"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Logout admin (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

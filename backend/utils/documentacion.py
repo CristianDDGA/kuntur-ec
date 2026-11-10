@@ -25,6 +25,14 @@ _TEMPLATE = {
         "description": "Servicios REST: usuarios, autenticación, vuelos y reservas.",
         "version": "1.0.0",
     },
+    # Un tag por servicio SOA (proveedor); el consumidor es el cliente Flutter.
+    "tags": [
+        {"name": "Sistema", "description": "Estado del servicio y de la base de datos."},
+        {"name": "Usuarios", "description": "Servicio de Usuarios: registro de clientes."},
+        {"name": "Autenticación", "description": "Servicio de Autenticación: login/logout con JWT."},
+        {"name": "Vuelos", "description": "Servicio de Vuelos: búsqueda, detalle y alta (admin)."},
+        {"name": "Reservas", "description": "Servicio de Reservas: crear, consultar, modificar, cancelar y comprobante XML."},
+    ],
     "definitions": {
         "Vuelo": {
             "type": "object",
