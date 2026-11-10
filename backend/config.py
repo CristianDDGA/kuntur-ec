@@ -8,7 +8,6 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass
-from decimal import Decimal
 
 from dotenv import load_dotenv
 
@@ -29,7 +28,6 @@ class Settings:
     jwt_secret_key: str
     jwt_expires_minutes: int
     cors_origins: tuple[str, ...]
-    iva_porcentaje: Decimal
 
     @property
     def is_testing(self) -> bool:
@@ -60,5 +58,4 @@ class Settings:
             jwt_secret_key=env.get("JWT_SECRET_KEY") or _CLAVE_JWT_LOCAL,
             jwt_expires_minutes=int(env.get("JWT_EXPIRES_MINUTES", "60")),
             cors_origins=tuple(o.strip() for o in env.get("CORS_ORIGINS", "*").split(",")),
-            iva_porcentaje=Decimal(env.get("IVA_PORCENTAJE", "15")),
         )
