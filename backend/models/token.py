@@ -1,4 +1,7 @@
-"""Tabla `tokens`: JWT emitidos, para poder revocarlos al cerrar sesión."""
+"""Tabla `tokens`: sesiones emitidas, para poder revocarlas al cerrar sesión.
+
+El campo `token` guarda la huella SHA-256 del JWT (utils/seguridad.huella_token),
+no el JWT: quien lea la BD no puede reutilizar las sesiones."""
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum

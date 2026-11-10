@@ -53,6 +53,7 @@
 | Usuarios | POST | `/api/usuarios/registro` | – | Crea usuario (nombre, correo, password) con rol `cliente` → 201 · 400 · 409 |
 | Auth | POST | `/api/auth/login` | – | Devuelve JWT |
 | Auth | POST | `/api/auth/logout` | JWT | Revoca token (tabla `tokens`) |
+| Auth | GET | `/api/auth/perfil` | JWT | Datos del usuario autenticado (lo usa el frontend) |
 | Vuelos | GET | `/api/vuelos?origen=&destino=&fecha=` | – | Lista/filtra vuelos |
 | Vuelos | GET | `/api/vuelos/{id}` | – | Detalle de vuelo |
 | Vuelos | POST | `/api/vuelos` | JWT admin | Crea vuelo (extra) |
@@ -67,6 +68,8 @@ Ejemplo (de la infografía): `POST /api/reservas {"usuario_id":1,"vuelo_id":10,"
 > Mejora: el `usuario_id` se toma del JWT, no del cuerpo (evita reservar a nombre de otro).
 
 Reglas del registro: correo único sin distinguir mayúsculas, contraseña de 8+ caracteres con letras y números (cifrada con bcrypt, costo 12), el rol nunca se toma de la petición.
+
+Reglas de la sesión: JWT HS256 firmado con `JWT_SECRET_KEY`, válido `JWT_EXPIRES_MINUTES` minutos; en la tabla `tokens` se guarda su huella SHA-256 (no el JWT); cada petición protegida verifica firma, expiración y que el token siga `activo`; el login fallido responde siempre "Correo o contraseña incorrectos" (no revela qué correos existen).
 
 Formato de error uniforme: `{"error": "codigo", "mensaje": "texto"}` con 400 / 401 / 403 / 404 / 409 (sin asientos).
 
@@ -127,8 +130,8 @@ Excepción documentada: `flasgger==0.9.7.1` (la 0.9.4 no funciona con Flask 3).
 | B1 | Modelos: Usuario, Vuelo, Reserva, Token, TarifaIva | ✅ Hecho |
 | B2 | Base de datos Supabase: `schema.sql`, `seed.sql`, conexión | ✅ Hecho |
 | B3 | Servicio Usuarios (registro, bcrypt) | ✅ Hecho |
-| B4 | Servicio Auth (login/logout JWT, tabla tokens) | ⏳ Siguiente |
-| B5 | Servicio Vuelos (búsqueda, detalle, crear admin) | Pendiente |
+| B4 | Servicio Auth (login/logout JWT, tabla tokens) | ✅ Hecho |
+| B5 | Servicio Vuelos (búsqueda, detalle, crear admin) | ⏳ Siguiente |
 | B6 | Servicio Reservas (crear, listar, modificar, cancelar, concurrencia) | Pendiente |
 | B7 | Comprobante XML + Swagger completo + colección Postman | Pendiente |
 | F1–F4 | Frontend: auth, vuelos, reservas, comprobante | Pendiente |

@@ -8,6 +8,7 @@ class CursorFalso:
         self._filas = list(filas)
         self._error = error
         self.consultas: list[tuple[str, tuple]] = []
+        self.rowcount = 0
 
     def execute(self, sql: str, params: tuple = ()) -> None:
         self.consultas.append((sql, params))

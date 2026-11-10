@@ -31,9 +31,9 @@ utils/formatos.py (V)  representa la respuesta en JSON o XML según la cabecera 
 | `utils/excepciones.py` | Excepciones de negocio (`NotFoundError`, `ConflictError`, …) | — |
 | `utils/manejador_errores.py` | Traduce excepciones a `{"error","mensaje"}` + código HTTP | — |
 | `utils/documentacion.py` | Swagger en `/api/docs/` | — |
-| `utils/seguridad.py` | `CifradorContrasenas` (bcrypt); JWT en la sección B4 | — |
+| `utils/seguridad.py` | `CifradorContrasenas` (bcrypt), `EmisorTokens` (JWT) y `huella_token` | — |
 | `utils/peticiones.py` | `cuerpo_json()`: lee el JSON de la petición o responde 400 | — |
-| `utils/autenticacion.py` *(sección B4)* | Decoradores `@token_requerido`, `@rol_requerido` | — |
+| `utils/autenticacion.py` | Decoradores `@token_requerido`, `@rol_requerido(Rol.ADMIN)` y `sesion_actual()` | Repetir la validación en cada ruta |
 
 ## Buenas prácticas aplicadas
 
