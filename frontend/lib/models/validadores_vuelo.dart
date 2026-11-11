@@ -29,7 +29,7 @@ class ValidadoresVuelo {
 
   // Largo = columna de la base (vuelos.origen/destino 80). El código lo genera el servidor.
   static const int ciudadMax = 80;
-  static const int capacidadMax = 900;
+  static const int capacidadMax = 200;
   static const int precioMaxCentavos = 10000 * 100;
   static const int diasMaxAdelante = 730;
 

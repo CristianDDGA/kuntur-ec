@@ -7,6 +7,7 @@ Cada valor es exactamente el tamaño de su columna en `database/schema.sql`:
     vuelos.codigo     VARCHAR(10)    -> CODIGO_VUELO
     vuelos.origen     VARCHAR(80)    -> CIUDAD
     vuelos.destino    VARCHAR(80)    -> CIUDAD
+    reserva_asientos.asiento VARCHAR(4) -> ASIENTO
 
 Si se cambia el tamaño de una columna hay que cambiarlo aquí, y viceversa. La prueba
 `tests/unit/test_limites_bd.py` compara estos valores con `schema.sql` y con la base real
@@ -18,11 +19,12 @@ NOMBRE_PERSONA = 100
 CORREO = 150
 CODIGO_VUELO = 10
 CIUDAD = 80
+ASIENTO = 4  # "1A" ... "50D"
 
 # --- reglas de negocio (siempre dentro de lo que admite la columna) ---
 CONTRASENA = 128             # caracteres; bcrypt además solo admite 72 bytes
 PRECIO_MAXIMO = 10_000       # NUMERIC(10,2) admitiría hasta 99 999 999,99
-CAPACIDAD_MAXIMA = 900       # vuelos.capacidad INTEGER
+CAPACIDAD_MAXIMA = 200       # vuelos.capacidad (CHECK 1..200): el mapa de asientos debe ser manejable
 ASIENTOS_POR_RESERVA = 10    # reservas.cantidad_asientos INTEGER
 
 # --- numéricos de la base ---

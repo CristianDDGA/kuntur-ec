@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 import '../services/http_rest_client.dart';
 import '../services/iva_service.dart';
+import '../services/reserva_service.dart';
 import '../services/rest_client.dart';
 import '../services/sistema_service.dart';
 import '../services/token_storage.dart';
@@ -54,4 +55,8 @@ final vueloServiceProvider = Provider<VueloService>(
 
 final ivaServiceProvider = Provider<IvaService>(
   (ref) => IvaService(ref.watch(restClientProvider)),
+);
+
+final reservaServiceProvider = Provider<ReservaService>(
+  (ref) => ReservaService(ref.watch(restClientProvider)),
 );

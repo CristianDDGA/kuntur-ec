@@ -31,6 +31,12 @@ class VuelosPage extends ConsumerWidget {
     return Scaffold(
       appBar: BarraKuntur(
         acciones: [
+          if (!usuario.esAdmin)
+            IconButton(
+              tooltip: 'Mis reservas',
+              icon: const Icon(Icons.confirmation_number_outlined),
+              onPressed: () => context.push(AppRoutes.reservas),
+            ),
           if (usuario.esAdmin)
             IconButton(
               tooltip: 'Panel de administración',

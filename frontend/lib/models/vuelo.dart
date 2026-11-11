@@ -96,12 +96,7 @@ class Vuelo {
     return Duration(hours: int.parse(partes[1]!), minutes: int.parse(partes[2]!));
   }
 
-  /// "75.50" -> 7550.
-  static int? _centavos(Object? valor) {
-    final partes = RegExp(r'^(\d+)(?:\.(\d{1,2}))?$').firstMatch(valor?.toString() ?? '');
-    if (partes == null) return null;
-    return int.parse(partes[1]!) * 100 + int.parse((partes[2] ?? '').padRight(2, '0'));
-  }
+  static int? _centavos(Object? valor) => Formatos.centavosDe(valor);
 }
 
 /// Filtros de la búsqueda y página pedida. Todo es opcional.
@@ -240,6 +235,20 @@ class Formatos {
     final minutos = d.inMinutes % 60;
     if (horas == 0) return '$minutos min';
     return '$horas h ${_dos(minutos)} min';
+  }
+
+  /// "75.50" -> 7550 (null si no es un monto válido). Los montos nunca pasan por `double`.
+  static int? centavosDe(Object? valor) {
+    final partes = RegExp(r'^(\d+)(?:\.(\d{1,2}))?$').firstMatch(valor?.toString() ?? '');
+    if (partes == null) return null;
+    return int.parse(partes[1]!) * 100 + int.parse((partes[2] ?? '').padRight(2, '0'));
+  }
+
+  /// "15.00" -> "15 %", "12.50" -> "12.5 %".
+  static String porcentaje(String texto) {
+    final partes = texto.split('.');
+    final decimales = partes.length > 1 ? partes[1].replaceFirst(RegExp(r'0+$'), '') : '';
+    return decimales.isEmpty ? '${partes[0]} %' : '${partes[0]}.$decimales %';
   }
 
   /// 7550 -> "\$75.50".

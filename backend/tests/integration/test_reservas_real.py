@@ -143,8 +143,9 @@ def test_un_usuario_no_ve_ni_toca_reservas_ajenas(escenario):
     servicio, vuelo_id, (ana, beto) = escenario
     reserva_id = servicio.crear(ana, {"vuelo_id": vuelo_id, "cantidad": 1}).reserva.id
 
-    assert [d.reserva.id for d in servicio.listar(ana)] == [reserva_id]
-    assert servicio.listar(beto) == []
+    assert [d.reserva.id for d in servicio.listar(ana).reservas] == [reserva_id]
+    assert servicio.listar(ana).total == 1
+    assert servicio.listar(beto).reservas == []
     for accion in (
         lambda: servicio.obtener(beto, reserva_id),
         lambda: servicio.modificar(beto, reserva_id, {"cantidad": 2, "version": 1}),

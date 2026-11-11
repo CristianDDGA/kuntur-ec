@@ -201,3 +201,64 @@ const respuestaIva = {
   'vigente': tarifaVigente,
   'tarifas': [tarifaVigente, tarifaAnterior],
 };
+
+/// Una reserva tal como la envía la API. Por defecto: 2 asientos del vuelo KT101 (Quito → Guayaquil, 1-dic-2030).
+Map<String, Object?> reservaJson({
+  int id = 58,
+  int cantidad = 2,
+  String estado = 'confirmada',
+  int version = 1,
+  String fecha = '2030-12-01',
+  String horaSalida = '07:00:00',
+  String subtotal = '178.00',
+  String ivaPorcentaje = '15.00',
+  String ivaValor = '26.70',
+  String total = '204.70',
+  List<String>? asientos,
+}) =>
+    {
+      'id': id,
+      'usuario_id': 7,
+      'vuelo_id': 3,
+      'cantidad_asientos': cantidad,
+      'subtotal': subtotal,
+      'iva_porcentaje': ivaPorcentaje,
+      'iva_valor': ivaValor,
+      'total': total,
+      'estado': estado,
+      'fecha_reserva': '2026-11-11T15:00:00+00:00',
+      'version': version,
+      'asientos': asientos ?? (cantidad == 1 ? ['1A'] : [for (var i = 0; i < cantidad; i++) '${i ~/ 4 + 1}${'ABCD'[i % 4]}']),
+      'vuelo': {
+        'codigo': 'KT101',
+        'origen': 'Quito',
+        'destino': 'Guayaquil',
+        'fecha': fecha,
+        'hora_salida': horaSalida,
+        'hora_llegada': '07:50:00',
+      },
+    };
+
+/// Respuesta de `GET /reservas` con [total] reservas en total, mostrando la página [pagina].
+Map<String, Object?> paginaDeReservas({required int total, required int pagina, int porPagina = 10}) {
+  final paginas = total == 0 ? 1 : (total + porPagina - 1) ~/ porPagina;
+  final desde = (pagina - 1) * porPagina;
+  final cuantos = (total - desde).clamp(0, porPagina);
+  return {
+    'total': total,
+    'pagina': pagina,
+    'por_pagina': porPagina,
+    'total_paginas': paginas,
+    'reservas': [for (var i = 0; i < cuantos; i++) reservaJson(id: desde + i + 1)],
+  };
+}
+
+const sinReservas = {'total': 0, 'pagina': 1, 'por_pagina': 10, 'total_paginas': 1, 'reservas': <Object>[]};
+
+/// Mapa de asientos de un vuelo (4 columnas A-D) con los [ocupados] indicados.
+Map<String, Object?> mapaJson({int vueloId = 3, int capacidad = 12, List<String> ocupados = const []}) => {
+      'vuelo_id': vueloId,
+      'capacidad': capacidad,
+      'columnas': ['A', 'B', 'C', 'D'],
+      'ocupados': ocupados,
+    };

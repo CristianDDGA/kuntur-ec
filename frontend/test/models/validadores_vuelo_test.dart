@@ -50,11 +50,11 @@ void main() {
   });
 
   group('capacidad', () {
-    test('1 a 900, entero', () {
-      for (final ok in ['1', '80', '900']) {
+    test('1 a 200, entero', () {
+      for (final ok in ['1', '80', '200']) {
         expect(ValidadoresVuelo.capacidad(ok), isNull, reason: ok);
       }
-      for (final mal in ['', '0', '901', '-3', '8.5', 'ocho']) {
+      for (final mal in ['', '0', '201', '900', '-3', '8.5', 'ocho']) {
         expect(ValidadoresVuelo.capacidad(mal), isNotNull, reason: mal);
       }
     });

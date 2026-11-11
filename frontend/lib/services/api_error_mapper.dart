@@ -8,7 +8,7 @@ class ApiErrorMapper {
   const ApiErrorMapper();
 
   Failure fromResponse(int statusCode, String body) {
-    final (codigo, mensaje) = _parse(body);
+    final (codigo, mensaje, detalles) = _parse(body);
     if (statusCode == 401) {
       return mensaje == null ? const UnauthorizedFailure() : UnauthorizedFailure(mensaje);
     }
@@ -16,18 +16,22 @@ class ApiErrorMapper {
       mensaje ?? 'Error inesperado del servidor ($statusCode).',
       statusCode: statusCode,
       codigo: codigo,
+      detalles: detalles,
     );
   }
 
-  (String?, String?) _parse(String body) {
+  (String?, String?, Map<String, dynamic>) _parse(String body) {
     try {
       final data = jsonDecode(body);
       if (data is Map<String, dynamic>) {
-        return (data['error'] as String?, data['mensaje'] as String?);
+        final error = data['error'];
+        final mensaje = data['mensaje'];
+        final extra = Map<String, dynamic>.of(data)..remove('error')..remove('mensaje');
+        return (error is String ? error : null, mensaje is String ? mensaje : null, extra);
       }
     } on FormatException {
       // Cuerpo vacío o no JSON (p. ej. error de un proxy): se usa el mensaje genérico.
     }
-    return (null, null);
+    return (null, null, const {});
   }
 }

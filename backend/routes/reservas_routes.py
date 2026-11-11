@@ -1,15 +1,19 @@
 """Servicio SOA de Reservas. Todas las rutas requieren sesión; el usuario sale del token, no del cuerpo."""
 from flasgger import swag_from
-from flask import Blueprint, Response, current_app
+from flask import Blueprint, Response, current_app, request
 
 from services.reserva_service import ReservaService
-from utils.autenticacion import sesion_actual, token_requerido
+from models import Rol
+from utils.autenticacion import rol_requerido, sesion_actual
 from utils.documentacion import contrato
 from utils.factura_xml import armar_datos_factura, generar_factura_xml
 from utils.peticiones import cuerpo_json
 from utils.respuestas import respond
 
 reservas_bp = Blueprint("reservas", __name__)
+
+# El administrador gestiona (vuelos, IVA) pero no compra: sus peticiones a reservas responden 403.
+solo_clientes = rol_requerido(Rol.CLIENTE)
 
 
 def _servicio() -> ReservaService:
@@ -22,7 +26,7 @@ def _servicio() -> ReservaService:
 
 @reservas_bp.route("", methods=["POST"])
 @swag_from(contrato("reservas", "crear"))
-@token_requerido
+@solo_clientes
 def crear():
     detalle = _servicio().crear(sesion_actual(), cuerpo_json())
     return respond({"mensaje": "Reserva creada correctamente.", "reserva": detalle.to_dict()}, status=201, root="reserva")
@@ -34,10 +38,10 @@ def crear():
 
 @reservas_bp.route("", methods=["GET"])
 @swag_from(contrato("reservas", "listar"))
-@token_requerido
+@solo_clientes
 def listar():
-    reservas = _servicio().listar(sesion_actual())
-    return respond({"total": len(reservas), "reservas": [r.to_dict() for r in reservas]}, root="reservas")
+    pagina = _servicio().listar(sesion_actual(), request.args.get("pagina"), request.args.get("por_pagina"))
+    return respond(pagina.to_dict(), root="reservas")
 
 
 # =============================
@@ -46,7 +50,7 @@ def listar():
 
 @reservas_bp.route("/<id:reserva_id>", methods=["GET"])
 @swag_from(contrato("reservas", "detalle"))
-@token_requerido
+@solo_clientes
 def detalle(reserva_id: int):
     return respond(_servicio().obtener(sesion_actual(), reserva_id).to_dict(), root="reserva")
 
@@ -57,7 +61,7 @@ def detalle(reserva_id: int):
 
 @reservas_bp.route("/<id:reserva_id>", methods=["PUT"])
 @swag_from(contrato("reservas", "modificar"))
-@token_requerido
+@solo_clientes
 def modificar(reserva_id: int):
     detalle = _servicio().modificar(sesion_actual(), reserva_id, cuerpo_json())
     return respond({"mensaje": "Reserva modificada correctamente.", "reserva": detalle.to_dict()}, root="reserva")
@@ -69,7 +73,7 @@ def modificar(reserva_id: int):
 
 @reservas_bp.route("/<id:reserva_id>/comprobante", methods=["GET"])
 @swag_from(contrato("reservas", "comprobante"))
-@token_requerido
+@solo_clientes
 def comprobante(reserva_id: int):
     sesion = sesion_actual()
     detalle = _servicio().obtener(sesion, reserva_id)
@@ -88,7 +92,7 @@ def comprobante(reserva_id: int):
 
 @reservas_bp.route("/<id:reserva_id>", methods=["DELETE"])
 @swag_from(contrato("reservas", "cancelar"))
-@token_requerido
+@solo_clientes
 def cancelar(reserva_id: int):
     detalle = _servicio().cancelar(sesion_actual(), reserva_id)
     return respond({"mensaje": "Reserva cancelada correctamente.", "reserva": detalle.to_dict()}, root="reserva")

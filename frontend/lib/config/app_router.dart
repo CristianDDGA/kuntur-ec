@@ -9,6 +9,9 @@ import '../pages/crear_vuelo_page.dart';
 import '../pages/login_page.dart';
 import '../pages/no_encontrada_page.dart';
 import '../pages/registro_page.dart';
+import '../pages/reserva_detalle_page.dart';
+import '../pages/reservas_page.dart';
+import '../pages/seleccion_asientos_page.dart';
 import '../pages/splash_page.dart';
 import '../pages/vuelo_detalle_page.dart';
 import '../pages/vuelos_page.dart';
@@ -22,6 +25,10 @@ class AppRoutes {
   static const registro = '/registro';
   static const inicio = '/';
   static const estado = '/estado';
+  static const reservas = '/reservas';
+  static String reserva(int id) => '/reservas/$id';
+  static String asientosDelVuelo(int id) => '/vuelos/$id/asientos';
+  static String asientosDeLaReserva(int id) => '/reservas/$id/asientos';
   static const admin = '/admin';
   static const nuevoVuelo = '/admin/vuelos/nuevo';
   static String vuelo(int id) => '/vuelos/$id';
@@ -59,6 +66,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
       // Crear vuelos es cosa del administrador (el servidor también lo exige con 403).
       if (ruta.startsWith(AppRoutes.admin) && !sesion.value!.esAdmin) return AppRoutes.inicio;
+      // El administrador no reserva: sus pantallas de reservas no existen (el servidor también responde 403).
+      if (ruta.startsWith(AppRoutes.reservas) && sesion.value!.esAdmin) return AppRoutes.inicio;
       return null;
     },
     routes: [
@@ -66,6 +75,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: AppRoutes.login, builder: (_, _) => const LoginPage()),
       GoRoute(path: AppRoutes.registro, builder: (_, _) => const RegistroPage()),
       GoRoute(path: AppRoutes.inicio, builder: (_, _) => const VuelosPage()),
+      GoRoute(path: AppRoutes.reservas, builder: (_, _) => const ReservasPage()),
+      GoRoute(
+        path: '/reservas/:id',
+        redirect: (_, state) => RegExp(r'^[1-9]\d{0,17}$').hasMatch(state.pathParameters['id'] ?? '') ? null : AppRoutes.reservas,
+        builder: (_, state) => ReservaDetallePage(reservaId: int.parse(state.pathParameters['id']!)),
+        routes: [
+          GoRoute(
+            path: 'asientos',
+            builder: (_, state) => SeleccionAsientosPage(reservaId: int.parse(state.pathParameters['id']!)),
+          ),
+        ],
+      ),
       GoRoute(path: AppRoutes.admin, builder: (_, _) => const AdminPage()),
       GoRoute(path: AppRoutes.nuevoVuelo, builder: (_, _) => const CrearVueloPage()),
       GoRoute(
@@ -74,6 +95,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         // lista en vez de pedirle al servidor algo imposible. 18 dígitos = el límite de la base (BIGINT).
         redirect: (_, state) => RegExp(r'^[1-9]\d{0,17}$').hasMatch(state.pathParameters['id'] ?? '') ? null : AppRoutes.inicio,
         builder: (_, state) => VueloDetallePage(vueloId: int.parse(state.pathParameters['id']!)),
+        routes: [
+          // Elegir asientos es reservar: solo clientes (el administrador vuelve al detalle del vuelo).
+          GoRoute(
+            path: 'asientos',
+            redirect: (_, state) => (ref.read(sesionControllerProvider).value?.esAdmin ?? false)
+                ? AppRoutes.vuelo(int.parse(state.pathParameters['id']!))
+                : null,
+            builder: (_, state) => SeleccionAsientosPage(vueloId: int.parse(state.pathParameters['id']!)),
+          ),
+        ],
       ),
       GoRoute(path: AppRoutes.estado, builder: (_, _) => const EstadoApiPage()),
     ],

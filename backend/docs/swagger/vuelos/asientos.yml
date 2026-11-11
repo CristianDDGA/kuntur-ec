@@ -1,0 +1,25 @@
+# Contrato del servicio vuelos: Mapa de asientos de un vuelo
+summary: "Mapa de asientos de un vuelo"
+description: "Los asientos que existen se deducen de la capacidad (4 columnas A-D: 1A, 1B, 1C, 1D, 2A...). Solo se listan los ocupados."
+tags: [Vuelos]
+produces: [application/json, application/xml]
+parameters:
+  - {in: path, name: vuelo_id, type: integer, required: true, example: 1}
+responses:
+  200:
+    description: Capacidad, columnas y asientos ocupados.
+    schema:
+      type: object
+      properties:
+        vuelo_id: {type: integer, example: 1}
+        capacidad: {type: integer, example: 120}
+        columnas:
+          type: array
+          items: {type: string}
+          example: [A, B, C, D]
+        ocupados:
+          type: array
+          items: {type: string}
+          example: ["2B", "3A"]
+  404:
+    description: El vuelo no existe.

@@ -10,9 +10,18 @@ sealed class Failure implements Exception {
 
 /// La API respondió con un error controlado: {"error": "...", "mensaje": "..."}.
 final class ServerFailure extends Failure {
-  const ServerFailure(super.mensaje, {required this.statusCode, this.codigo});
+  const ServerFailure(super.mensaje, {required this.statusCode, this.codigo, this.detalles = const {}});
   final int statusCode;
   final String? codigo;
+
+  /// Datos extra del error (p. ej. `version_actual`, `asientos_ocupados` en un 409).
+  final Map<String, dynamic> detalles;
+
+  /// Asientos que ya no estaban libres cuando se intentó reservar (409), o lista vacía.
+  List<String> get asientosOcupados {
+    final lista = detalles['asientos_ocupados'];
+    return lista is List ? lista.whereType<String>().toList() : const [];
+  }
 }
 
 /// Token ausente, vencido o revocado (HTTP 401).

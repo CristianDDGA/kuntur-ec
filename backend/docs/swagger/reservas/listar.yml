@@ -3,6 +3,9 @@ summary: "Historial de reservas del usuario"
 tags: [Reservas]
 security: [{Bearer: []}]
 produces: [application/json, application/xml]
+parameters:
+  - {in: query, name: pagina, type: integer, required: false, default: 1}
+  - {in: query, name: por_pagina, type: integer, required: false, default: 10, description: "1 a 50"}
 responses:
   200:
     description: Reservas del usuario, de la más reciente a la más antigua.
@@ -10,6 +13,9 @@ responses:
       type: object
       properties:
         total: {type: integer}
+        pagina: {type: integer}
+        por_pagina: {type: integer}
+        total_paginas: {type: integer}
         reservas:
           type: array
           items: {$ref: "#/definitions/Reserva"}

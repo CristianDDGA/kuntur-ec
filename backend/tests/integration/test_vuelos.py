@@ -20,6 +20,11 @@ class VuelosFalso:
         self.filtros = filtros
         return PaginaVuelos([un_vuelo(), un_vuelo(id=11, codigo="KEC-102")], total=2, pagina=1, por_pagina=10)
 
+    def asientos(self, vuelo_id):
+        if vuelo_id != 10:
+            raise NotFoundError("El vuelo solicitado no existe.")
+        return {"vuelo_id": 10, "capacidad": 120, "columnas": ["A", "B", "C", "D"], "ocupados": ["2B"]}
+
     def obtener(self, vuelo_id):
         if vuelo_id != 10:
             raise NotFoundError("El vuelo solicitado no existe.")
@@ -72,6 +77,18 @@ def test_buscar_es_publico_y_responde_xml(client, vuelos):
     resp = client.get("/api/vuelos", headers={"Accept": "application/xml"})
     assert resp.status_code == 200
     assert "<codigo>KEC-101</codigo>" in resp.get_data(as_text=True)
+
+
+def test_mapa_de_asientos_es_publico(client, vuelos):
+    cuerpo = client.get("/api/vuelos/10/asientos").get_json()
+    assert (cuerpo["capacidad"], cuerpo["columnas"], cuerpo["ocupados"]) == (120, ["A", "B", "C", "D"], ["2B"])
+    assert client.get("/api/vuelos/10/asientos", headers={"Accept": "application/xml"}).status_code == 200
+
+
+def test_mapa_de_un_vuelo_inexistente_o_con_id_absurdo(client, vuelos):
+    assert client.get("/api/vuelos/999/asientos").status_code == 404
+    assert client.get("/api/vuelos/abc/asientos").status_code == 404
+    assert client.get("/api/vuelos/99999999999999999999/asientos").status_code == 404
 
 
 def test_detalle(client, vuelos):
