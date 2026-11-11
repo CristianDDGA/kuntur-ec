@@ -147,6 +147,24 @@ def precio(datos: dict, campo: str = "precio", maximo: Decimal = Decimal(PRECIO_
     return monto
 
 
+def porcentaje(datos: dict, campo: str = "porcentaje") -> Decimal:
+    """Porcentaje de 0 a 100 con hasta 2 decimales (columna NUMERIC(5,2))."""
+    valor = datos.get(campo)
+    if isinstance(valor, bool) or not isinstance(valor, (int, float, str)):
+        raise ValidationError(f"El campo '{campo}' es obligatorio y debe ser numérico.")
+    try:
+        monto = Decimal(str(valor).strip())
+    except InvalidOperation:
+        raise ValidationError(f"El campo '{campo}' debe ser numérico.") from None
+    if not monto.is_finite():
+        raise ValidationError(f"El campo '{campo}' debe ser numérico.")
+    if monto.as_tuple().exponent < -2:  # type: ignore[operator]
+        raise ValidationError(f"El campo '{campo}' admite como máximo 2 decimales.")
+    if not 0 <= monto <= 100:
+        raise ValidationError(f"El campo '{campo}' debe estar entre 0 y 100.")
+    return monto
+
+
 # ---------------------------------------------------------------- fechas y horas
 
 

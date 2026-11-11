@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:flutter/services.dart';
+
 /// Reglas de validación de los formularios.
 ///
 /// Reflejan las del backend (`backend/utils/validaciones.py` y `utils/limites.py`) para que
@@ -37,6 +39,13 @@ class Validadores {
     if (_letraUnicode.allMatches(texto).length < 2) return 'Debe tener al menos 2 letras.';
     return null;
   }
+
+  /// Bloquea al escribir todo lo que no sea parte de un nombre (emojis, números, símbolos) y
+  /// corta en [max] caracteres, el largo de la columna en la base de datos.
+  static List<TextInputFormatter> entradaNombre(int max) => [
+        FilteringTextInputFormatter.allow(RegExp(r"[\p{L}\p{M} .'’-]", unicode: true)),
+        LengthLimitingTextInputFormatter(max),
+      ];
 
   /// Quita espacios sobrantes: "  Ana   Torres " -> "Ana Torres".
   static String normalizarNombre(String? valor) =>

@@ -35,6 +35,7 @@ class _CampoPasswordState extends State<CampoPassword> {
 
   @override
   Widget build(BuildContext context) => TextFormField(
+        autovalidateMode: AutovalidateMode.onUserInteraction,
         controller: widget.controller,
         obscureText: _oculta,
         enabled: widget.enabled,

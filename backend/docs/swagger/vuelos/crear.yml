@@ -10,9 +10,9 @@ parameters:
     required: true
     schema:
       type: object
-      required: [codigo, origen, destino, fecha, hora_salida, hora_llegada, precio, capacidad]
+      required: [origen, destino, fecha, hora_salida, hora_llegada, precio, capacidad]
       properties:
-        codigo: {type: string, example: KT801}
+        codigo: {type: string, example: KT801, description: "Opcional. Si no se envía, el sistema genera el siguiente (KT101, KT102...)."}
         origen: {type: string, example: Quito}
         destino: {type: string, example: Esmeraldas}
         fecha: {type: string, format: date, example: "2026-12-28"}

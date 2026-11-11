@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vuelos_app/pages/inicio_page.dart';
+import 'package:vuelos_app/pages/vuelos_page.dart';
 import 'package:vuelos_app/pages/registro_page.dart';
 import 'package:vuelos_app/services/api_exception.dart';
 
@@ -10,7 +10,7 @@ import '../helpers/fakes.dart';
 const _registroOk = {'mensaje': 'Usuario registrado correctamente.', 'usuario': usuarioAna};
 
 RouteFakeRestClient _api({Object? registro = _registroOk, Object? login = respuestaLogin}) =>
-    RouteFakeRestClient({'POST /usuarios/registro': registro, 'POST /auth/login': login});
+    RouteFakeRestClient({'POST /usuarios/registro': registro, 'POST /auth/login': login, 'GET /vuelos': sinVuelos});
 
 Future<void> _abrirRegistro(WidgetTester tester, RouteFakeRestClient client) async {
   await abrirApp(tester, client: client);
@@ -41,10 +41,22 @@ void main() {
     expect(client.llamadas, isEmpty);
   });
 
+  // Lo que no es parte de un nombre ni siquiera se puede escribir.
   for (final caso in <(String, String, String)>[
-    ('emoji', 'Ana 😀', 'Use solo letras'),
-    ('números', 'Ana123', 'Use solo letras'),
-    ('script', '<script>alert(1)</script>', 'Use solo letras'),
+    ('emoji', 'Ana 😀', 'Ana '),
+    ('números', 'Ana123', 'Ana'),
+    ('script', '<script>alert(1)</script>', 'scriptalertscript'),
+  ]) {
+    testWidgets('nombre con ${caso.$1}: el campo lo bloquea al escribir', (tester) async {
+      await _abrirRegistro(tester, _api());
+
+      await _llenar(tester, nombre: caso.$2);
+
+      expect(tester.widget<TextFormField>(campo('Nombre completo')).controller!.text, caso.$3);
+    });
+  }
+
+  for (final caso in <(String, String, String)>[
     ('una letra', 'A', 'al menos 2 letras'),
   ]) {
     testWidgets('nombre con ${caso.$1}: se rechaza antes de enviar', (tester) async {
@@ -93,10 +105,10 @@ void main() {
     await tocarBoton(tester, 'Crear cuenta');
     await tester.pumpAndSettle();
 
-    expect(client.rutasSolicitadas, ['POST /usuarios/registro', 'POST /auth/login']);
+    expect(client.rutasSolicitadas, ['POST /usuarios/registro', 'POST /auth/login', 'GET /vuelos']);
     expect(client.llamada('POST', '/usuarios/registro').cuerpo,
         {'nombre': 'Ana Torres', 'correo': 'ana@correo.com', 'password': 'Clave2026'}); // nombre normalizado
-    expect(find.byType(InicioPage), findsOneWidget);
+    expect(find.byType(VuelosPage), findsOneWidget);
     expect(await tokens.leer(), 'jwt-de-prueba');
   });
 

@@ -59,18 +59,18 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
       child: AutofillGroup(
         child: Form(
           key: _formulario,
-          autovalidateMode: AutovalidateMode.onUserInteraction,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               TextFormField(
+                autovalidateMode: AutovalidateMode.onUserInteraction,
                 controller: _nombre,
                 enabled: !cargando,
                 textCapitalization: TextCapitalization.words,
                 textInputAction: TextInputAction.next,
                 autofillHints: const [AutofillHints.name],
                 validator: Validadores.nombre,
-                inputFormatters: [LengthLimitingTextInputFormatter(Validadores.nombreMax)],
+                inputFormatters: Validadores.entradaNombre(Validadores.nombreMax),
                 decoration: const InputDecoration(
                   labelText: 'Nombre completo',
                   prefixIcon: Icon(Icons.person_outline),
@@ -78,6 +78,7 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
               ),
               const SizedBox(height: 16),
               TextFormField(
+                autovalidateMode: AutovalidateMode.onUserInteraction,
                 controller: _correo,
                 enabled: !cargando,
                 keyboardType: TextInputType.emailAddress,

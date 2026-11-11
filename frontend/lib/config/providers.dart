@@ -4,9 +4,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/auth_service.dart';
 import '../services/http_rest_client.dart';
+import '../services/iva_service.dart';
 import '../services/rest_client.dart';
 import '../services/sistema_service.dart';
 import '../services/token_storage.dart';
+import '../services/vuelo_service.dart';
 import 'app_config.dart';
 
 /// Inyección de dependencias: único lugar donde se crean los servicios.
@@ -44,4 +46,12 @@ final authServiceProvider = Provider<AuthService>(
 
 final sistemaServiceProvider = Provider<SistemaService>(
   (ref) => SistemaService(ref.watch(restClientProvider)),
+);
+
+final vueloServiceProvider = Provider<VueloService>(
+  (ref) => VueloService(ref.watch(restClientProvider)),
+);
+
+final ivaServiceProvider = Provider<IvaService>(
+  (ref) => IvaService(ref.watch(restClientProvider)),
 );

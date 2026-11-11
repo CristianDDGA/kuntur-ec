@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vuelos_app/config/app_router.dart';
 import 'package:vuelos_app/pages/estado_api_page.dart';
-import 'package:vuelos_app/pages/inicio_page.dart';
+import 'package:vuelos_app/pages/vuelos_page.dart';
 import 'package:vuelos_app/pages/login_page.dart';
 import 'package:vuelos_app/pages/splash_page.dart';
 import 'package:vuelos_app/services/api_exception.dart';
@@ -30,13 +30,12 @@ void main() {
     });
 
     testWidgets('con un token válido recupera la sesión y entra al inicio', (tester) async {
-      final client = api({'GET /auth/perfil': {'usuario': usuarioAna}});
+      final client = api({'GET /auth/perfil': {'usuario': usuarioAna}, 'GET /vuelos': sinVuelos});
       await abrirApp(tester, client: client, tokens: InMemoryTokenStorage('jwt-guardado'));
 
-      expect(client.rutasSolicitadas, ['GET /auth/perfil']);
-      expect(find.byType(InicioPage), findsOneWidget);
-      expect(find.text('Hola, Ana Torres'), findsOneWidget);
-      expect(find.text('Cliente'), findsOneWidget);
+      expect(client.rutasSolicitadas, ['GET /auth/perfil', 'GET /vuelos']);
+      expect(find.byType(VuelosPage), findsOneWidget);
+      expect(find.text('Hola, Ana'), findsOneWidget);
     });
 
     testWidgets('con un token vencido o revocado lo descarta y pide iniciar sesión', (tester) async {
@@ -57,7 +56,7 @@ void main() {
       expect(find.text('Verificando su sesión…'), findsOneWidget);
 
       await tester.pumpAndSettle();
-      expect(find.byType(InicioPage), findsOneWidget);
+      expect(find.byType(VuelosPage), findsOneWidget);
     });
 
     testWidgets('con el servidor caído conserva el token y permite reintentar', (tester) async {
@@ -75,7 +74,7 @@ void main() {
       caido = false;
       await tocarBoton(tester, 'Reintentar');
       await tester.pumpAndSettle();
-      expect(find.byType(InicioPage), findsOneWidget);
+      expect(find.byType(VuelosPage), findsOneWidget);
     });
 
     testWidgets('con el servidor caído se puede seguir hacia el login', (tester) async {
@@ -97,7 +96,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(LoginPage), findsOneWidget);
-      expect(find.byType(InicioPage), findsNothing);
+      expect(find.byType(VuelosPage), findsNothing);
     });
 
     testWidgets('sin sesión el estado del servicio sí es público', (tester) async {
@@ -111,15 +110,15 @@ void main() {
 
     testWidgets('con sesión, login y registro redirigen al inicio', (tester) async {
       await abrirApp(tester,
-          client: api({'GET /auth/perfil': {'usuario': usuarioAna}}), tokens: InMemoryTokenStorage('jwt'));
+          client: api({'GET /auth/perfil': {'usuario': usuarioAna}, 'GET /vuelos': sinVuelos}), tokens: InMemoryTokenStorage('jwt'));
 
       irA(tester, AppRoutes.login);
       await tester.pumpAndSettle();
-      expect(find.byType(InicioPage), findsOneWidget);
+      expect(find.byType(VuelosPage), findsOneWidget);
 
       irA(tester, AppRoutes.registro);
       await tester.pumpAndSettle();
-      expect(find.byType(InicioPage), findsOneWidget);
+      expect(find.byType(VuelosPage), findsOneWidget);
     });
   });
 
@@ -128,6 +127,7 @@ void main() {
       final tokens = InMemoryTokenStorage('jwt');
       final client = api({
         'GET /auth/perfil': {'usuario': usuarioAna},
+        'GET /vuelos': sinVuelos,
         'POST /auth/logout': {'mensaje': 'Sesión cerrada correctamente.'},
       });
       await abrirApp(tester, client: client, tokens: tokens);
@@ -135,7 +135,7 @@ void main() {
       await tester.tap(find.byTooltip('Cerrar sesión'));
       await tester.pumpAndSettle();
 
-      expect(client.rutasSolicitadas, ['GET /auth/perfil', 'POST /auth/logout']);
+      expect(client.rutasSolicitadas, ['GET /auth/perfil', 'GET /vuelos', 'POST /auth/logout']);
       expect(await tokens.leer(), isNull);
       expect(find.byType(LoginPage), findsOneWidget);
     });
@@ -144,6 +144,7 @@ void main() {
       final tokens = InMemoryTokenStorage('jwt');
       final client = api({
         'GET /auth/perfil': {'usuario': usuarioAna},
+        'GET /vuelos': sinVuelos,
         'POST /auth/logout': const NetworkFailure(),
       });
       await abrirApp(tester, client: client, tokens: tokens);
