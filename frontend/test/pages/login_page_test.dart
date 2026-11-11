@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vuelos_app/pages/inicio_page.dart';
+import 'package:vuelos_app/pages/vuelos_page.dart';
 import 'package:vuelos_app/pages/login_page.dart';
 import 'package:vuelos_app/services/api_exception.dart';
 import 'package:vuelos_app/widgets/boton_degradado.dart';
@@ -10,7 +10,7 @@ import 'package:vuelos_app/widgets/boton_degradado.dart';
 import '../helpers/app_helper.dart';
 import '../helpers/fakes.dart';
 
-RouteFakeRestClient _api(Object? login) => RouteFakeRestClient({'POST /auth/login': login});
+RouteFakeRestClient _api(Object? login) => RouteFakeRestClient({'POST /auth/login': login, 'GET /vuelos': sinVuelos});
 
 void main() {
   testWidgets('sin token se muestra el login', (tester) async {
@@ -57,8 +57,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(client.llamada('POST', '/auth/login').cuerpo, {'correo': 'ana@correo.com', 'password': 'Clave2026'});
-    expect(find.byType(InicioPage), findsOneWidget);
-    expect(find.text('Hola, Ana Torres'), findsOneWidget);
+    expect(find.byType(VuelosPage), findsOneWidget);
+    expect(find.text('Hola, Ana'), findsOneWidget);
     expect(await tokens.leer(), 'jwt-de-prueba');
   });
 
@@ -71,7 +71,7 @@ void main() {
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
 
-    expect(find.byType(InicioPage), findsOneWidget);
+    expect(find.byType(VuelosPage), findsOneWidget);
   });
 
   testWidgets('credenciales incorrectas: muestra el mensaje de la API y sigue en el login', (tester) async {
@@ -141,7 +141,7 @@ void main() {
 
     espera.complete(respuestaLogin);
     await tester.pumpAndSettle();
-    expect(find.byType(InicioPage), findsOneWidget);
+    expect(find.byType(VuelosPage), findsOneWidget);
   });
 
   testWidgets('el botón del ojo muestra y oculta la contraseña', (tester) async {

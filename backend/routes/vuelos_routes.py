@@ -23,12 +23,14 @@ def _servicio() -> VueloService:
 @vuelos_bp.route("", methods=["GET"])
 @swag_from(contrato("vuelos", "buscar"))
 def buscar():
-    vuelos = _servicio().buscar(
+    pagina = _servicio().buscar(
         origen=request.args.get("origen"),
         destino=request.args.get("destino"),
         fecha=request.args.get("fecha"),
+        pagina=request.args.get("pagina"),
+        por_pagina=request.args.get("por_pagina"),
     )
-    return respond({"total": len(vuelos), "vuelos": [v.to_dict() for v in vuelos]}, root="vuelos")
+    return respond(pagina.to_dict(), root="vuelos")
 
 
 # =============================

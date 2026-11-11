@@ -2,6 +2,7 @@ import pytest
 
 from models import Rol
 from services.auth_service import Sesion
+from services.vuelo_service import PaginaVuelos
 from tests.factories import un_usuario, un_vuelo
 from utils.excepciones import ConflictError, NotFoundError, UnauthorizedError
 
@@ -17,7 +18,7 @@ class VuelosFalso:
 
     def buscar(self, **filtros):
         self.filtros = filtros
-        return [un_vuelo(), un_vuelo(id=11, codigo="KEC-102")]
+        return PaginaVuelos([un_vuelo(), un_vuelo(id=11, codigo="KEC-102")], total=2, pagina=1, por_pagina=10)
 
     def obtener(self, vuelo_id):
         if vuelo_id != 10:
@@ -53,10 +54,18 @@ def _bearer(token):
 def test_buscar_pasa_los_filtros_y_devuelve_total(client, vuelos):
     resp = client.get("/api/vuelos?origen=Quito&destino=Guayaquil&fecha=2026-12-01")
     assert resp.status_code == 200
-    assert vuelos.filtros == {"origen": "Quito", "destino": "Guayaquil", "fecha": "2026-12-01"}
+    assert vuelos.filtros == {
+        "origen": "Quito", "destino": "Guayaquil", "fecha": "2026-12-01", "pagina": None, "por_pagina": None,
+    }
     cuerpo = resp.get_json()
     assert cuerpo["total"] == 2
+    assert (cuerpo["pagina"], cuerpo["por_pagina"], cuerpo["total_paginas"]) == (1, 10, 1)
     assert cuerpo["vuelos"][0]["precio"] == "89.00"  # montos como texto con 2 decimales
+
+
+def test_buscar_pasa_la_pagina_pedida(client, vuelos):
+    client.get("/api/vuelos?pagina=3&por_pagina=5")
+    assert (vuelos.filtros["pagina"], vuelos.filtros["por_pagina"]) == ("3", "5")
 
 
 def test_buscar_es_publico_y_responde_xml(client, vuelos):

@@ -53,11 +53,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       child: AutofillGroup(
         child: Form(
           key: _formulario,
-          autovalidateMode: AutovalidateMode.onUserInteraction,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               TextFormField(
+                autovalidateMode: AutovalidateMode.onUserInteraction,
                 controller: _correo,
                 enabled: !cargando,
                 keyboardType: TextInputType.emailAddress,

@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vuelos_app/config/providers.dart';
 import 'package:vuelos_app/main.dart';
 import 'package:vuelos_app/services/auth_service.dart';
+import 'package:vuelos_app/services/iva_service.dart';
 import 'package:vuelos_app/services/sistema_service.dart';
+import 'package:vuelos_app/services/vuelo_service.dart';
 
 import 'fakes.dart';
 
@@ -28,6 +30,8 @@ Future<void> abrirApp(
     overrides: [
       authServiceProvider.overrideWithValue(AuthService(client, tokens ?? InMemoryTokenStorage())),
       sistemaServiceProvider.overrideWithValue(SistemaService(client)),
+      vueloServiceProvider.overrideWithValue(VueloService(client)),
+      ivaServiceProvider.overrideWithValue(IvaService(client)),
     ],
     child: const KunturApp(),
   ));

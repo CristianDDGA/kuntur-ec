@@ -166,6 +166,8 @@ class AppTheme {
         labelStyle: const TextStyle(color: AppColors.textoSuave),
         floatingLabelStyle: const TextStyle(color: AppColors.azul, fontWeight: FontWeight.w600),
         hintStyle: const TextStyle(color: AppColors.textoSuave),
+        errorMaxLines: 3, // los mensajes largos se ven completos en pantallas angostas
+        helperMaxLines: 2,
         errorStyle: const TextStyle(color: AppColors.error, fontWeight: FontWeight.w500),
         prefixIconColor: AppColors.textoSuave,
         suffixIconColor: AppColors.textoSuave,

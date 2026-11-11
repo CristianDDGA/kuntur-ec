@@ -35,6 +35,7 @@ _TEMPLATE = {
         {"name": "Usuarios", "description": "Servicio de Usuarios: registro de clientes."},
         {"name": "Autenticación", "description": "Servicio de Autenticación: login/logout con JWT."},
         {"name": "Vuelos", "description": "Servicio de Vuelos: búsqueda, detalle y alta (admin)."},
+        {"name": "IVA", "description": "Servicio de IVA: tarifa vigente, historial y cambio (admin)."},
         {"name": "Reservas", "description": "Servicio de Reservas: crear, consultar, modificar, cancelar y comprobante XML."},
     ],
     "definitions": {
@@ -52,6 +53,16 @@ _TEMPLATE = {
                 "capacidad": {"type": "integer", "example": 120},
                 "asientos_disponibles": {"type": "integer", "example": 120},
                 "version": {"type": "integer", "example": 1, "description": "Control de concurrencia"},
+            },
+        },
+        "TarifaIva": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer", "example": 2},
+                "porcentaje": {"type": "string", "example": "15.00"},
+                "vigente_desde": {"type": "string", "format": "date", "example": "2024-04-01"},
+                "vigente_hasta": {"type": "string", "format": "date", "example": "2027-01-01"},
+                "estado": {"type": "string", "enum": ["vigente", "programada", "anterior"]},
             },
         },
         "Reserva": {

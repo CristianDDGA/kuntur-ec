@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
-from datetime import date, timedelta
+from dataclasses import dataclass
+from datetime import date, datetime, timedelta
 
 from psycopg.errors import UniqueViolation
 
@@ -28,7 +29,18 @@ _COLUMNAS = (
     "precio, capacidad, asientos_disponibles, version"
 )
 MAX_DIAS_ADELANTE = 730  # no se programan vuelos a más de 2 años
+POR_PAGINA_DEFECTO = 10
+POR_PAGINA_MAXIMO = 50
+MAX_PAGINA = 100_000
 _CODIGO = re.compile(rf"^[A-Z0-9-]{{2,{MAX_LARGO_CODIGO}}}$")
+PREFIJO_CODIGO = "KT"
+PRIMER_NUMERO = 101  # el primer vuelo generado es KT101
+INTENTOS_CODIGO = 5  # reintentos si dos administradores crean vuelos a la vez
+# Siguiente código libre: KT + (mayor número existente + 1). Se evalúa dentro del mismo INSERT.
+_SQL_CODIGO_NUEVO = (
+    f"(SELECT '{PREFIJO_CODIGO}' || COALESCE(MAX(substring(codigo FROM '^{PREFIJO_CODIGO}([0-9]+)$')::int) + 1, "
+    f"{PRIMER_NUMERO}) FROM vuelos)"
+)
 
 
 def _filtro(valor: str | None, campo: str) -> str | None:
@@ -42,17 +54,69 @@ def _filtro(valor: str | None, campo: str) -> str | None:
     return limpio
 
 
+def _numero_consulta(valor: str | None, campo: str, defecto: int, maximo: int) -> int:
+    """Número entero positivo de la URL (`?pagina=2`). Vacío = valor por defecto; basura = 400."""
+    if valor is None or not str(valor).strip():
+        return defecto
+    texto = str(valor).strip()
+    if not texto.isascii() or not texto.isdigit() or not 1 <= int(texto) <= maximo:
+        raise ValidationError(f"El parámetro '{campo}' debe ser un número entero entre 1 y {maximo}.")
+    return int(texto)
+
+
+@dataclass(frozen=True)
+class PaginaVuelos:
+    """Una página de resultados y los datos para pedir las demás."""
+
+    vuelos: list[Vuelo]
+    total: int
+    pagina: int
+    por_pagina: int
+
+    @property
+    def total_paginas(self) -> int:
+        return max(1, -(-self.total // self.por_pagina))  # división hacia arriba; mínimo 1 aunque no haya vuelos
+
+    def to_dict(self) -> dict:
+        return {
+            "total": self.total,
+            "pagina": self.pagina,
+            "por_pagina": self.por_pagina,
+            "total_paginas": self.total_paginas,
+            "vuelos": [v.to_dict() for v in self.vuelos],
+        }
+
+
 # ---------------------------------------------------------------- servicio
 
 
 class VueloService:
-    def __init__(self, db: Database, hoy: Callable[[], date] = date.today):
+    def __init__(
+        self,
+        db: Database,
+        hoy: Callable[[], date] | None = None,
+        ahora: Callable[[], datetime] = datetime.now,
+    ):
         self._db = db
-        self._hoy = hoy  # inyectable para las pruebas
+        self._ahora = ahora  # inyectables para las pruebas
+        self._hoy = hoy or (lambda: self._ahora().date())
 
-    def buscar(self, origen: str | None = None, destino: str | None = None, fecha: str | None = None) -> list[Vuelo]:
-        """Vuelos desde hoy en adelante, filtrados por origen, destino y/o fecha (sin distinguir mayúsculas)."""
-        condiciones, params = ["fecha >= %s"], [self._hoy()]
+    def _hora_actual(self):
+        return self._ahora().time().replace(second=0, microsecond=0)
+
+    def buscar(
+        self,
+        origen: str | None = None,
+        destino: str | None = None,
+        fecha: str | None = None,
+        pagina: str | None = None,
+        por_pagina: str | None = None,
+    ) -> PaginaVuelos:
+        """Vuelos que aún no parten, filtrados por origen, destino y/o fecha (sin distinguir mayúsculas), paginados."""
+        numero = _numero_consulta(pagina, "pagina", 1, MAX_PAGINA)
+        tamano = _numero_consulta(por_pagina, "por_pagina", POR_PAGINA_DEFECTO, POR_PAGINA_MAXIMO)
+        condiciones = ["(fecha > %s OR (fecha = %s AND hora_salida > %s))"]
+        params: list = [self._hoy(), self._hoy(), self._hora_actual()]
         if (origen := _filtro(origen, "origen")):
             condiciones.append("lower(origen) = lower(%s)")
             params.append(origen)
@@ -63,13 +127,15 @@ class VueloService:
             condiciones.append("fecha = %s")
             params.append(fecha_iso(fecha))
 
+        donde = " AND ".join(condiciones)
         with self._db.transaccion() as cur:
+            cur.execute(f"SELECT count(*) AS total FROM vuelos WHERE {donde}", tuple(params))
+            total = cur.fetchone()["total"]
             cur.execute(
-                f"SELECT {_COLUMNAS} FROM vuelos WHERE {' AND '.join(condiciones)} "
-                "ORDER BY fecha, hora_salida, codigo",
-                tuple(params),
+                f"SELECT {_COLUMNAS} FROM vuelos WHERE {donde} ORDER BY fecha, hora_salida, codigo LIMIT %s OFFSET %s",
+                (*params, tamano, (numero - 1) * tamano),
             )
-            return [Vuelo.from_row(fila) for fila in cur.fetchall()]
+            return PaginaVuelos([Vuelo.from_row(f) for f in cur.fetchall()], total, numero, tamano)
 
     def obtener(self, vuelo_id: int) -> Vuelo:
         with self._db.transaccion() as cur:
@@ -80,13 +146,15 @@ class VueloService:
         return Vuelo.from_row(fila)
 
     def crear(self, datos: dict) -> Vuelo:
+        """Crea un vuelo. Si `datos` trae `codigo` se respeta; si no, el sistema genera el siguiente (KT101, KT102...)."""
         capacidad = entero(datos, "capacidad", 1, MAX_CAPACIDAD)
-        codigo = texto_obligatorio(datos, "codigo", MAX_LARGO_CODIGO).upper().replace(" ", "")
-        if not _CODIGO.match(codigo):
+        generar = datos.get("codigo") in (None, "")
+        codigo = None if generar else texto_obligatorio(datos, "codigo", MAX_LARGO_CODIGO).upper().replace(" ", "")
+        if codigo is not None and not _CODIGO.match(codigo):
             raise ValidationError(f"El campo 'codigo' solo admite letras, números y guiones (de 2 a {MAX_LARGO_CODIGO} caracteres).")
         vuelo = Vuelo(  # el modelo valida además origen ≠ destino y asientos entre 0 y la capacidad
             id=None,
-            codigo=codigo,
+            codigo=codigo or PREFIJO_CODIGO,  # provisional: el definitivo lo asigna la base al insertar
             origen=nombre_propio(datos, "origen", MAX_LARGO_CIUDAD),
             destino=nombre_propio(datos, "destino", MAX_LARGO_CIUDAD),
             fecha=fecha_iso(datos.get("fecha")),
@@ -98,22 +166,31 @@ class VueloService:
         )
         if vuelo.fecha < self._hoy():
             raise ValidationError("No se puede crear un vuelo con fecha pasada.")
+        if vuelo.fecha == self._hoy() and vuelo.hora_salida <= self._hora_actual():
+            raise ValidationError(
+                f"La hora de salida ya pasó: para hoy elija una hora posterior a las {self._hora_actual():%H:%M}."
+            )
         if vuelo.fecha > self._hoy() + timedelta(days=MAX_DIAS_ADELANTE):
             raise ValidationError("La fecha del vuelo no puede superar los 2 años desde hoy.")
         if vuelo.hora_llegada == vuelo.hora_salida:
             raise ValidationError("La hora de llegada debe ser distinta a la de salida.")
 
-        try:
-            with self._db.transaccion() as cur:
-                cur.execute(
-                    "INSERT INTO vuelos (codigo, origen, destino, fecha, hora_salida, hora_llegada, "
-                    "precio, capacidad, asientos_disponibles) "
-                    f"VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING {_COLUMNAS}",
-                    (
-                        vuelo.codigo, vuelo.origen, vuelo.destino, vuelo.fecha, vuelo.hora_salida,
-                        vuelo.hora_llegada, vuelo.precio, vuelo.capacidad, vuelo.asientos_disponibles,
-                    ),
-                )
-                return Vuelo.from_row(cur.fetchone())
-        except UniqueViolation:
-            raise ConflictError(f"Ya existe un vuelo con el código {vuelo.codigo}.") from None
+        for intento in range(INTENTOS_CODIGO if generar else 1):
+            try:
+                with self._db.transaccion() as cur:
+                    cur.execute(
+                        "INSERT INTO vuelos (codigo, origen, destino, fecha, hora_salida, hora_llegada, "
+                        "precio, capacidad, asientos_disponibles) "
+                        f"VALUES ({_SQL_CODIGO_NUEVO if generar else '%s'}, %s, %s, %s, %s, %s, %s, %s, %s) "
+                        f"RETURNING {_COLUMNAS}",
+                        ((() if generar else (vuelo.codigo,)) + (
+                            vuelo.origen, vuelo.destino, vuelo.fecha, vuelo.hora_salida, vuelo.hora_llegada,
+                            vuelo.precio, vuelo.capacidad, vuelo.asientos_disponibles,
+                        )),
+                    )
+                    return Vuelo.from_row(cur.fetchone())
+            except UniqueViolation:
+                if not generar:
+                    raise ConflictError(f"Ya existe un vuelo con el código {vuelo.codigo}.") from None
+                # Otro vuelo tomó ese código en el mismo instante: se calcula el siguiente y se reintenta.
+        raise ConflictError("No se pudo asignar un código de vuelo. Intente nuevamente.")

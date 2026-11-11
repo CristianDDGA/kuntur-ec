@@ -54,7 +54,9 @@
 | Auth | POST | `/api/auth/login` | – | Devuelve JWT |
 | Auth | POST | `/api/auth/logout` | JWT | Revoca token (tabla `tokens`) |
 | Auth | GET | `/api/auth/perfil` | JWT | Datos del usuario autenticado (lo usa el frontend) |
-| Vuelos | GET | `/api/vuelos?origen=&destino=&fecha=` | – | Lista/filtra vuelos desde hoy → `{total, vuelos}` · 400 fecha inválida |
+| Vuelos | GET | `/api/vuelos?origen=&destino=&fecha=&pagina=&por_pagina=` | – | Lista/filtra vuelos que aún no parten (hoy solo los de salida posterior a la hora actual), paginada (10 por defecto, máx. 50) → `{total, pagina, por_pagina, total_paginas, vuelos}` · 400 fecha o paginación inválida |
+| IVA | GET | `/api/iva` | JWT | Tarifa vigente e historial (`vigente`, `programada`, `anterior`) |
+| IVA | POST | `/api/iva` | JWT admin | Programa una tarifa `{porcentaje 0–100, vigente_desde ≥ hoy}`; cierra la abierta el día anterior; no altera reservas hechas → 201 · 400 · 403 · 409 (ya hay una tarifa igual o posterior) |
 | Vuelos | GET | `/api/vuelos/{id}` | – | Detalle de vuelo → 200 · 404 |
 | Vuelos | POST | `/api/vuelos` | JWT admin | Crea vuelo → 201 · 400 · 401 · 403 · 409 código repetido |
 | Reservas | POST | `/api/reservas` | JWT | Crea reserva `{vuelo_id, cantidad}` (1–10) → 201 · 400 · 404 · 409 sin asientos |
@@ -71,7 +73,7 @@ Reglas del registro: correo único sin distinguir mayúsculas, contraseña de 8+
 
 Reglas de la sesión: JWT HS256 firmado con `JWT_SECRET_KEY`, válido `JWT_EXPIRES_MINUTES` minutos; en la tabla `tokens` se guarda su huella SHA-256 (no el JWT); cada petición protegida verifica firma, expiración y que el token siga `activo`; el login fallido responde siempre "Correo o contraseña incorrectos" (no revela qué correos existen).
 
-Reglas de vuelos: la búsqueda no distingue mayúsculas y solo muestra vuelos desde hoy; al crear, el código se guarda en mayúsculas y es único, la fecha no puede ser pasada, horas en `HH:MM`, precio con máximo 2 decimales, capacidad entera de 1 a 900 y `asientos_disponibles = capacidad`.
+Reglas de vuelos: la búsqueda no distingue mayúsculas y solo muestra vuelos desde hoy; al crear, el código lo genera el sistema (`KT101`, `KT102`…; si se envía uno se respeta, en mayúsculas y único), la fecha no puede ser pasada, horas en `HH:MM`, precio con máximo 2 decimales, capacidad entera de 1 a 900 y `asientos_disponibles = capacidad`.
 
 Formato de error uniforme: `{"error": "codigo", "mensaje": "texto"}` con 400 / 401 / 403 / 404 / 409 (sin asientos) y, para casos de operación, 413 (cuerpo > 64 KB), 415 (no es JSON), 429 (límite de logins, con `Retry-After`), 500 (genérico, sin detalles internos) y 503 (base de datos caída). Tabla completa y reglas de validación en `backend/README.md`.
 
@@ -155,7 +157,8 @@ Excepción documentada: `flasgger==0.9.7.1` (la 0.9.4 no funciona con Flask 3).
 | B7 | Comprobante XML + Swagger completo + colección Postman | ✅ Hecho |
 | B8 | Robustez: validaciones de entrada, errores HTTP, límites = BD y base caída | ✅ Hecho |
 | F1 | Frontend: tema Ecuador, login, registro, sesión persistente y rutas protegidas | ✅ Hecho |
-| F2–F4 | Frontend: vuelos, reservas, factura XML | ⏳ Siguiente (F2) |
+| F2 | Frontend: lista paginada y búsqueda de vuelos, detalle, crear vuelo (admin), panel de administración con IVA | ✅ Hecho |
+| F3–F4 | Frontend: reservas (reservar, mis reservas, modificar, cancelar) y factura XML | ⏳ Siguiente (F3) |
 | P | Pruebas funcionales y capturas | Pendiente |
 | D | Diagrama SOA + informe PDF | Pendiente |
 
