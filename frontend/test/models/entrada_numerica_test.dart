@@ -29,13 +29,14 @@ String _borrar(List<TextInputFormatter> formateadores, String texto, int veces) 
 }
 
 void main() {
-  group('capacidad: entero de 1 a 900', () {
+  group('capacidad: entero de 1 a 200', () {
     final f = ValidadoresVuelo.entradaCapacidad;
 
-    test('deja escribir hasta 900', () => expect(_teclear(f, '900'), '900'));
-    test('no deja pasar de 900', () {
-      expect(_teclear(f, '901'), '90');
+    test('deja escribir hasta 200', () => expect(_teclear(f, '200'), '200'));
+    test('no deja pasar de 200', () {
+      expect(_teclear(f, '201'), '20');
       expect(_teclear(f, '999'), '99');
+      expect(_teclear(f, '300'), '30');
       expect(_teclear(f, '1000'), '100');
     });
     test('no deja empezar con cero', () {
@@ -49,7 +50,7 @@ void main() {
     test('borrar siempre funciona, hasta dejar el campo vacío', () {
       expect(_borrar(f, '123', 1), '12');
       expect(_borrar(f, '123', 3), '');
-      expect(_borrar(f, '900', 2), '9');
+      expect(_borrar(f, '200', 2), '2');
     });
     test('se puede escribir de nuevo después de vaciar', () {
       expect(_teclear(f, '45', inicial: _borrar(f, '123', 3)), '45');

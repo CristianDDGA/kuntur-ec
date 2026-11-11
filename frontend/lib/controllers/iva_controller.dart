@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/providers.dart';
 import '../models/tarifa_iva.dart';
 import '../services/api_exception.dart';
+import 'con_sesion.dart';
 import 'sesion_controller.dart';
 
 /// Controlador (C) del panel de IVA: carga la tarifa vigente y el historial, y permite programar una nueva.
@@ -30,5 +31,12 @@ class IvaController extends AsyncNotifier<ResumenIva> {
 
 final ivaControllerProvider = AsyncNotifierProvider.autoDispose<IvaController, ResumenIva>(
   IvaController.new,
+  retry: (_, _) => null,
+);
+
+/// IVA vigente hoy, para que el cliente vea un total estimado antes de reservar.
+/// Si no se puede consultar, la pantalla muestra solo el subtotal (el servidor calcula el total real).
+final ivaVigenteProvider = FutureProvider.autoDispose<TarifaIva?>(
+  (ref) async => (await conSesion(ref, () => ref.read(ivaServiceProvider).consultar())).vigente,
   retry: (_, _) => null,
 );

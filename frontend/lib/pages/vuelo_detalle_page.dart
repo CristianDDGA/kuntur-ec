@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/app_theme.dart';
+import '../controllers/sesion_controller.dart';
 import '../controllers/vuelo_detalle_controller.dart';
 import '../models/vuelo.dart';
 import '../services/api_exception.dart';
 import '../widgets/aviso.dart';
 import '../widgets/barra_kuntur.dart';
 import '../widgets/etiqueta_asientos.dart';
+import '../widgets/panel_reserva.dart';
 import '../widgets/tarjeta_vuelo.dart';
 
-/// Detalle de un vuelo (V). La reserva se agrega en la siguiente etapa (F3).
+/// Detalle de un vuelo (V): datos del vuelo y, para clientes, el panel para reservar.
 class VueloDetallePage extends ConsumerWidget {
   const VueloDetallePage({super.key, required this.vueloId});
 
@@ -47,13 +49,14 @@ class VueloDetallePage extends ConsumerWidget {
   }
 }
 
-class _Detalle extends StatelessWidget {
+class _Detalle extends ConsumerWidget {
   const _Detalle({required this.vuelo});
 
   final Vuelo vuelo;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final esAdmin = ref.watch(sesionControllerProvider).value?.esAdmin ?? false;
     final ocupados = vuelo.capacidad - vuelo.asientosDisponibles;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -104,12 +107,14 @@ class _Detalle extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 14),
-        AvisoInline(
-          tipo: vuelo.agotado ? TipoAviso.error : TipoAviso.info,
-          texto: vuelo.agotado
-              ? 'Este vuelo ya no tiene asientos disponibles.'
-              : 'Los precios se muestran sin IVA; el impuesto vigente se calcula al reservar.',
-        ),
+        // El administrador gestiona vuelos pero no reserva (el servidor responde 403 si lo intentara).
+        if (esAdmin)
+          const AvisoInline(
+            tipo: TipoAviso.info,
+            texto: 'Los administradores gestionan los vuelos y no hacen reservas.',
+          )
+        else
+          PanelReserva(vuelo: vuelo),
       ],
     );
   }

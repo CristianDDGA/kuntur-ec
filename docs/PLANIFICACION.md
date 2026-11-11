@@ -58,13 +58,14 @@
 | IVA | GET | `/api/iva` | JWT | Tarifa vigente e historial (`vigente`, `programada`, `anterior`) |
 | IVA | POST | `/api/iva` | JWT admin | Programa una tarifa `{porcentaje 0–100, vigente_desde ≥ hoy}`; cierra la abierta el día anterior; no altera reservas hechas → 201 · 400 · 403 · 409 (ya hay una tarifa igual o posterior) |
 | Vuelos | GET | `/api/vuelos/{id}` | – | Detalle de vuelo → 200 · 404 |
+| Vuelos | GET | `/api/vuelos/{id}/asientos` | – | Mapa de asientos: `{vuelo_id, capacidad, columnas: [A,B,C,D], ocupados: ["2B"]}`. Los asientos existentes se deducen de la capacidad (1A, 1B, 1C, 1D, 2A…) → 200 · 404 |
 | Vuelos | POST | `/api/vuelos` | JWT admin | Crea vuelo → 201 · 400 · 401 · 403 · 409 código repetido |
-| Reservas | POST | `/api/reservas` | JWT | Crea reserva `{vuelo_id, cantidad}` (1–10) → 201 · 400 · 404 · 409 sin asientos |
-| Reservas | GET | `/api/reservas` | JWT | Historial del usuario |
-| Reservas | GET | `/api/reservas/{id}` | JWT | Detalle |
-| Reservas | PUT | `/api/reservas/{id}` | JWT | Modifica cantidad `{cantidad, version}` (mismo precio e IVA) → 200 · 409 "Ya actualizaron este registro" + `version_actual` |
-| Reservas | DELETE | `/api/reservas/{id}` | JWT | Cancela (estado = `cancelada`, devuelve asientos) → 200 · 409 ya cancelada |
-| Reservas | GET | `/api/reservas/{id}/comprobante` | JWT | Factura en **XML** siempre, armada como en la práctica de clase (`practica-xml`): JSON de la factura → XML con `ElementTree` (`factura/cabecera/cliente/Detalle/producto/Totales/Estado`). Los montos salen de la reserva, no del cliente → 200 · 401 · 404 |
+| Reservas | POST | `/api/reservas` | JWT cliente | Crea reserva `{vuelo_id, asientos: ["1A","2B"]}` (1–10 asientos concretos; o solo `cantidad` → el sistema asigna los primeros libres) → 201 · 400 (incluye vuelo que ya partió: se compara fecha **y hora** de salida, o un asiento que no existe en ese vuelo) · 403 admin · 404 · 409 sin asientos o asiento ya tomado (trae `asientos_ocupados`) |
+| Reservas | GET | `/api/reservas?pagina=&por_pagina=` | JWT cliente | Historial del usuario, paginado → `{total, pagina, por_pagina, total_paginas, reservas}` |
+| Reservas | GET | `/api/reservas/{id}` | JWT cliente | Detalle |
+| Reservas | PUT | `/api/reservas/{id}` | JWT cliente | Modifica los asientos `{asientos, version}` (cambiar de lugar, ampliar o reducir; mismo precio e IVA; también acepta `{cantidad, version}`) → 200 · 409 "Ya actualizaron este registro" + `version_actual` |
+| Reservas | DELETE | `/api/reservas/{id}` | JWT cliente | Cancela (estado = `cancelada`, devuelve asientos) → 200 · 409 ya cancelada |
+| Reservas | GET | `/api/reservas/{id}/comprobante` | JWT cliente | Factura en **XML** siempre, armada como en la práctica de clase (`practica-xml`): JSON de la factura → XML con `ElementTree` (`factura/cabecera/cliente/Detalle/producto/Totales/Estado`). Los montos salen de la reserva, no del cliente → 200 · 401 · 404 |
 
 Ejemplo (de la infografía): `POST /api/reservas {"usuario_id":1,"vuelo_id":10,"cantidad":2}` → `200 {"mensaje":"Reserva creada","reserva_id":58,"total":336.00,"estado":"confirmada"}`.
 > Mejora: el `usuario_id` se toma del JWT, no del cuerpo (evita reservar a nombre de otro).
@@ -73,7 +74,7 @@ Reglas del registro: correo único sin distinguir mayúsculas, contraseña de 8+
 
 Reglas de la sesión: JWT HS256 firmado con `JWT_SECRET_KEY`, válido `JWT_EXPIRES_MINUTES` minutos; en la tabla `tokens` se guarda su huella SHA-256 (no el JWT); cada petición protegida verifica firma, expiración y que el token siga `activo`; el login fallido responde siempre "Correo o contraseña incorrectos" (no revela qué correos existen).
 
-Reglas de vuelos: la búsqueda no distingue mayúsculas y solo muestra vuelos desde hoy; al crear, el código lo genera el sistema (`KT101`, `KT102`…; si se envía uno se respeta, en mayúsculas y único), la fecha no puede ser pasada, horas en `HH:MM`, precio con máximo 2 decimales, capacidad entera de 1 a 900 y `asientos_disponibles = capacidad`.
+Reglas de vuelos: la búsqueda no distingue mayúsculas y solo muestra vuelos desde hoy; al crear, el código lo genera el sistema (`KT101`, `KT102`…; si se envía uno se respeta, en mayúsculas y único), la fecha no puede ser pasada, horas en `HH:MM`, precio con máximo 2 decimales, capacidad entera de 1 a **200** (CHECK en la BD; el mapa de asientos debe ser manejable) y `asientos_disponibles = capacidad`.
 
 Formato de error uniforme: `{"error": "codigo", "mensaje": "texto"}` con 400 / 401 / 403 / 404 / 409 (sin asientos) y, para casos de operación, 413 (cuerpo > 64 KB), 415 (no es JSON), 429 (límite de logins, con `Retry-After`), 500 (genérico, sin detalles internos) y 503 (base de datos caída). Tabla completa y reglas de validación en `backend/README.md`.
 
@@ -84,6 +85,7 @@ Formato de error uniforme: `{"error": "codigo", "mensaje": "texto"}` con 400 / 4
 Basado en la infografía, con ajustes (marcados con ★):
 
 - **usuarios**(id PK, nombre, correo UNIQUE, password_hash, ★rol `cliente|admin`, fecha_registro)
+- **reserva_asientos**(reserva_id FK, vuelo_id FK, asiento VARCHAR(4) `^[1-9][0-9]{0,2}[A-D]$`, activo; PK (reserva_id, asiento); **índice único parcial (vuelo_id, asiento) WHERE activo**: un asiento activo nunca se repite en un vuelo). Al cancelar, `activo = false` (queda en el historial y se libera)
 - **vuelos**(id PK, ★codigo, origen, destino, fecha, hora_salida, hora_llegada, precio, ★capacidad, asientos_disponibles CHECK ≥ 0, ★version)
 - **reservas**(id PK, usuario_id FK, vuelo_id FK, cantidad_asientos CHECK > 0, ★subtotal, ★iva_porcentaje, ★iva_valor, total, estado `confirmada|cancelada`, fecha_reserva, ★version)
 - **tokens**(id PK, usuario_id FK, token, expiracion, estado `activo|revocado`)
@@ -158,7 +160,8 @@ Excepción documentada: `flasgger==0.9.7.1` (la 0.9.4 no funciona con Flask 3).
 | B8 | Robustez: validaciones de entrada, errores HTTP, límites = BD y base caída | ✅ Hecho |
 | F1 | Frontend: tema Ecuador, login, registro, sesión persistente y rutas protegidas | ✅ Hecho |
 | F2 | Frontend: lista paginada y búsqueda de vuelos, detalle, crear vuelo (admin), panel de administración con IVA | ✅ Hecho |
-| F3–F4 | Frontend: reservas (reservar, mis reservas, modificar, cancelar) y factura XML | ⏳ Siguiente (F3) |
+| F3 | Frontend: reservar desde el detalle, mis reservas (paginadas), modificar con versión y cancelar. **El administrador no reserva** (403 en el API, sin pantallas) | ✅ Hecho |
+| F4 | Frontend: comprobante XML (panel "Factura XML") | ⏳ Siguiente (F4) |
 | P | Pruebas funcionales y capturas | Pendiente |
 | D | Diagrama SOA + informe PDF | Pendiente |
 

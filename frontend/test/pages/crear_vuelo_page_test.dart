@@ -106,7 +106,7 @@ void main() {
     final capacidad = tester.widget<TextFormField>(campo('Capacidad (asientos)')).controller!;
 
     await tester.enterText(campo('Capacidad (asientos)'), '90');
-    await tester.enterText(campo('Capacidad (asientos)'), '901'); // pasaría de 900: se ignora
+    await tester.enterText(campo('Capacidad (asientos)'), '201'); // pasaría de 200: se ignora
     await tester.pump();
     expect(capacidad.text, '90');
     await tester.enterText(campo('Capacidad (asientos)'), '9'); // borrar un dígito

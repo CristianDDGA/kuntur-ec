@@ -1,3 +1,4 @@
+import '../models/asientos.dart';
 import '../models/vuelo.dart';
 import 'api_exception.dart';
 import 'rest_client.dart';
@@ -15,6 +16,10 @@ class VueloService {
   /// `GET /vuelos/{id}`. Lanza [ServerFailure] con 404 si el vuelo no existe.
   Future<Vuelo> obtener(int id) async =>
       Vuelo.fromJson(asJsonMap(await _client.get('/vuelos/$id')));
+
+  /// `GET /vuelos/{id}/asientos`: mapa de asientos (capacidad y ocupados). Es público.
+  Future<MapaAsientos> mapaAsientos(int id) async =>
+      MapaAsientos.fromJson(asJsonMap(await _client.get('/vuelos/$id/asientos')));
 
   /// `POST /vuelos` (solo administrador).
   Future<Vuelo> crear(NuevoVuelo datos) async {

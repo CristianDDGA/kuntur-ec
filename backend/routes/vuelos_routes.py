@@ -44,6 +44,16 @@ def detalle(vuelo_id: int):
 
 
 # =============================
+# GET - Mapa de asientos del vuelo
+# =============================
+
+@vuelos_bp.route("/<id:vuelo_id>/asientos", methods=["GET"])
+@swag_from(contrato("vuelos", "asientos"))
+def asientos(vuelo_id: int):
+    return respond(_servicio().asientos(vuelo_id), root="asientos")
+
+
+# =============================
 # POST - Crear vuelo (admin)
 # =============================
 

@@ -10,7 +10,9 @@ from psycopg.errors import UniqueViolation
 
 from database import Database
 from models import Vuelo
+from utils.asientos import COLUMNAS
 from utils.excepciones import ConflictError, NotFoundError, ValidationError
+from utils.paginacion import leer_pagina, total_paginas
 from utils.limites import CAPACIDAD_MAXIMA as MAX_CAPACIDAD
 from utils.limites import CIUDAD as MAX_LARGO_CIUDAD
 from utils.limites import CODIGO_VUELO as MAX_LARGO_CODIGO
@@ -29,9 +31,6 @@ _COLUMNAS = (
     "precio, capacidad, asientos_disponibles, version"
 )
 MAX_DIAS_ADELANTE = 730  # no se programan vuelos a más de 2 años
-POR_PAGINA_DEFECTO = 10
-POR_PAGINA_MAXIMO = 50
-MAX_PAGINA = 100_000
 _CODIGO = re.compile(rf"^[A-Z0-9-]{{2,{MAX_LARGO_CODIGO}}}$")
 PREFIJO_CODIGO = "KT"
 PRIMER_NUMERO = 101  # el primer vuelo generado es KT101
@@ -54,16 +53,6 @@ def _filtro(valor: str | None, campo: str) -> str | None:
     return limpio
 
 
-def _numero_consulta(valor: str | None, campo: str, defecto: int, maximo: int) -> int:
-    """Número entero positivo de la URL (`?pagina=2`). Vacío = valor por defecto; basura = 400."""
-    if valor is None or not str(valor).strip():
-        return defecto
-    texto = str(valor).strip()
-    if not texto.isascii() or not texto.isdigit() or not 1 <= int(texto) <= maximo:
-        raise ValidationError(f"El parámetro '{campo}' debe ser un número entero entre 1 y {maximo}.")
-    return int(texto)
-
-
 @dataclass(frozen=True)
 class PaginaVuelos:
     """Una página de resultados y los datos para pedir las demás."""
@@ -75,7 +64,7 @@ class PaginaVuelos:
 
     @property
     def total_paginas(self) -> int:
-        return max(1, -(-self.total // self.por_pagina))  # división hacia arriba; mínimo 1 aunque no haya vuelos
+        return total_paginas(self.total, self.por_pagina)
 
     def to_dict(self) -> dict:
         return {
@@ -113,8 +102,7 @@ class VueloService:
         por_pagina: str | None = None,
     ) -> PaginaVuelos:
         """Vuelos que aún no parten, filtrados por origen, destino y/o fecha (sin distinguir mayúsculas), paginados."""
-        numero = _numero_consulta(pagina, "pagina", 1, MAX_PAGINA)
-        tamano = _numero_consulta(por_pagina, "por_pagina", POR_PAGINA_DEFECTO, POR_PAGINA_MAXIMO)
+        numero, tamano = leer_pagina(pagina, por_pagina)
         condiciones = ["(fecha > %s OR (fecha = %s AND hora_salida > %s))"]
         params: list = [self._hoy(), self._hoy(), self._hora_actual()]
         if (origen := _filtro(origen, "origen")):
@@ -136,6 +124,26 @@ class VueloService:
                 (*params, tamano, (numero - 1) * tamano),
             )
             return PaginaVuelos([Vuelo.from_row(f) for f in cur.fetchall()], total, numero, tamano)
+
+    def asientos(self, vuelo_id: int) -> dict:
+        """Mapa de asientos: los que existen (por la capacidad) y cuáles ya están ocupados."""
+        with self._db.transaccion() as cur:
+            cur.execute("SELECT capacidad FROM vuelos WHERE id = %s", (vuelo_id,))
+            fila = cur.fetchone()
+            if fila is None:
+                raise NotFoundError("El vuelo solicitado no existe.")
+            cur.execute(
+                "SELECT coalesce(array_agg(asiento ORDER BY length(asiento), asiento), ARRAY[]::varchar[]) AS ocupados "
+                "FROM reserva_asientos WHERE vuelo_id = %s AND activo",
+                (vuelo_id,),
+            )
+            ocupados = cur.fetchone()["ocupados"]
+        return {
+            "vuelo_id": vuelo_id,
+            "capacidad": fila["capacidad"],
+            "columnas": list(COLUMNAS),
+            "ocupados": list(ocupados),
+        }
 
     def obtener(self, vuelo_id: int) -> Vuelo:
         with self._db.transaccion() as cur:

@@ -1,5 +1,5 @@
-# Contrato del servicio reservas: Modificar la cantidad de asientos
-summary: "Modificar la cantidad de asientos"
+# Contrato del servicio reservas: Modificar los asientos
+summary: "Modificar los asientos de la reserva"
 description: >
   Control de concurrencia optimista: envíe la `version` que obtuvo al consultar la reserva.
   Si otra petición la modificó antes, responde 409 "Ya actualizaron este registro" con la
@@ -15,9 +15,14 @@ parameters:
     required: true
     schema:
       type: object
-      required: [cantidad, version]
+      required: [version]
       properties:
-        cantidad: {type: integer, example: 3, description: "Nueva cantidad total (1 a 10)"}
+        asientos:
+          type: array
+          items: {type: string}
+          example: ["1A", "1B", "1C"]
+          description: "Conjunto final de asientos de la reserva (1 a 10). Puede cambiar de lugar, ampliar o reducir."
+        cantidad: {type: integer, example: 3, description: "Alternativa a asientos: nueva cantidad total (se quitan los últimos o se agregan los primeros libres)"}
         version: {type: integer, example: 1, description: "Versión de la reserva que se leyó"}
 responses:
   200:

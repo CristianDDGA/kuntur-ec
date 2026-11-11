@@ -1,5 +1,8 @@
 # Contrato del servicio reservas: Crear una reserva
-summary: "Crear una reserva"
+summary: "Crear una reserva eligiendo asientos"
+description: >
+  Envíe `asientos` (por ejemplo ["1A", "2B"]; 4 columnas A-D, hasta 10 por reserva) para elegir lugares concretos,
+  o solo `cantidad` para que el sistema asigne los primeros libres. Consulte el mapa en GET /vuelos/{id}/asientos.
 tags: [Reservas]
 security: [{Bearer: []}]
 consumes: [application/json]
@@ -10,10 +13,15 @@ parameters:
     required: true
     schema:
       type: object
-      required: [vuelo_id, cantidad]
+      required: [vuelo_id]
       properties:
         vuelo_id: {type: integer, example: 1}
-        cantidad: {type: integer, example: 2, description: "Entre 1 y 10 asientos"}
+        asientos:
+          type: array
+          items: {type: string}
+          example: ["1A", "2B"]
+          description: "De 1 a 10 asientos distintos (fila + letra A-D)"
+        cantidad: {type: integer, example: 2, description: "Alternativa a asientos: entre 1 y 10; se asignan los primeros libres"}
 responses:
   201:
     description: Reserva confirmada; los asientos se descuentan del vuelo y se aplica el IVA vigente.
@@ -29,4 +37,4 @@ responses:
   404:
     description: El vuelo no existe.
   409:
-    description: No hay suficientes asientos disponibles.
+    description: No hay asientos suficientes o alguno de los elegidos ya fue reservado por otra persona (la respuesta trae `asientos_ocupados`).

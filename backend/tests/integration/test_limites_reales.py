@@ -50,7 +50,7 @@ def test_la_base_acepta_nombre_correo_codigo_y_ciudades_en_su_largo_maximo(db):
         "precio": limites.PRECIO_MAXIMO, "capacidad": limites.CAPACIDAD_MAXIMA,
     })
     assert (len(vuelo.codigo), len(vuelo.origen), len(vuelo.destino)) == (10, 80, 80)
-    assert vuelo.capacidad == 900 and str(vuelo.precio) == "10000.00"
+    assert vuelo.capacidad == 200 and str(vuelo.precio) == "10000.00"
 
 
 @pytest.mark.parametrize(
