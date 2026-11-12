@@ -13,6 +13,7 @@ import '../widgets/aviso.dart';
 import '../widgets/barra_kuntur.dart';
 import '../widgets/boton_degradado.dart';
 import '../widgets/campo_selector.dart';
+import '../widgets/navegacion_principal.dart';
 
 /// Panel del administrador (V): acceso a crear vuelos y gestión del IVA.
 /// Solo lo ve quien tiene rol admin (lo garantiza el router y, además, el servidor con 403).
@@ -24,7 +25,8 @@ class AdminPage extends ConsumerWidget {
     final iva = ref.watch(ivaControllerProvider);
 
     return Scaffold(
-      appBar: const BarraKuntur(conAtras: true),
+      appBar: const BarraKuntur(),
+      bottomNavigationBar: const NavegacionPrincipal(actual: Seccion.administracion),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(

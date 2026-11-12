@@ -14,6 +14,7 @@ import '../widgets/barra_kuntur.dart';
 import '../widgets/control_paginas.dart';
 import '../widgets/campo_selector.dart';
 import '../widgets/tarjeta_vuelo.dart';
+import '../widgets/navegacion_principal.dart';
 
 /// Pantalla principal (V): búsqueda y lista de vuelos. No llama a la API: delega en
 /// [VuelosController] y en [FiltroVuelosController].
@@ -29,27 +30,8 @@ class VuelosPage extends ConsumerWidget {
     final filtro = ref.watch(filtroVuelosProvider);
 
     return Scaffold(
-      appBar: BarraKuntur(
-        acciones: [
-          if (!usuario.esAdmin)
-            IconButton(
-              tooltip: 'Mis reservas',
-              icon: const Icon(Icons.confirmation_number_outlined),
-              onPressed: () => context.push(AppRoutes.reservas),
-            ),
-          if (usuario.esAdmin)
-            IconButton(
-              tooltip: 'Panel de administración',
-              icon: const Icon(Icons.admin_panel_settings_outlined),
-              onPressed: () => context.push(AppRoutes.admin),
-            ),
-          IconButton(
-            tooltip: 'Estado del servicio',
-            icon: const Icon(Icons.cloud_done_outlined),
-            onPressed: () => context.push(AppRoutes.estado),
-          ),
-        ],
-      ),
+      appBar: const BarraKuntur(),
+      bottomNavigationBar: const NavegacionPrincipal(actual: Seccion.vuelos),
       floatingActionButton: usuario.esAdmin
           ? FloatingActionButton.extended(
               onPressed: () => context.push(AppRoutes.nuevoVuelo),

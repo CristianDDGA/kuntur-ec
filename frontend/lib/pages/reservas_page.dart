@@ -10,6 +10,7 @@ import '../widgets/aviso.dart';
 import '../widgets/barra_kuntur.dart';
 import '../widgets/control_paginas.dart';
 import '../widgets/tarjeta_reserva.dart';
+import '../widgets/navegacion_principal.dart';
 
 /// "Mis reservas" (V): historial paginado del cliente.
 class ReservasPage extends ConsumerWidget {
@@ -20,7 +21,8 @@ class ReservasPage extends ConsumerWidget {
     final reservas = ref.watch(reservasControllerProvider);
 
     return Scaffold(
-      appBar: const BarraKuntur(conAtras: true),
+      appBar: const BarraKuntur(),
+      bottomNavigationBar: const NavegacionPrincipal(actual: Seccion.reservas),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () => ref.read(reservasControllerProvider.notifier).recargar(),

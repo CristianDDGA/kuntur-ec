@@ -17,6 +17,7 @@ import '../widgets/asiento_boton.dart';
 import '../widgets/aviso.dart';
 import '../widgets/barra_kuntur.dart';
 import '../widgets/boton_degradado.dart';
+import '../widgets/migas.dart';
 import '../widgets/tarjeta_vuelo.dart';
 
 /// Elegir asientos en el mapa del avión (V).
@@ -164,13 +165,36 @@ class _MapaState extends ConsumerState<_Mapa> {
     final iva = ref.watch(ivaVigenteProvider).value;
     ref.watch(reservarControllerProvider); // lo mantiene vivo mientras se reserva (guarda el error del servidor)
 
-    return Scaffold(
-      appBar: const BarraKuntur(conAtras: true),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: _contenido(vuelo, mapa, iva?.porcentaje),
+    // Con asientos elegidos (o cambios sin guardar) la flecha "Volver" pregunta antes de salir.
+    final conCambios = !_enviando && (_editando ? !_sinCambios : !_seleccion.vacia);
+
+    return PopScope(
+      canPop: !conCambios,
+      onPopInvokedWithResult: (salio, _) async {
+        if (salio) return;
+        final salir = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('¿Salir sin guardar?'),
+            content: Text(_editando
+                ? 'Los cambios en sus asientos no se guardarán.'
+                : 'Los asientos que eligió no se reservarán.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Seguir eligiendo')),
+              FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Salir')),
+            ],
+          ),
+        );
+        if (salir == true && context.mounted) context.pop();
+      },
+      child: Scaffold(
+        appBar: const BarraKuntur(conAtras: true),
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: _contenido(vuelo, mapa, iva?.porcentaje),
+            ),
           ),
         ),
       ),
@@ -218,8 +242,27 @@ class _MapaState extends ConsumerState<_Mapa> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             children: [
+              Migas(_editando
+                  ? [
+                      const Miga('Mis reservas', ruta: AppRoutes.reservas),
+                      Miga(widget.reserva!.numero, ruta: AppRoutes.reserva(widget.reserva!.id)),
+                      const Miga('Cambiar asientos'),
+                    ]
+                  : [
+                      const Miga('Vuelos', ruta: AppRoutes.inicio),
+                      Miga(v.codigo, ruta: AppRoutes.vuelo(v.id)),
+                      const Miga('Elegir asientos'),
+                    ]),
+              const SizedBox(height: 10),
               _CabeceraVuelo(vuelo: v, onActualizar: actualizando ? null : _actualizarMapa, libres: m.libres),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
+              Text(
+                _editando
+                    ? 'Toque un asiento para soltarlo o elegir otro. Los marcados en rojo son de otras personas.'
+                    : 'Toque los asientos que quiere (hasta ${SeleccionAsientos.maximo}). Los marcados en rojo ya están ocupados.',
+                style: AppTextStyles.cuerpo,
+              ),
+              const SizedBox(height: 10),
               const _Leyenda(),
               const SizedBox(height: 12),
               Opacity(

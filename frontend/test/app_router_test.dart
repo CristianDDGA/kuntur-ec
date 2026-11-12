@@ -132,8 +132,7 @@ void main() {
       });
       await abrirApp(tester, client: client, tokens: tokens);
 
-      await tester.tap(find.byTooltip('Cerrar sesión'));
-      await tester.pumpAndSettle();
+      await cerrarSesionDesdeElMenu(tester);
 
       expect(client.rutasSolicitadas, ['GET /auth/perfil', 'GET /vuelos', 'POST /auth/logout']);
       expect(await tokens.leer(), isNull);
@@ -149,8 +148,7 @@ void main() {
       });
       await abrirApp(tester, client: client, tokens: tokens);
 
-      await tester.tap(find.byTooltip('Cerrar sesión'));
-      await tester.pumpAndSettle();
+      await cerrarSesionDesdeElMenu(tester);
 
       expect(await tokens.leer(), isNull);
       expect(find.byType(LoginPage), findsOneWidget);

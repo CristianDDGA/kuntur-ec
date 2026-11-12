@@ -43,7 +43,7 @@ void main() {
       await _ir(tester, AppRoutes.asientosDelVuelo(3));
 
       expect(find.byType(SeleccionAsientosPage), findsOneWidget);
-      expect(find.text('KT101'), findsOneWidget);
+      expect(find.text('KT101'), findsWidgets); // en las migas y en la cabecera
       expect(find.text('Disponible'), findsOneWidget);
       expect(find.text('Seleccionado'), findsOneWidget);
       expect(find.text('Ocupado'), findsOneWidget);

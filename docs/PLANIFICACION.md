@@ -161,7 +161,7 @@ Excepción documentada: `flasgger==0.9.7.1` (la 0.9.4 no funciona con Flask 3).
 | F1 | Frontend: tema Ecuador, login, registro, sesión persistente y rutas protegidas | ✅ Hecho |
 | F2 | Frontend: lista paginada y búsqueda de vuelos, detalle, crear vuelo (admin), panel de administración con IVA | ✅ Hecho |
 | F3 | Frontend: reservar desde el detalle, mis reservas (paginadas), modificar con versión y cancelar. **El administrador no reserva** (403 en el API, sin pantallas) | ✅ Hecho |
-| F4 | Frontend: comprobante XML (panel "Factura XML") | ⏳ Siguiente (F4) |
+| F4 | Frontend: comprobante (factura legible + panel "Factura XML" con copiar) y mejoras de usabilidad con las heurísticas de Nielsen (barra de navegación inferior, logo → inicio, menú de cuenta, migas de pan, aviso al salir con cambios). Ver `docs/USABILIDAD.md` | ✅ Hecho |
 | P | Pruebas funcionales y capturas | Pendiente |
 | D | Diagrama SOA + informe PDF | Pendiente |
 

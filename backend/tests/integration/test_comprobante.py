@@ -98,3 +98,28 @@ def test_comprobante_errores(client, url, cabeceras, status):
 
 def test_numero_de_factura():
     assert numero_factura(7) == "KEC-00000007"
+
+
+# ---------------------------------------------------------------- asientos en la factura
+
+
+def _con_asientos(*asientos):
+    base = _detalle()
+    return ReservaDetalle(base.reserva, base.vuelo, tuple(asientos))
+
+
+def test_la_factura_lista_los_asientos_de_la_reserva():
+    datos = armar_datos_factura(_con_asientos("1A", "2B"), ANA)
+    assert datos["detalles"][0]["asientos"] == "1A, 2B"
+    raiz = ElementTree.fromstring(generar_factura_xml(datos).encode("utf-8"))
+    producto = raiz.find("Detalle/producto")
+    assert [c.tag for c in producto] == ["Nombre", "Asientos", "Cantidad", "PrecioUnitario", "Subtotal"]
+    assert producto.findtext("Asientos") == "1A, 2B"
+
+
+def test_los_caracteres_especiales_del_cliente_no_rompen_el_xml():
+    cliente = un_usuario(id=1, nombre="Ana <script>&\"'", correo="ana@correo.com")
+    xml = generar_factura_xml(armar_datos_factura(_con_asientos("1A"), cliente))
+    raiz = ElementTree.fromstring(xml.encode("utf-8"))  # sigue siendo XML válido
+    assert raiz.findtext("cliente/nombre") == "Ana <script>&\"'"
+    assert "<script>" not in xml  # va escapado como &lt;script&gt;

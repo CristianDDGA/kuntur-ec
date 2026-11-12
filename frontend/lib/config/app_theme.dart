@@ -196,6 +196,23 @@ class AppTheme {
           textStyle: const TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: AppColors.superficie,
+        indicatorColor: AppColors.amarillo.withValues(alpha: 0.55),
+        height: 68,
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (estados) => TextStyle(
+            fontSize: 12.5,
+            fontWeight: estados.contains(WidgetState.selected) ? FontWeight.w800 : FontWeight.w600,
+            color: estados.contains(WidgetState.selected) ? AppColors.textoPrincipal : AppColors.textoSecundario,
+          ),
+        ),
+        iconTheme: WidgetStateProperty.resolveWith(
+          (estados) => IconThemeData(
+            color: estados.contains(WidgetState.selected) ? AppColors.azulNoche : AppColors.textoSecundario,
+          ),
+        ),
+      ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppColors.azulNoche,

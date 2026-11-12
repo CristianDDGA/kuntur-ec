@@ -137,7 +137,10 @@ class Reserva {
   bool puedeEditarse({DateTime? ahora}) => !cancelada && !vuelo.yaPartio(ahora: ahora);
 
   /// Número de comprobante: "KEC-00000058".
-  String get numero => 'KEC-${id.toString().padLeft(8, '0')}';
+  String get numero => numeroDe(id);
+
+  /// "KEC-00000058" a partir del id (el mismo formato que usa el servidor en la factura).
+  static String numeroDe(int id) => 'KEC-${id.toString().padLeft(8, '0')}';
 }
 
 /// Una página del historial. Contrato: {"total", "pagina", "por_pagina", "total_paginas", "reservas": [...]}.

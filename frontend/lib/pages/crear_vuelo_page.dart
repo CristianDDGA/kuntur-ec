@@ -12,6 +12,8 @@ import '../widgets/aviso.dart';
 import '../widgets/barra_kuntur.dart';
 import '../widgets/boton_degradado.dart';
 import '../widgets/campo_selector.dart';
+import '../widgets/migas.dart';
+import '../widgets/navegacion_principal.dart';
 
 /// Formulario "Nuevo vuelo" (V). Solo el administrador llega aquí (lo garantiza el router
 /// y, en última instancia, el servidor con 403).
@@ -199,13 +201,19 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
 
     return Scaffold(
       appBar: const BarraKuntur(conAtras: true),
+      bottomNavigationBar: const NavegacionPrincipal(actual: Seccion.administracion),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
-              child: Container(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Migas([Miga('Administración', ruta: AppRoutes.admin), Miga('Nuevo vuelo')]),
+                  const SizedBox(height: 12),
+                  Container(
                 padding: const EdgeInsets.all(22),
                 decoration: AppDecorations.tarjeta,
                 child: Form(
@@ -248,6 +256,8 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
                     },
                   ),
                 ),
+              ),
+                ],
               ),
             ),
           ),

@@ -44,6 +44,7 @@ def armar_datos_factura(detalle: ReservaDetalle, cliente: Usuario) -> dict[str, 
                     f"Pasaje {vuelo.codigo} {vuelo.origen} - {vuelo.destino} "
                     f"({vuelo.fecha} {vuelo.hora_salida:%H:%M})"
                 ),
+                **({"asientos": ", ".join(detalle.asientos)} if detalle.asientos else {}),  # "1A, 1B"
                 "cantidad": reserva.cantidad_asientos,
                 "precio": redondear(reserva.subtotal / reserva.cantidad_asientos),
                 "subtotal": reserva.subtotal,
@@ -81,6 +82,8 @@ def generar_factura_xml(datos: dict[str, Any]) -> str:
     for item in datos["detalles"]:
         producto = ET.SubElement(detalle, "producto")
         ET.SubElement(producto, "Nombre").text = item["nombre"]
+        if "asientos" in item:
+            ET.SubElement(producto, "Asientos").text = item["asientos"]
         ET.SubElement(producto, "Cantidad").text = str(item["cantidad"])
         ET.SubElement(producto, "PrecioUnitario").text = item["precio"]
         ET.SubElement(producto, "Subtotal").text = item["subtotal"]

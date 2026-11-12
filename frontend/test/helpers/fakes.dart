@@ -262,3 +262,47 @@ Map<String, Object?> mapaJson({int vueloId = 3, int capacidad = 12, List<String>
       'columnas': ['A', 'B', 'C', 'D'],
       'ocupados': ocupados,
     };
+
+/// XML de una factura tal como lo genera el servidor (con sangría y declaración).
+String facturaXml({
+  String numero = 'KEC-00000058',
+  String fecha = '2026-11-11',
+  String nombre = 'Ana Torres',
+  String correo = 'ana@correo.com',
+  String descripcion = 'Pasaje KT101 Quito - Guayaquil (2030-12-01 07:00)',
+  String? asientos = '1A, 1B',
+  String cantidad = '2',
+  String unitario = '89.00',
+  String subtotal = '178.00',
+  String porcentaje = '15.00',
+  String iva = '26.70',
+  String total = '204.70',
+  String estado = 'Confirmada',
+}) =>
+    '''<?xml version="1.0" encoding="utf-8"?>
+<factura>
+  <cabecera>
+    <numero>$numero</numero>
+    <fecha>$fecha</fecha>
+  </cabecera>
+  <cliente>
+    <nombre>$nombre</nombre>
+    <correo>$correo</correo>
+  </cliente>
+  <Detalle>
+    <producto>
+      <Nombre>$descripcion</Nombre>
+${asientos == null ? '' : '      <Asientos>$asientos</Asientos>\n'}      <Cantidad>$cantidad</Cantidad>
+      <PrecioUnitario>$unitario</PrecioUnitario>
+      <Subtotal>$subtotal</Subtotal>
+    </producto>
+  </Detalle>
+  <Totales>
+    <Subtotal>$subtotal</Subtotal>
+    <PorcentajeIVA>$porcentaje</PorcentajeIVA>
+    <IVA>$iva</IVA>
+    <Total>$total</Total>
+  </Totales>
+  <Estado>$estado</Estado>
+</factura>
+''';

@@ -11,6 +11,9 @@ import '../widgets/barra_kuntur.dart';
 import '../widgets/etiqueta_asientos.dart';
 import '../widgets/panel_reserva.dart';
 import '../widgets/tarjeta_vuelo.dart';
+import '../config/app_router.dart';
+import '../widgets/migas.dart';
+import '../widgets/navegacion_principal.dart';
 
 /// Detalle de un vuelo (V): datos del vuelo y, para clientes, el panel para reservar.
 class VueloDetallePage extends ConsumerWidget {
@@ -24,22 +27,33 @@ class VueloDetallePage extends ConsumerWidget {
 
     return Scaffold(
       appBar: const BarraKuntur(conAtras: true),
+      bottomNavigationBar: const NavegacionPrincipal(actual: Seccion.vuelos),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
-              child: vuelo.when(
-                loading: () => const Padding(
-                  padding: EdgeInsets.all(48),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-                error: (error, _) => _Error(
-                  mensaje: mensajeDeError(error),
-                  onReintentar: () => ref.invalidate(vueloDetalleControllerProvider(vueloId)),
-                ),
-                data: (v) => _Detalle(vuelo: v),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Migas([
+                    const Miga('Vuelos', ruta: AppRoutes.inicio),
+                    Miga(vuelo.value?.codigo ?? 'Detalle del vuelo'),
+                  ]),
+                  const SizedBox(height: 12),
+                  vuelo.when(
+                    loading: () => const Padding(
+                      padding: EdgeInsets.all(48),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                    error: (error, _) => _Error(
+                      mensaje: mensajeDeError(error),
+                      onReintentar: () => ref.invalidate(vueloDetalleControllerProvider(vueloId)),
+                    ),
+                    data: (v) => _Detalle(vuelo: v),
+                  ),
+                ],
               ),
             ),
           ),
