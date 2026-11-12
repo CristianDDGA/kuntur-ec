@@ -198,7 +198,7 @@ class _VistaXml extends StatelessWidget {
           ),
           child: SelectableText(
             factura.xml,
-            style: const TextStyle(fontFamily: 'monospace', fontSize: 12.5, height: 1.5, color: Color(0xFFD6E4FF)),
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 12.5, height: 1.5, color: Color(0xFFE6E9EE)),
           ),
         ),
       ],

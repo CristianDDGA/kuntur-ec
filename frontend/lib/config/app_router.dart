@@ -39,32 +39,56 @@ class AppRoutes {
   static const publicas = {login, registro, estado};
 }
 
+/// A dónde volver después de la carga o del login ("/reservas/58"), o `null` si no es un destino seguro.
+///
+/// Solo se aceptan rutas internas de la app: un `volver=https://sitio-malo.com` o `volver=//otro.com`
+/// nunca debe llevar al usuario fuera, ni a las pantallas de entrada.
+String? destinoSeguro(String? valor) {
+  if (valor == null || valor.isEmpty || valor.length > 200) return null;
+  if (!valor.startsWith('/') || valor.startsWith('//') || valor.contains(r'\') || valor.contains('://')) return null;
+  final ruta = Uri.tryParse(valor)?.path ?? '';
+  const entrada = {AppRoutes.cargando, AppRoutes.login, AppRoutes.registro};
+  return ruta.isEmpty || entrada.contains(ruta) ? null : valor;
+}
+
+String _con(String ruta, String? volver) =>
+    volver == null || volver == AppRoutes.inicio ? ruta : '$ruta?volver=${Uri.encodeQueryComponent(volver)}';
+
 /// El router observa la sesión y protege las rutas:
-/// - mientras se valida el token guardado -> pantalla de carga;
+/// - mientras se valida el token guardado -> pantalla de carga (recordando a dónde iba el usuario);
 /// - sin sesión -> solo login, registro y estado del servicio;
-/// - con sesión -> login y registro redirigen al inicio.
+/// - con sesión -> login y registro redirigen a donde iba el usuario (o al inicio).
+///
+/// Así, recargar la página en "/reservas/58" (o volver a entrar después de que venza la sesión)
+/// deja al usuario donde estaba, en vez de mandarlo siempre al inicio.
 final appRouterProvider = Provider<GoRouter>((ref) {
   final cambios = ValueNotifier<int>(0);
   ref.listen(sesionControllerProvider, (_, _) => cambios.value++);
   ref.onDispose(cambios.dispose);
 
   return GoRouter(
-    initialLocation: AppRoutes.cargando,
+    // Sin initialLocation: en la web se respeta la dirección del navegador (recargar no pierde la pantalla).
     refreshListenable: cambios,
     errorBuilder: (_, _) => const NoEncontradaPage(),
     redirect: (context, state) {
       final sesion = ref.read(sesionControllerProvider);
       final ruta = state.matchedLocation;
+      final volver = destinoSeguro(state.uri.queryParameters['volver']);
 
       if (sesion.isLoading || sesion.hasError) {
-        return ruta == AppRoutes.cargando ? null : AppRoutes.cargando;
+        if (ruta == AppRoutes.cargando) return null;
+        return _con(AppRoutes.cargando, destinoSeguro(state.uri.toString()));
       }
       final autenticado = sesion.value != null;
       if (!autenticado) {
-        return AppRoutes.publicas.contains(ruta) ? null : AppRoutes.login;
+        if (ruta == AppRoutes.cargando) return _con(AppRoutes.login, volver); // la carga terminó sin sesión
+        if (AppRoutes.publicas.contains(ruta)) return null;
+        // Solo se recuerda el destino si la sesión se perdió sin querer (venció); al cerrarla a propósito, no.
+        final seVencio = ref.read(avisoLoginProvider) != null;
+        return _con(AppRoutes.login, seVencio ? destinoSeguro(state.uri.toString()) : null);
       }
       if (ruta == AppRoutes.cargando || ruta == AppRoutes.login || ruta == AppRoutes.registro) {
-        return AppRoutes.inicio;
+        return volver ?? AppRoutes.inicio;
       }
       // Crear vuelos es cosa del administrador (el servidor también lo exige con 403).
       if (ruta.startsWith(AppRoutes.admin) && !sesion.value!.esAdmin) return AppRoutes.inicio;

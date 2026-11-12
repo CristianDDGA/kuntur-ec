@@ -6,9 +6,12 @@ import '../config/app_theme.dart';
 /// Logo: un cóndor andino (kuntur, el ave nacional del Ecuador) con las alas abiertas,
 /// dibujado a mano sobre un cuadrado redondeado con el degradado de marca.
 class LogoKuntur extends StatelessWidget {
-  const LogoKuntur({super.key, this.tamano = 56});
+  const LogoKuntur({super.key, this.tamano = 56, this.conSombra = true});
 
   final double tamano;
+
+  /// `false` para generar íconos (sin sombra alrededor).
+  final bool conSombra;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -19,13 +22,15 @@ class LogoKuntur extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: AppGradients.boton,
             borderRadius: BorderRadius.circular(tamano * 0.28),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.azul.withValues(alpha: 0.30),
-                blurRadius: tamano * 0.3,
-                offset: Offset(0, tamano * 0.1),
-              ),
-            ],
+            boxShadow: conSombra
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.18),
+                      blurRadius: tamano * 0.3,
+                      offset: Offset(0, tamano * 0.1),
+                    ),
+                  ]
+                : null,
           ),
           child: Padding(
             padding: EdgeInsets.all(tamano * 0.14),
