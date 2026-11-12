@@ -48,6 +48,9 @@ class AuthService {
 
   Future<bool> tieneToken() async => (await _tokens.leer()) != null;
 
+  /// El token guardado (para saber cuándo vence), o `null` si no hay.
+  Future<String?> tokenGuardado() => _tokens.leer();
+
   /// Cierra la sesión en el servidor (revoca el token). Aunque el servidor no responda,
   /// el token local se elimina siempre: el usuario no puede quedar "atrapado" en la sesión.
   Future<void> cerrarSesion() async {

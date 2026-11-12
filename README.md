@@ -48,4 +48,26 @@ flutter pub get
 flutter run -d chrome
 ```
 
+La app web queda en `http://localhost:<puerto>`; el backend debe estar en `http://localhost:5000`
+(`CORS_ORIGINS` del `.env` debe incluir el origen del frontend). La base se crea con
+[`database/`](database/) (esquema y datos semilla: cuenta de administrador).
+
+## Pruebas
+
+```bash
+cd backend  && python -m pytest        # API (incluye pruebas contra la base real configurada en .env)
+cd frontend && flutter analyze && flutter test
+```
+
+Colección de Postman en [`docs/postman/`](docs/postman/). Casos de prueba y capturas en
+[`docs/PRUEBAS.md`](docs/PRUEBAS.md); evaluación de usabilidad (heurísticas de Nielsen) en
+[`docs/USABILIDAD.md`](docs/USABILIDAD.md).
+
+## Funcionalidades
+
+- Registro e inicio de sesión (JWT con vencimiento: al vencer, la app cierra la sesión y avisa).
+- Búsqueda de vuelos, detalle y **mapa de asientos** (el cliente elige asientos concretos).
+- Reservas: crear, modificar (control de concurrencia por versión), cancelar y comprobante/factura en **XML**.
+- Administrador: crea vuelos y gestiona el IVA (historial con vigencias); no reserva.
+
 Ver la planificación completa en [`docs/PLANIFICACION.md`](docs/PLANIFICACION.md).

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../config/app_router.dart';
 import '../controllers/login_controller.dart';
+import '../controllers/sesion_controller.dart';
 import '../models/validadores.dart';
 import '../services/api_exception.dart';
 import '../widgets/aviso.dart';
@@ -46,6 +47,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final estado = ref.watch(loginControllerProvider);
     final cargando = estado.isLoading;
     final error = estado.hasError && !cargando ? mensajeDeError(estado.error!) : null;
+    final aviso = ref.watch(avisoLoginProvider); // p. ej. "Su sesión venció por seguridad…"
 
     return PanelAutenticacion(
       titulo: 'Bienvenido de vuelta',
@@ -56,6 +58,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (aviso != null) ...[
+                AvisoInline(texto: aviso, tipo: TipoAviso.info),
+                const SizedBox(height: 16),
+              ],
               TextFormField(
                 autovalidateMode: AutovalidateMode.onUserInteraction,
                 controller: _correo,

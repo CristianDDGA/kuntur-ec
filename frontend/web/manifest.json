@@ -3,10 +3,11 @@
     "short_name": "Kuntur EC",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "Cliente Flutter del sistema de reservas de vuelos (SOA)",
+    "background_color": "#F7F3EC",
+    "theme_color": "#1C2B40",
+    "description": "Reserve vuelos nacionales por todo el Ecuador, elija sus asientos y descargue su comprobante.",
     "orientation": "portrait-primary",
+    "lang": "es",
     "prefer_related_applications": false,
     "icons": [
         {

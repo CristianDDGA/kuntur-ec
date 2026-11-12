@@ -11,44 +11,45 @@ class AppColors {
   const AppColors._();
 
   // Bandera
-  static const Color azul = Color(0xFF0B4DA2);
-  static const Color amarillo = Color(0xFFFFC800);
-  static const Color rojo = Color(0xFFD62839);
+  static const Color azul = Color(0xFF2A4365);
+  static const Color amarillo = Color(0xFFE9A820);
+  static const Color rojo = Color(0xFFB5382C);
 
   // Andes y cielo
-  static const Color azulNoche = Color(0xFF071E45);
-  static const Color cielo = Color(0xFF2F7DD8);
+  static const Color azulNoche = Color(0xFF1C2B40);
+  static const Color cielo = Color(0xFF5B7694);
   static const Color nieve = Color(0xFFFFFFFF);
 
   // Fondos y superficies
-  static const Color fondo = Color(0xFFF2F6FC);
+  static const Color fondo = Color(0xFFF7F3EC);
   static const Color superficie = Color(0xFFFFFFFF);
 
   // Textos
-  static const Color textoPrincipal = Color(0xFF0A2540);
-  static const Color textoSecundario = Color(0xFF4A5F7D);
-  static const Color textoSuave = Color(0xFF7A8BA3);
+  static const Color textoPrincipal = Color(0xFF20262E);
+  static const Color textoSecundario = Color(0xFF56606B);
+  static const Color textoSuave = Color(0xFF656E77);
 
   // Bordes
-  static const Color borde = Color(0xFFD0DBEA);
-  static const Color divisor = Color(0xFFE1E9F4);
+  static const Color borde = Color(0xFFE3DBCD);
+  static const Color divisor = Color(0xFFECE5D9);
 
   // Semánticos
-  static const Color exito = Color(0xFF1B8A5A);
-  static const Color exitoSuave = Color(0xFFE5F5EC);
-  static const Color error = Color(0xFFC8283A);
-  static const Color errorSuave = Color(0xFFFDEBED);
-  static const Color aviso = Color(0xFFB57F00);
-  static const Color avisoSuave = Color(0xFFFFF6D6);
-  static const Color info = Color(0xFF2F7DD8);
-  static const Color infoSuave = Color(0xFFE6F0FC);
+  static const Color exito = Color(0xFF2A6F4F);
+  static const Color exitoSuave = Color(0xFFE6F2EB);
+  static const Color error = Color(0xFFB5382C);
+  static const Color errorSuave = Color(0xFFF8E8E5);
+  static const Color aviso = Color(0xFF8A5F00);
+  static const Color avisoSuave = Color(0xFFFBF1D8);
+  static const Color info = Color(0xFF4F6D8F);
+  static const Color infoSuave = Color(0xFFE8EDF3);
 }
 
 class AppGradients {
   const AppGradients._();
 
   static const LinearGradient boton = LinearGradient(
-    colors: [AppColors.azul, AppColors.cielo],
+    // Plano a propósito: un solo color, sin brillo de degradado.
+    colors: [AppColors.azul, AppColors.azul],
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
   );
@@ -61,7 +62,7 @@ class AppGradients {
   );
 
   static const LinearGradient fondo = LinearGradient(
-    colors: [Color(0xFFE6EEF9), AppColors.fondo],
+    colors: [Color(0xFFF1EADD), AppColors.fondo],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
@@ -109,7 +110,7 @@ class AppDecorations {
     border: Border.all(color: AppColors.borde.withValues(alpha: 0.6)),
     boxShadow: [
       BoxShadow(
-        color: AppColors.azul.withValues(alpha: 0.08),
+        color: Colors.black.withValues(alpha: 0.06),
         blurRadius: 24,
         offset: const Offset(0, 8),
       ),
@@ -194,6 +195,16 @@ class AppTheme {
         style: TextButton.styleFrom(
           foregroundColor: AppColors.azul,
           textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith(
+            (estados) => estados.contains(WidgetState.selected) ? AppColors.azul : Colors.transparent,
+          ),
+          foregroundColor: WidgetStateProperty.resolveWith(
+            (estados) => estados.contains(WidgetState.selected) ? Colors.white : AppColors.textoPrincipal,
+          ),
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(

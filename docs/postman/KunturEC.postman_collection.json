@@ -945,7 +945,7 @@
       "description": "Servicio de Reservas: flujo completo, control de concurrencia por versión y comprobante XML.",
       "item": [
         {
-          "name": "Crear reserva (201)",
+          "name": "Crear reserva por cantidad (201, asigna los primeros asientos libres)",
           "event": [
             {
               "listen": "test",

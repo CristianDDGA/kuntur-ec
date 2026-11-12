@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:vuelos_app/services/rest_client.dart';
 import 'package:vuelos_app/services/token_storage.dart';
 
@@ -306,3 +308,10 @@ ${asientos == null ? '' : '      <Asientos>$asientos</Asientos>\n'}      <Cantid
   <Estado>$estado</Estado>
 </factura>
 ''';
+
+/// JWT de prueba (sin firma válida: la app solo lee el `exp`) que vence dentro de [duracion].
+String jwtQueVenceEn(Duration duracion, {DateTime? ahora}) {
+  String parte(Map<String, Object?> m) => base64Url.encode(utf8.encode(jsonEncode(m))).replaceAll('=', '');
+  final exp = ((ahora ?? DateTime.now()).toUtc().add(duracion).millisecondsSinceEpoch / 1000).round();
+  return '${parte({'alg': 'HS256', 'typ': 'JWT'})}.${parte({'sub': '7', 'exp': exp})}.firma';
+}
