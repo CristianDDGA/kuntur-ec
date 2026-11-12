@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../controllers/sesion_controller.dart';
 import '../pages/estado_api_page.dart';
 import '../pages/admin_page.dart';
+import '../pages/comprobante_page.dart';
 import '../pages/crear_vuelo_page.dart';
 import '../pages/login_page.dart';
 import '../pages/no_encontrada_page.dart';
@@ -27,6 +28,7 @@ class AppRoutes {
   static const estado = '/estado';
   static const reservas = '/reservas';
   static String reserva(int id) => '/reservas/$id';
+  static String comprobante(int id) => '/reservas/$id/comprobante';
   static String asientosDelVuelo(int id) => '/vuelos/$id/asientos';
   static String asientosDeLaReserva(int id) => '/reservas/$id/asientos';
   static const admin = '/admin';
@@ -84,6 +86,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'asientos',
             builder: (_, state) => SeleccionAsientosPage(reservaId: int.parse(state.pathParameters['id']!)),
+          ),
+          GoRoute(
+            path: 'comprobante',
+            builder: (_, state) => ComprobantePage(reservaId: int.parse(state.pathParameters['id']!)),
           ),
         ],
       ),

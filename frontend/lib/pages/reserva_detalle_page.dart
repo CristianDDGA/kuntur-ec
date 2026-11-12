@@ -12,6 +12,8 @@ import '../widgets/aviso.dart';
 import '../widgets/barra_kuntur.dart';
 import '../widgets/tarjeta_reserva.dart';
 import '../widgets/tarjeta_vuelo.dart';
+import '../widgets/migas.dart';
+import '../widgets/navegacion_principal.dart';
 
 /// Detalle de una reserva (V): asientos, montos y las acciones de cambiar asientos o cancelar.
 class ReservaDetallePage extends ConsumerWidget {
@@ -25,34 +27,49 @@ class ReservaDetallePage extends ConsumerWidget {
 
     return Scaffold(
       appBar: const BarraKuntur(conAtras: true),
+      bottomNavigationBar: const NavegacionPrincipal(actual: Seccion.reservas),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
-              child: reserva.when(
-                loading: () => const Padding(padding: EdgeInsets.all(48), child: Center(child: CircularProgressIndicator())),
-                error: (error, _) => Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    AvisoInline(texto: mensajeDeError(error)),
-                    const SizedBox(height: 12),
-                    Align(
-                      child: OutlinedButton.icon(
-                        onPressed: () => ref.invalidate(reservaDetalleControllerProvider(reservaId)),
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Reintentar'),
-                      ),
-                    ),
-                  ],
-                ),
-                data: (r) => _Contenido(reserva: r),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Migas([
+                    const Miga('Mis reservas', ruta: AppRoutes.reservas),
+                    Miga(Reserva.numeroDe(reservaId)),
+                  ]),
+                  const SizedBox(height: 12),
+                  _cuerpo(ref, reserva),
+                ],
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _cuerpo(WidgetRef ref, AsyncValue<Reserva> reserva) {
+    return reserva.when(
+      loading: () => const Padding(padding: EdgeInsets.all(48), child: Center(child: CircularProgressIndicator())),
+      error: (error, _) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AvisoInline(texto: mensajeDeError(error)),
+          const SizedBox(height: 12),
+          Align(
+            child: OutlinedButton.icon(
+              onPressed: () => ref.invalidate(reservaDetalleControllerProvider(reservaId)),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Reintentar'),
+            ),
+          ),
+        ],
+      ),
+      data: (r) => _Contenido(reserva: r),
     );
   }
 }
@@ -160,6 +177,12 @@ class _ContenidoState extends ConsumerState<_Contenido> {
           ),
         ),
         const SizedBox(height: 14),
+        FilledButton.icon(
+          onPressed: () => context.push(AppRoutes.comprobante(r.id)),
+          icon: const Icon(Icons.receipt_long_outlined),
+          label: const Text('Ver comprobante (factura XML)'),
+        ),
+        const SizedBox(height: 10),
         if (r.cancelada)
           const AvisoInline(tipo: TipoAviso.info, texto: 'Esta reserva fue cancelada. Los asientos volvieron al vuelo.')
         else if (!editable)

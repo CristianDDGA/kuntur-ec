@@ -137,7 +137,7 @@ void main() {
       expect(find.text('42 libres de 80'), findsOneWidget);
       expect(find.text('Precio por persona'), findsOneWidget);
 
-      await tester.tap(find.byTooltip('Volver a los vuelos'));
+      await tester.tap(find.byTooltip('Volver'));
       await tester.pumpAndSettle();
       expect(find.byType(VuelosPage), findsOneWidget);
     });

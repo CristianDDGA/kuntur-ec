@@ -52,3 +52,13 @@ Future<void> tocarBoton(WidgetTester tester, String texto) async {
   await tester.tap(find.text(texto));
   await tester.pump();
 }
+
+/// Abre el menú de cuenta (el avatar de la barra superior) y cierra la sesión confirmando el aviso.
+Future<void> cerrarSesionDesdeElMenu(WidgetTester tester) async {
+  await tester.tap(find.byWidgetPredicate((w) => w is PopupMenuButton));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Cerrar sesión'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Sí, cerrar sesión'));
+  await tester.pumpAndSettle();
+}

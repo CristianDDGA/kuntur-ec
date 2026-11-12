@@ -152,7 +152,7 @@ void main() {
   group('panel de administración', () {
     testWidgets('el cliente no ve el botón del panel y la ruta lo devuelve a la lista', (tester) async {
       await _abrir(tester, {'GET /vuelos': sinVuelos});
-      expect(find.byTooltip('Panel de administración'), findsNothing);
+      expect(find.text('Administración'), findsNothing);
 
       _irA(tester, AppRoutes.admin);
       await tester.pumpAndSettle();
@@ -163,7 +163,7 @@ void main() {
     testWidgets('el administrador abre el panel y ve el IVA vigente y el historial', (tester) async {
       await _abrir(tester, {'GET /vuelos': sinVuelos, 'GET /iva': respuestaIva}, usuario: usuarioAdmin);
 
-      await tester.tap(find.byTooltip('Panel de administración'));
+      await tester.tap(find.text('Administración'));
       await tester.pumpAndSettle();
 
       expect(find.byType(AdminPage), findsOneWidget);
