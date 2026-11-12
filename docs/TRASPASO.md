@@ -11,12 +11,10 @@ El sistema (backend Flask + frontend Flutter web + Supabase) está completo y pr
 - No poner credenciales en el repositorio.
 
 ## Pendiente
-1. `docs/PRUEBAS.md`: casos de prueba con las capturas de `docs/capturas/` (login, registro, vuelos, mis reservas, comprobante, admin).
+1. `docs/PRUEBAS.md` ya existe; completar con las capturas faltantes.
    Faltan capturas: detalle de vuelo, mapa de asientos, reserva confirmada, página no encontrada, sesión vencida, vistas de escritorio.
 2. Prueba de expiración del token: arrancar el backend con `JWT_EXPIRES_MINUTES=1`, iniciar sesión, esperar >1 min
    y comprobar que vuelve al login con el aviso "Su sesión venció por seguridad…".
-3. Actualizar la colección de Postman (todavía usa `cantidad`; ahora se reservan asientos concretos).
-4. README final (instalación, variables de entorno, cómo correr backend y frontend, pruebas).
 5. Informe + diagrama SOA.
 6. Decidir despliegue (y Docker, opcional). Opcional: descarga del comprobante; borrar vuelos de prueba (confirmar antes).
 
