@@ -31,6 +31,13 @@ Se recorrió la app como usuario (cliente y administrador) en vista móvil de 39
 | 10 | Vuelos como administrador | Sin botón de reservar | OK | `capturas/14-vuelos-administrador.jpg` |
 | 11 | Panel de administración | Acceso a crear vuelo e IVA | OK | `capturas/15-panel-administracion.jpg` |
 | 12 | Crear vuelo con datos inválidos | Errores de validación por campo | OK | `capturas/16-crear-vuelo-validacion.jpg` |
+| 13 | Detalle de vuelo | Datos del vuelo y botón «Elegir asientos» | OK | `capturas/04-detalle-vuelo.jpg` |
+| 14 | Mapa de asientos (vacío) | Leyenda y asientos disponibles | OK | `capturas/05-mapa-asientos.jpg` |
+| 15 | Selección de asientos | Resumen con subtotal, IVA y total | OK | `capturas/06-seleccion-asientos.jpg` |
+| 16 | Reserva confirmada | Código, asientos y total | OK | `capturas/07-reserva-confirmada.jpg` |
+| 17 | Dirección inexistente | Página «No encontramos esa página» | OK | `capturas/17-pagina-no-encontrada.jpg` |
+| 18 | Vista de escritorio (mapa de asientos) | Contenido centrado; recargar conserva la pantalla | OK | `capturas/18-escritorio-mapa-asientos.jpg` |
+| 19 | Sesión vencida | Vuelve al login con aviso | OK | `capturas/19-sesion-vencida.jpg` |
 
 ## 3. Expiración del token
 
@@ -40,7 +47,7 @@ Se recorrió la app como usuario (cliente y administrador) en vista móvil de 39
 - Al volver a iniciar sesión, se regresa a la pantalla donde estaba (solo rutas internas).
 - Al cerrar sesión a propósito no se recuerda la pantalla.
 - Cubierto por `test/pages/sesion_vencida_test.dart` y `test/app_router_volver_test.dart`.
-- Pendiente: repetir en el navegador real con `JWT_EXPIRES_MINUTES=1` y capturar el aviso.
+- Verificado en el navegador real con `JWT_EXPIRES_MINUTES=1`: tras ~1 minuto la app pasó sola al login con el aviso (captura 19).
 
 ## 4. Hallazgos y correcciones
 
@@ -53,7 +60,3 @@ Se recorrió la app como usuario (cliente y administrador) en vista móvil de 39
 | Segmento seleccionado con poco contraste | Tema de `SegmentedButton` (azul con texto blanco) |
 | Íconos y manifest por defecto de Flutter | Regenerados con el logo del cóndor; idioma `es` |
 | Accesibilidad web | Semántica activada para lectores de pantalla |
-
-## 5. Pendiente de capturar
-
-Detalle de vuelo, mapa de asientos, reserva confirmada, página no encontrada, sesión vencida y vistas de escritorio.
