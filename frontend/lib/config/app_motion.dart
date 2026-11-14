@@ -19,11 +19,17 @@ class AppMotion {
   /// Cambios de pantalla o revelados amplios (expansión del buscador).
   static const Duration lenta = Duration(milliseconds: 420);
 
+  /// Entrada de ilustraciones y héroes visuales (isométrico, liquid morph).
+  static const Duration heroe = Duration(milliseconds: 520);
+
   /// Curva de entrada: arranca rápido y frena suave (nada de rebotes bruscos).
   static const Curve curvaEntrada = Curves.easeOutCubic;
 
   /// Curva para respuesta táctil (presionar/soltar).
   static const Curve curvaTactil = Curves.easeInOut;
+
+  /// Curva orgánica para el morfismo líquido y los asentamientos elásticos.
+  static const Curve curvaLiquida = Curves.easeInOutCubic;
 
   /// Duración efectiva según la preferencia de accesibilidad del sistema.
   static Duration duracion(BuildContext context, Duration base) =>
@@ -34,4 +40,6 @@ class AppMotion {
   static Duration mediaDe(BuildContext context) => duracion(context, media);
 
   static Duration lentaDe(BuildContext context) => duracion(context, lenta);
+
+  static Duration heroeDe(BuildContext context) => duracion(context, heroe);
 }
