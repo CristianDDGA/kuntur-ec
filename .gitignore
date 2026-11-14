@@ -29,3 +29,10 @@ frontend/.packages
 *.iml
 .DS_Store
 Thumbs.db
+
+# --- Artefactos locales de análisis (no se suben) ---
+.jscpd-report/
+.tmp-metrics/
+.tmp-test.log
+coverage/
+lcov.info
