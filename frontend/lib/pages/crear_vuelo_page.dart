@@ -14,7 +14,10 @@ import '../widgets/campo_selector.dart';
 import '../widgets/campo_texto_kuntur.dart';
 import '../widgets/fila_detalle.dart';
 import '../widgets/hoja_confirmacion.dart';
+import '../widgets/isometric_kuntur.dart';
+import '../widgets/kinetic_type.dart';
 import '../widgets/kuntur_scaffold.dart';
+import '../widgets/liquid_morph.dart';
 import '../widgets/migas.dart';
 import '../widgets/navegacion_principal.dart';
 import '../widgets/selectores_fecha_hora.dart';
@@ -97,17 +100,7 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
     }
   }
 
-  Future<DateTime?> _elegirFecha() {
-    final hoy = DateTime.now();
-    final dia = DateTime(hoy.year, hoy.month, hoy.day);
-    return elegirFechaKuntur(
-      context,
-      inicial: _fecha ?? dia,
-      primera: dia,
-      ultima: dia.add(const Duration(days: ValidadoresVuelo.diasMaxAdelante)),
-      ayuda: 'Fecha del vuelo',
-    );
-  }
+  Future<DateTime?> _elegirFecha() => elegirFechaDeVuelo(context, inicial: _fecha);
 
   /// Si el vuelo es hoy se propone la próxima hora completa; si no, las 08:00.
   Duration _salidaSugerida() {
@@ -150,6 +143,85 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
     final horas = minutos ~/ 60;
     final resto = minutos % 60;
     return resto == 0 ? '$horas h' : '$horas h $resto min';
+  }
+
+  /// Filas de la cabina **3 + pasillo + 3** para la capacidad escrita, o `null`
+  /// mientras la capacidad no sea un entero válido.
+  int? get _filasCabina {
+    final capacidad = int.tryParse(_capacidad.text.trim());
+    if (capacidad == null || capacidad < 1 || capacidad > ValidadoresVuelo.capacidadMax) return null;
+    return (capacidad / 6).ceil();
+  }
+
+  /// Una ciudad frecuente resalta cuando ya es el origen o el destino escrito.
+  bool _ciudadElegida(String ciudad) {
+    final nombre = ciudad.toLowerCase();
+    return _origen.text.trim().toLowerCase() == nombre || _destino.text.trim().toLowerCase() == nombre;
+  }
+
+  /// Tarjeta de vista previa en vivo: ruta cinética, duración y cabina 3+3.
+  Widget _vistaPrevia() {
+    final duracion = _duracionTexto;
+    final filas = _filasCabina;
+    return MarcoIsometrico25D(
+      radio: 16,
+      color: AppColors.infoSuave,
+      relleno: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.flight_takeoff, size: 18, color: AppColors.azul),
+              SizedBox(width: 8),
+              Expanded(child: Text('Vista previa del vuelo', style: AppTextStyles.etiqueta)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          TextoRutaCinetica(
+            origen: _origen.text,
+            destino: _destino.text,
+            estilo: AppTextStyles.subtitulo,
+          ),
+          if (duracion != null) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.schedule, size: 16, color: AppColors.textoSecundario),
+                const SizedBox(width: 6),
+                Semantics(
+                  label: 'Duración estimada',
+                  child: Text(duracion, style: AppTextStyles.cuerpo),
+                ),
+              ],
+            ),
+          ],
+          if (filas != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Cabina 3+3 · $filas filas',
+              style: AppTextStyles.etiqueta.copyWith(color: AppColors.azul),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Chip de ciudad frecuente con respuesta líquida cuando ya está elegida.
+  Widget _chipCiudad(String ciudad) {
+    final activa = _ciudadElegida(ciudad);
+    return CapsulaLiquidMorph(
+      activa: activa,
+      radio: 20,
+      colorActiva: AppColors.amarillo.withValues(alpha: 0.35),
+      child: ActionChip(
+        label: Text(ciudad),
+        onPressed: () => _sugerirCiudad(ciudad),
+        backgroundColor: activa ? Colors.transparent : AppColors.infoSuave,
+        side: BorderSide.none,
+      ),
+    );
   }
 
   Future<bool> _confirmarSalidaSinGuardar() => mostrarConfirmacionKuntur(
@@ -304,6 +376,8 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
                             'El código (KT101, KT102…) se asigna solo y el vuelo nace con todos sus asientos libres.',
                             style: AppTextStyles.cuerpo,
                           ),
+                          const SizedBox(height: 16),
+                          _vistaPrevia(),
                           const SizedBox(height: 20),
                           fila(origen, destino),
                           const SizedBox(height: 10),
@@ -313,11 +387,7 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
                             spacing: 6,
                             runSpacing: 2,
                             children: [
-                              for (final ciudad in _ciudadesFrecuentes)
-                                ActionChip(
-                                  label: Text(ciudad),
-                                  onPressed: () => _sugerirCiudad(ciudad),
-                                ),
+                              for (final ciudad in _ciudadesFrecuentes) _chipCiudad(ciudad),
                             ],
                           ),
                           const SizedBox(height: 14),

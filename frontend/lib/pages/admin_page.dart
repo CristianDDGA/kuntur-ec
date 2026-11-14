@@ -16,6 +16,8 @@ import '../widgets/campo_texto_kuntur.dart';
 import '../widgets/estado_vista.dart';
 import '../widgets/hoja_confirmacion.dart';
 import '../widgets/insignia_estado.dart';
+import '../widgets/isometric_kuntur.dart';
+import '../widgets/kinetic_type.dart';
 import '../widgets/kuntur_scaffold.dart';
 import '../widgets/navegacion_principal.dart';
 import '../widgets/selectores_fecha_hora.dart';
@@ -115,17 +117,7 @@ class _SeccionIvaState extends ConsumerState<_SeccionIva> {
     super.dispose();
   }
 
-  Future<DateTime?> _elegirFecha() {
-    final hoy = DateTime.now();
-    final dia = DateTime(hoy.year, hoy.month, hoy.day);
-    return elegirFechaKuntur(
-      context,
-      inicial: _desde ?? dia,
-      primera: dia,
-      ultima: dia.add(const Duration(days: ValidadoresVuelo.diasMaxAdelante)),
-      ayuda: 'La tarifa rige desde',
-    );
-  }
+  Future<DateTime?> _elegirFecha() => elegirFechaDeTarifa(context, inicial: _desde);
 
   Future<void> _enviar() async {
     if (_ocupado || !_formulario.currentState!.validate()) return;
@@ -209,18 +201,30 @@ class _SeccionIvaState extends ConsumerState<_SeccionIva> {
               tipo: TipoAviso.error,
               texto: 'No hay una tarifa de IVA vigente: nadie podrá reservar hasta que programe una.',
             )
-          else
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(vigente.porcentajeCorto,
-                    style: const TextStyle(fontSize: 38, fontWeight: FontWeight.w800, color: AppColors.azul, height: 1)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text('vigente desde ${Formatos.fecha(vigente.vigenteDesde)}', style: AppTextStyles.cuerpo),
+          else ...[
+            BloqueMetricaIsometrico(
+              etiqueta: 'IVA vigente',
+              valor: OdometroCinetico(
+                texto: vigente.porcentajeCorto,
+                estilo: const TextStyle(
+                  fontSize: 38,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.azul,
+                  height: 1,
                 ),
+              ),
+              pie: Text('vigente desde ${Formatos.fecha(vigente.vigenteDesde)}', style: AppTextStyles.cuerpo),
+            ),
+            const SizedBox(height: 10),
+            // Línea de tiempo del impuesto: pasado, presente y futuro en una sola lectura.
+            const Row(
+              children: [
+                Icon(Icons.timeline, size: 16, color: AppColors.textoSuave),
+                SizedBox(width: 8),
+                Text('Anterior · Ahora · Próxima', style: AppTextStyles.etiqueta),
               ],
             ),
+          ],
           if (programada != null) ...[
             const SizedBox(height: 12),
             Container(

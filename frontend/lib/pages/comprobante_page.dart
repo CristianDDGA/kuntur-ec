@@ -15,7 +15,9 @@ import '../widgets/estado_vista.dart';
 import '../widgets/fila_detalle.dart';
 import '../widgets/franja_tricolor.dart';
 import '../widgets/insignia_estado.dart';
+import '../widgets/kinetic_type.dart';
 import '../widgets/kuntur_scaffold.dart';
+import '../widgets/liquid_morph.dart';
 import '../widgets/logo_kuntur.dart';
 import '../widgets/migas.dart';
 import '../widgets/navegacion_principal.dart';
@@ -65,14 +67,13 @@ class _ComprobantePageState extends ConsumerState<ComprobantePage> {
               onReintentar: () => ref.invalidate(comprobanteControllerProvider(widget.reservaId)),
             )
           else ...[
-            SegmentedButton<_Vista>(
-              showSelectedIcon: false,
-              segments: const [
-                ButtonSegment(value: _Vista.factura, label: Text('Factura')),
-                ButtonSegment(value: _Vista.xml, label: Text('Factura XML')),
+            SelectorLiquidMorph<_Vista>(
+              opciones: const [
+                OpcionLiquid(valor: _Vista.factura, etiqueta: 'Factura', icono: Icons.receipt_long_outlined),
+                OpcionLiquid(valor: _Vista.xml, etiqueta: 'Factura XML', icono: Icons.data_object),
               ],
-              selected: {_vista},
-              onSelectionChanged: (v) => setState(() => _vista = v.first),
+              seleccion: _vista,
+              onCambio: (v) => setState(() => _vista = v),
             ),
             const SizedBox(height: 16),
             AnimatedSwitcher(
@@ -144,12 +145,33 @@ class _VistaFactura extends StatelessWidget {
                 const SizedBox(height: 12),
                 FilaDetalle(etiqueta: '${f.cantidad} × ${Formatos.dinero(f.precioUnitarioCentavos)}', valor: Formatos.dinero(f.subtotalCentavos)),
                 const SizedBox(height: 6),
-                const _Perforado(),
+                const _PerforadoConMuescas(),
                 const SizedBox(height: 6),
                 FilaDetalle(etiqueta: 'Subtotal', valor: Formatos.dinero(f.subtotalCentavos)),
                 FilaDetalle(etiqueta: 'IVA (${Formatos.porcentaje(f.ivaPorcentaje)})', valor: Formatos.dinero(f.ivaCentavos)),
                 const SizedBox(height: 6),
-                FilaDetalle(etiqueta: 'Total', valor: Formatos.dinero(f.totalCentavos), destacado: true),
+                // El total se anima con el odómetro cinético (un único `Text` conserva `find.text`).
+                Semantics(
+                  label: 'Total: ${Formatos.dinero(f.totalCentavos)}',
+                  excludeSemantics: true,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 5),
+                    child: Row(
+                      children: [
+                        const Expanded(child: Text('Total', style: AppTextStyles.cuerpo)),
+                        const SizedBox(width: 12),
+                        OdometroCinetico(
+                          texto: Formatos.dinero(f.totalCentavos),
+                          estilo: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textoPrincipal,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -157,6 +179,54 @@ class _VistaFactura extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Línea discontinua de perforado con las muescas semicirculares laterales
+/// propias de un *boarding pass*: dos círculos del color del fondo recortan el
+/// borde de la tarjeta a la altura de la perforación.
+class _PerforadoConMuescas extends StatelessWidget {
+  const _PerforadoConMuescas();
+
+  /// El contenido de la factura lleva 22 pt de relleno lateral: el centro de la
+  /// muesca queda justo sobre el borde de la tarjeta (22 + 9 = 31).
+  static const double _desplazamiento = 31;
+  static const double _diametro = 18;
+
+  @override
+  Widget build(BuildContext context) => const SizedBox(
+        height: _diametro,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            Center(child: _Perforado()),
+            Positioned(
+              left: -_desplazamiento,
+              top: 0,
+              child: _Muesca(diametro: _diametro),
+            ),
+            Positioned(
+              right: -_desplazamiento,
+              top: 0,
+              child: _Muesca(diametro: _diametro),
+            ),
+          ],
+        ),
+      );
+}
+
+/// Semicírculo del color del fondo que simula el corte del troquel.
+class _Muesca extends StatelessWidget {
+  const _Muesca({required this.diametro});
+
+  final double diametro;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: diametro,
+        height: diametro,
+        decoration: const BoxDecoration(color: AppColors.fondo, shape: BoxShape.circle),
+      );
 }
 
 /// Línea discontinua que separa los datos del pago, como en un comprobante impreso.

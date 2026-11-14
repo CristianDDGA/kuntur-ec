@@ -12,6 +12,7 @@ import '../widgets/aviso.dart';
 import '../widgets/estado_vista.dart';
 import '../widgets/fila_detalle.dart';
 import '../widgets/hoja_confirmacion.dart';
+import '../widgets/isometric_kuntur.dart';
 import '../widgets/kuntur_scaffold.dart';
 import '../widgets/migas.dart';
 import '../widgets/navegacion_principal.dart';
@@ -190,7 +191,8 @@ class _ContenidoState extends ConsumerState<_Contenido> {
   }
 }
 
-/// Un asiento de la reserva ("1A") en una pastilla.
+/// Un asiento de la reserva ("1A") en una pastilla con relieve isométrico 2.5D,
+/// igual que las butacas de la cabina. Al cancelar conserva el texto tachado.
 class _Asiento extends StatelessWidget {
   const _Asiento(this.numero, {this.apagado = false});
 
@@ -198,12 +200,10 @@ class _Asiento extends StatelessWidget {
   final bool apagado;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: apagado ? AppColors.divisor : AppColors.infoSuave,
-          borderRadius: BorderRadius.circular(10),
-        ),
+  Widget build(BuildContext context) => MarcoIsometrico25D(
+        radio: 10,
+        color: apagado ? AppColors.divisor : AppColors.infoSuave,
+        relleno: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         child: Text(
           numero,
           style: TextStyle(

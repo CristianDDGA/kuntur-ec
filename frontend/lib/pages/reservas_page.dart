@@ -8,6 +8,7 @@ import '../controllers/reservas_controller.dart';
 import '../services/api_exception.dart';
 import '../widgets/control_paginas.dart';
 import '../widgets/estado_vista.dart';
+import '../widgets/kinetic_type.dart';
 import '../widgets/kuntur_scaffold.dart';
 import '../widgets/navegacion_principal.dart';
 import '../widgets/tarjeta_reserva.dart';
@@ -27,7 +28,7 @@ class ReservasPage extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
         children: [
-          const Text('Mis reservas', style: AppTextStyles.titulo),
+          const TituloCinetico('Mis reservas', estilo: AppTextStyles.titulo),
           const SizedBox(height: 4),
           const Text('Consulte, modifique o cancele sus reservas.', style: AppTextStyles.cuerpo),
           const SizedBox(height: 16),
