@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../config/app_theme.dart';
 import '../models/vuelo.dart';
+import 'insignia_estado.dart';
 
 /// Disponibilidad del vuelo: "Agotado", "Quedan 3" o "42 asientos".
+///
+/// Es una [InsigniaEstado] más: una sola forma de pintar píldoras en toda la app.
 class EtiquetaAsientos extends StatelessWidget {
   const EtiquetaAsientos({super.key, required this.vuelo});
 
@@ -11,15 +13,11 @@ class EtiquetaAsientos extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (texto, color, fondo) = vuelo.agotado
-        ? ('Agotado', AppColors.error, AppColors.errorSuave)
+    final (texto, tipo) = vuelo.agotado
+        ? ('Agotado', TipoInsignia.error)
         : vuelo.pocosAsientos
-            ? ('Quedan ${vuelo.asientosDisponibles}', AppColors.aviso, AppColors.avisoSuave)
-            : ('${vuelo.asientosDisponibles} asientos', AppColors.exito, AppColors.exitoSuave);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: fondo, borderRadius: BorderRadius.circular(20)),
-      child: Text(texto, style: TextStyle(color: color, fontSize: 12.5, fontWeight: FontWeight.w700)),
-    );
+            ? ('Quedan ${vuelo.asientosDisponibles}', TipoInsignia.aviso)
+            : ('${vuelo.asientosDisponibles} asientos', TipoInsignia.exito);
+    return InsigniaEstado(texto: texto, tipo: tipo);
   }
 }

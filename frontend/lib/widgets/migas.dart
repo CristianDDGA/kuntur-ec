@@ -29,19 +29,34 @@ class Migas extends StatelessWidget {
       }
       tramos.add(
         ultima || miga.ruta == null
-            ? Text(miga.texto, style: AppTextStyles.nota.copyWith(fontWeight: FontWeight.w800, color: AppColors.textoPrincipal))
+            ? Text(
+                miga.texto,
+                style: AppTextStyles.nota.copyWith(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.textoPrincipal),
+              )
             : Semantics(
                 button: true,
                 label: 'Ir a ${miga.texto}',
+                onTap: () => context.go(miga.ruta!),
                 excludeSemantics: true,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(6),
                   onTap: () => context.go(miga.ruta!),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-                    child: Text(
-                      miga.texto,
-                      style: AppTextStyles.nota.copyWith(color: AppColors.azul, fontWeight: FontWeight.w700, decoration: TextDecoration.underline),
+                  // Área táctil mínima de 44 pt de alto (Apple HIG `accessibility.md › Mobility`).
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 44),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                      child: Center(
+                        child: Text(
+                          miga.texto,
+                          style: AppTextStyles.nota.copyWith(
+                            fontSize: 13,
+                            color: AppColors.azul,
+                            fontWeight: FontWeight.w700,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
