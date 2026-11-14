@@ -6,11 +6,11 @@ import '../config/app_router.dart';
 import '../config/app_theme.dart';
 import '../controllers/reservas_controller.dart';
 import '../services/api_exception.dart';
-import '../widgets/aviso.dart';
-import '../widgets/barra_kuntur.dart';
 import '../widgets/control_paginas.dart';
-import '../widgets/tarjeta_reserva.dart';
+import '../widgets/estado_vista.dart';
+import '../widgets/kuntur_scaffold.dart';
 import '../widgets/navegacion_principal.dart';
+import '../widgets/tarjeta_reserva.dart';
 
 /// "Mis reservas" (V): historial paginado del cliente.
 class ReservasPage extends ConsumerWidget {
@@ -20,47 +20,32 @@ class ReservasPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final reservas = ref.watch(reservasControllerProvider);
 
-    return Scaffold(
-      appBar: const BarraKuntur(),
-      bottomNavigationBar: const NavegacionPrincipal(actual: Seccion.reservas),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () => ref.read(reservasControllerProvider.notifier).recargar(),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 760),
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
-                children: [
-                  const Text('Mis reservas', style: AppTextStyles.titulo),
-                  const SizedBox(height: 4),
-                  const Text('Consulte, modifique o cancele sus reservas.', style: AppTextStyles.cuerpo),
-                  const SizedBox(height: 16),
-                  ..._contenido(context, ref, reservas),
-                ],
-              ),
-            ),
-          ),
-        ),
+    return KunturScaffold(
+      seccion: Seccion.reservas,
+      onRefrescar: () => ref.read(reservasControllerProvider.notifier).recargar(),
+      body: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+        children: [
+          const Text('Mis reservas', style: AppTextStyles.titulo),
+          const SizedBox(height: 4),
+          const Text('Consulte, modifique o cancele sus reservas.', style: AppTextStyles.cuerpo),
+          const SizedBox(height: 16),
+          ..._contenido(context, ref, reservas),
+        ],
       ),
     );
   }
 
   List<Widget> _contenido(BuildContext context, WidgetRef ref, AsyncValue<dynamic> reservas) {
     if (reservas.isLoading && !reservas.hasValue) {
-      return const [Padding(padding: EdgeInsets.all(48), child: Center(child: CircularProgressIndicator()))];
+      return const [CargandoVista(tarjetas: 3)];
     }
     if (reservas.hasError && !reservas.hasValue) {
       return [
-        AvisoInline(texto: mensajeDeError(reservas.error!)),
-        const SizedBox(height: 12),
-        Align(
-          child: OutlinedButton.icon(
-            onPressed: () => ref.invalidate(reservasControllerProvider),
-            icon: const Icon(Icons.refresh),
-            label: const Text('Reintentar'),
-          ),
+        ErrorVista(
+          mensaje: mensajeDeError(reservas.error!),
+          onReintentar: () => ref.invalidate(reservasControllerProvider),
         ),
       ];
     }
@@ -69,27 +54,14 @@ class ReservasPage extends ConsumerWidget {
     if (pagina.reservas.isEmpty) {
       final fueraDeRango = pagina.total > 0;
       return [
-        Container(
-          padding: const EdgeInsets.all(28),
-          decoration: AppDecorations.tarjeta,
-          child: Column(
-            children: [
-              const Icon(Icons.confirmation_number_outlined, size: 40, color: AppColors.textoSuave),
-              const SizedBox(height: 10),
-              Text(
-                fueraDeRango ? 'Esta página ya no tiene reservas.' : 'Aún no tiene reservas.',
-                style: AppTextStyles.subtitulo,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 14),
-              OutlinedButton(
-                onPressed: () => fueraDeRango
-                    ? ref.read(paginaReservasProvider.notifier).primera()
-                    : context.go(AppRoutes.inicio),
-                child: Text(fueraDeRango ? 'Ir a la primera página' : 'Buscar vuelos'),
-              ),
-            ],
-          ),
+        VacioVista(
+          icono: Icons.confirmation_number_outlined,
+          titulo: fueraDeRango ? 'Esta página ya no tiene reservas.' : 'Aún no tiene reservas.',
+          mensaje: fueraDeRango ? 'Vuelva a la primera página.' : 'Busque un vuelo y reserve su asiento.',
+          textoAccion: fueraDeRango ? 'Ir a la primera página' : 'Buscar vuelos',
+          onAccion: () => fueraDeRango
+              ? ref.read(paginaReservasProvider.notifier).primera()
+              : context.go(AppRoutes.inicio),
         ),
       ];
     }

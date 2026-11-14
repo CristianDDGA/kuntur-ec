@@ -9,11 +9,14 @@ import '../models/reserva.dart';
 import '../models/vuelo.dart';
 import '../services/api_exception.dart';
 import '../widgets/aviso.dart';
-import '../widgets/barra_kuntur.dart';
-import '../widgets/tarjeta_reserva.dart';
-import '../widgets/tarjeta_vuelo.dart';
+import '../widgets/estado_vista.dart';
+import '../widgets/fila_detalle.dart';
+import '../widgets/hoja_confirmacion.dart';
+import '../widgets/kuntur_scaffold.dart';
 import '../widgets/migas.dart';
 import '../widgets/navegacion_principal.dart';
+import '../widgets/tarjeta_reserva.dart';
+import '../widgets/tarjeta_vuelo.dart';
 
 /// Detalle de una reserva (V): asientos, montos y las acciones de cambiar asientos o cancelar.
 class ReservaDetallePage extends ConsumerWidget {
@@ -25,28 +28,22 @@ class ReservaDetallePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final reserva = ref.watch(reservaDetalleControllerProvider(reservaId));
 
-    return Scaffold(
-      appBar: const BarraKuntur(conAtras: true),
-      bottomNavigationBar: const NavegacionPrincipal(actual: Seccion.reservas),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Migas([
-                    const Miga('Mis reservas', ruta: AppRoutes.reservas),
-                    Miga(Reserva.numeroDe(reservaId)),
-                  ]),
-                  const SizedBox(height: 12),
-                  _cuerpo(ref, reserva),
-                ],
-              ),
-            ),
-          ),
+    return KunturScaffold(
+      conAtras: true,
+      seccion: Seccion.reservas,
+      maxAncho: 640,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Migas([
+              const Miga('Mis reservas', ruta: AppRoutes.reservas),
+              Miga(Reserva.numeroDe(reservaId)),
+            ]),
+            const SizedBox(height: 12),
+            _cuerpo(ref, reserva),
+          ],
         ),
       ),
     );
@@ -54,20 +51,10 @@ class ReservaDetallePage extends ConsumerWidget {
 
   Widget _cuerpo(WidgetRef ref, AsyncValue<Reserva> reserva) {
     return reserva.when(
-      loading: () => const Padding(padding: EdgeInsets.all(48), child: Center(child: CircularProgressIndicator())),
-      error: (error, _) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AvisoInline(texto: mensajeDeError(error)),
-          const SizedBox(height: 12),
-          Align(
-            child: OutlinedButton.icon(
-              onPressed: () => ref.invalidate(reservaDetalleControllerProvider(reservaId)),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Reintentar'),
-            ),
-          ),
-        ],
+      loading: () => const Padding(padding: EdgeInsets.all(16), child: CargandoDetalleVista()),
+      error: (error, _) => ErrorVista(
+        mensaje: mensajeDeError(error),
+        onReintentar: () => ref.invalidate(reservaDetalleControllerProvider(reservaId)),
       ),
       data: (r) => _Contenido(reserva: r),
     );
@@ -92,25 +79,17 @@ class _ContenidoState extends ConsumerState<_Contenido> {
   Future<void> _cancelar() async {
     final r = widget.reserva;
     final liberados = r.cantidad == 1 ? 'el asiento ${r.asientos.join()} volverá' : 'los asientos ${r.asientos.join(', ')} volverán';
-    final confirmado = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('¿Cancelar la reserva?'),
-        content: Text(
-          'Se cancelará la reserva ${r.numero} (${r.vuelo.origen} → ${r.vuelo.destino}) y $liberados al vuelo. '
+    final confirmado = await mostrarConfirmacionKuntur(
+      context,
+      titulo: '¿Cancelar la reserva?',
+      mensaje: 'Se cancelará la reserva ${r.numero} (${r.vuelo.origen} → ${r.vuelo.destino}) y $liberados al vuelo. '
           'Esta acción no se puede deshacer.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No, conservarla')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Sí, cancelar'),
-          ),
-        ],
-      ),
+      textoConfirmar: 'Sí, cancelar',
+      textoCancelar: 'No, conservarla',
+      estilo: EstiloConfirmacion.destructiva,
+      icono: Icons.cancel_outlined,
     );
-    if (confirmado != true || !mounted || _enviando) return;
+    if (!confirmado || !mounted || _enviando) return;
     setState(() {
       _enviando = true;
       _error = null;
@@ -164,11 +143,11 @@ class _ContenidoState extends ConsumerState<_Contenido> {
               const SizedBox(height: 8),
               Wrap(spacing: 8, runSpacing: 8, children: [for (final a in r.asientos) _Asiento(a, apagado: r.cancelada)]),
               const SizedBox(height: 12),
-              _Fila('Cantidad', '${r.cantidad}'),
-              _Fila('Subtotal', Formatos.dinero(r.subtotalCentavos)),
-              _Fila('IVA (${Formatos.porcentaje(r.ivaPorcentaje)})', Formatos.dinero(r.ivaCentavos)),
+              FilaDetalle(etiqueta: 'Cantidad', valor: '${r.cantidad}'),
+              FilaDetalle(etiqueta: 'Subtotal', valor: Formatos.dinero(r.subtotalCentavos)),
+              FilaDetalle(etiqueta: 'IVA (${Formatos.porcentaje(r.ivaPorcentaje)})', valor: Formatos.dinero(r.ivaCentavos)),
               const SizedBox(height: 4),
-              _Fila('Total', Formatos.dinero(r.totalCentavos), destacado: true),
+              FilaDetalle(etiqueta: 'Total', valor: Formatos.dinero(r.totalCentavos), destacado: true),
               if (r.fechaReserva != null) ...[
                 const SizedBox(height: 8),
                 Text('Reservada el ${Formatos.fecha(r.fechaReserva!.toLocal())}', style: AppTextStyles.nota),
@@ -194,12 +173,10 @@ class _ContenidoState extends ConsumerState<_Contenido> {
             label: const Text('Cambiar asientos'),
           ),
           const SizedBox(height: 10),
-          OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.error,
-              side: const BorderSide(color: AppColors.error, width: 1.5),
-            ),
+          // Acción destructiva separada y sin rol primario (Apple HIG, `buttons.md › Role`).
+          TextButton.icon(
             onPressed: _enviando ? null : _cancelar,
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
             icon: const Icon(Icons.cancel_outlined),
             label: const Text('Cancelar reserva'),
           ),
@@ -234,32 +211,6 @@ class _Asiento extends StatelessWidget {
             color: apagado ? AppColors.textoSuave : AppColors.azul,
             decoration: apagado ? TextDecoration.lineThrough : null,
           ),
-        ),
-      );
-}
-
-class _Fila extends StatelessWidget {
-  const _Fila(this.etiqueta, this.valor, {this.destacado = false});
-
-  final String etiqueta;
-  final String valor;
-  final bool destacado;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(etiqueta, style: destacado ? AppTextStyles.subtitulo.copyWith(fontSize: 16) : AppTextStyles.cuerpo),
-            ),
-            Text(
-              valor,
-              style: destacado
-                  ? const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.azul)
-                  : AppTextStyles.subtitulo.copyWith(fontSize: 15),
-            ),
-          ],
         ),
       );
 }

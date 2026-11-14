@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../config/app_motion.dart';
 import '../config/app_router.dart';
 import '../config/app_theme.dart';
 import '../controllers/iva_controller.dart';
@@ -15,8 +16,10 @@ import '../models/vuelo.dart';
 import '../services/api_exception.dart';
 import '../widgets/asiento_boton.dart';
 import '../widgets/aviso.dart';
-import '../widgets/barra_kuntur.dart';
 import '../widgets/boton_degradado.dart';
+import '../widgets/estado_vista.dart';
+import '../widgets/hoja_confirmacion.dart';
+import '../widgets/kuntur_scaffold.dart';
 import '../widgets/migas.dart';
 import '../widgets/tarjeta_vuelo.dart';
 
@@ -37,15 +40,27 @@ class SeleccionAsientosPage extends ConsumerWidget {
     // Modificar: primero se lee la reserva para saber el vuelo y los asientos actuales.
     final reserva = ref.watch(reservaDetalleControllerProvider(reservaId!));
     return reserva.when(
-      loading: () => const Scaffold(appBar: BarraKuntur(conAtras: true), body: Center(child: CircularProgressIndicator())),
-      error: (e, _) => Scaffold(
-        appBar: const BarraKuntur(conAtras: true),
-        body: Padding(padding: const EdgeInsets.all(16), child: AvisoInline(texto: mensajeDeError(e))),
+      loading: () => const KunturScaffold(
+        conAtras: true,
+        maxAncho: 640,
+        body: Padding(padding: EdgeInsets.all(16), child: CargandoDetalleVista()),
+      ),
+      error: (e, _) => KunturScaffold(
+        conAtras: true,
+        maxAncho: 640,
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: ErrorVista(
+            mensaje: mensajeDeError(e),
+            onReintentar: () => ref.invalidate(reservaDetalleControllerProvider(reservaId!)),
+          ),
+        ),
       ),
       data: (r) => r.puedeEditarse()
           ? _Mapa(vueloId: r.vueloId, reserva: r)
-          : const Scaffold(
-              appBar: BarraKuntur(conAtras: true),
+          : const KunturScaffold(
+              conAtras: true,
+              maxAncho: 640,
               body: Padding(
                 padding: EdgeInsets.all(16),
                 child: AvisoInline(
@@ -172,60 +187,49 @@ class _MapaState extends ConsumerState<_Mapa> {
       canPop: !conCambios,
       onPopInvokedWithResult: (salio, _) async {
         if (salio) return;
-        final salir = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('¿Salir sin guardar?'),
-            content: Text(_editando
-                ? 'Los cambios en sus asientos no se guardarán.'
-                : 'Los asientos que eligió no se reservarán.'),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Seguir eligiendo')),
-              FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Salir')),
-            ],
-          ),
-        );
-        if (salir == true && context.mounted) context.pop();
+        final salir = await _confirmarSalida();
+        if (salir && context.mounted) context.pop();
       },
-      child: Scaffold(
-        appBar: const BarraKuntur(conAtras: true),
-        body: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 640),
-              child: _contenido(vuelo, mapa, iva?.porcentaje),
-            ),
-          ),
-        ),
+      child: KunturScaffold(
+        conAtras: true,
+        // Mientras hay asientos elegidos, el logo confirma antes de salir (context.go no pasa por PopScope).
+        alTocarInicio: conCambios ? _salirAInicio : null,
+        maxAncho: 640,
+        body: _contenido(vuelo, mapa, iva?.porcentaje, conCambios),
       ),
     );
   }
 
-  Widget _contenido(AsyncValue<Vuelo> vuelo, AsyncValue<MapaAsientos> mapa, String? ivaPorcentaje) {
+  Future<bool> _confirmarSalida() => mostrarConfirmacionKuntur(
+        context,
+        titulo: '¿Salir sin guardar?',
+        mensaje: _editando
+            ? 'Los cambios en sus asientos no se guardarán.'
+            : 'Los asientos que eligió no se reservarán.',
+        textoConfirmar: 'Salir',
+        textoCancelar: 'Seguir eligiendo',
+        estilo: EstiloConfirmacion.destructiva,
+        icono: Icons.event_seat_outlined,
+      );
+
+  Future<void> _salirAInicio() async {
+    if (await _confirmarSalida() && mounted) context.go(AppRoutes.inicio);
+  }
+
+  Widget _contenido(AsyncValue<Vuelo> vuelo, AsyncValue<MapaAsientos> mapa, String? ivaPorcentaje, bool conCambios) {
     if ((vuelo.isLoading && !vuelo.hasValue) || (mapa.isLoading && !mapa.hasValue)) {
-      return const Center(child: CircularProgressIndicator());
+      return const Padding(padding: EdgeInsets.all(16), child: CargandoDetalleVista());
     }
     final fallo = (vuelo.hasValue ? null : vuelo.error) ?? (mapa.hasValue ? null : mapa.error);
     if (fallo != null) {
       return Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AvisoInline(texto: mensajeDeError(fallo)),
-            const SizedBox(height: 12),
-            Align(
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  ref.invalidate(vueloDetalleControllerProvider(widget.vueloId));
-                  ref.invalidate(mapaAsientosControllerProvider(widget.vueloId));
-                },
-                icon: const Icon(Icons.refresh),
-                label: const Text('Reintentar'),
-              ),
-            ),
-          ],
+        child: ErrorVista(
+          mensaje: mensajeDeError(fallo),
+          onReintentar: () {
+            ref.invalidate(vueloDetalleControllerProvider(widget.vueloId));
+            ref.invalidate(mapaAsientosControllerProvider(widget.vueloId));
+          },
         ),
       );
     }
@@ -244,13 +248,13 @@ class _MapaState extends ConsumerState<_Mapa> {
             children: [
               Migas(_editando
                   ? [
-                      const Miga('Mis reservas', ruta: AppRoutes.reservas),
-                      Miga(widget.reserva!.numero, ruta: AppRoutes.reserva(widget.reserva!.id)),
+                      Miga('Mis reservas', ruta: conCambios ? null : AppRoutes.reservas),
+                      Miga(widget.reserva!.numero, ruta: conCambios ? null : AppRoutes.reserva(widget.reserva!.id)),
                       const Miga('Cambiar asientos'),
                     ]
                   : [
-                      const Miga('Vuelos', ruta: AppRoutes.inicio),
-                      Miga(v.codigo, ruta: AppRoutes.vuelo(v.id)),
+                      Miga('Vuelos', ruta: conCambios ? null : AppRoutes.inicio),
+                      Miga(v.codigo, ruta: conCambios ? null : AppRoutes.vuelo(v.id)),
                       const Miga('Elegir asientos'),
                     ]),
               const SizedBox(height: 10),
@@ -407,8 +411,21 @@ class _Cabina extends StatelessWidget {
       decoration: AppDecorations.tarjeta,
       child: Column(
         children: [
+          // Silueta sutil de la proa: orienta el mapa sin dibujar un avión entero.
+          Container(
+            width: 150,
+            height: 20,
+            margin: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: AppColors.infoSuave,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(40), bottom: Radius.circular(6)),
+              border: Border.all(color: AppColors.divisor),
+            ),
+          ),
           Text('Frente del avión', style: AppTextStyles.nota.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
+          _filaLetras(mapa, mitad),
+          const SizedBox(height: 2),
           for (var fila = 1; fila <= mapa.filas; fila++)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -424,6 +441,25 @@ class _Cabina extends StatelessWidget {
       ),
     );
   }
+
+  /// Encabezado de columnas (A B | C D) alineado con cada asiento y el pasillo.
+  Widget _filaLetras(MapaAsientos mapa, int mitad) => Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(width: 26),
+          for (var c = 0; c < mitad; c++) _letra(mapa.columnas[c]),
+          const SizedBox(width: 22),
+          for (var c = mitad; c < mapa.columnas.length; c++) _letra(mapa.columnas[c]),
+          const SizedBox(width: 26),
+        ],
+      );
+
+  Widget _letra(String columna) => SizedBox(
+        width: AsientoBoton.tamano,
+        child: Center(
+          child: Text(columna, style: AppTextStyles.nota.copyWith(fontWeight: FontWeight.w800)),
+        ),
+      );
 }
 
 class _Resumen extends StatelessWidget {
@@ -507,9 +543,21 @@ class _Resumen extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              Text(
-                Formatos.dinero(subtotal + (iva ?? 0)),
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.azul),
+              // El total entra con un pulso corto al cambiar la selección (Reduce Motion lo anula).
+              // Se reinicia por clave: hay un solo Text en el árbol, nunca un valor viejo a la vista.
+              TweenAnimationBuilder<double>(
+                key: ValueKey(subtotal + (iva ?? 0)),
+                tween: Tween<double>(begin: 0.88, end: 1),
+                duration: AppMotion.rapidaDe(context),
+                curve: AppMotion.curvaEntrada,
+                builder: (context, avance, hijo) => Opacity(
+                  opacity: avance.clamp(0, 1),
+                  child: Transform.scale(scale: avance, child: hijo),
+                ),
+                child: Text(
+                  Formatos.dinero(subtotal + (iva ?? 0)),
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.azul),
+                ),
               ),
             ],
           ),

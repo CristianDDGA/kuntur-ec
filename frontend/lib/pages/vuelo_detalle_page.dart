@@ -7,8 +7,10 @@ import '../controllers/vuelo_detalle_controller.dart';
 import '../models/vuelo.dart';
 import '../services/api_exception.dart';
 import '../widgets/aviso.dart';
-import '../widgets/barra_kuntur.dart';
+import '../widgets/estado_vista.dart';
 import '../widgets/etiqueta_asientos.dart';
+import '../widgets/fila_detalle.dart';
+import '../widgets/kuntur_scaffold.dart';
 import '../widgets/panel_reserva.dart';
 import '../widgets/tarjeta_vuelo.dart';
 import '../config/app_router.dart';
@@ -25,38 +27,29 @@ class VueloDetallePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final vuelo = ref.watch(vueloDetalleControllerProvider(vueloId));
 
-    return Scaffold(
-      appBar: const BarraKuntur(conAtras: true),
-      bottomNavigationBar: const NavegacionPrincipal(actual: Seccion.vuelos),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Migas([
-                    const Miga('Vuelos', ruta: AppRoutes.inicio),
-                    Miga(vuelo.value?.codigo ?? 'Detalle del vuelo'),
-                  ]),
-                  const SizedBox(height: 12),
-                  vuelo.when(
-                    loading: () => const Padding(
-                      padding: EdgeInsets.all(48),
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
-                    error: (error, _) => _Error(
-                      mensaje: mensajeDeError(error),
-                      onReintentar: () => ref.invalidate(vueloDetalleControllerProvider(vueloId)),
-                    ),
-                    data: (v) => _Detalle(vuelo: v),
-                  ),
-                ],
+    return KunturScaffold(
+      conAtras: true,
+      seccion: Seccion.vuelos,
+      maxAncho: 640,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Migas([
+              const Miga('Vuelos', ruta: AppRoutes.inicio),
+              Miga(vuelo.value?.codigo ?? 'Detalle del vuelo'),
+            ]),
+            const SizedBox(height: 12),
+            vuelo.when(
+              loading: () => const Padding(padding: EdgeInsets.all(16), child: CargandoDetalleVista()),
+              error: (error, _) => ErrorVista(
+                mensaje: mensajeDeError(error),
+                onReintentar: () => ref.invalidate(vueloDetalleControllerProvider(vueloId)),
               ),
+              data: (v) => _Detalle(vuelo: v),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -92,10 +85,10 @@ class _Detalle extends ConsumerWidget {
               const SizedBox(height: 20),
               RutaVuelo(vuelo: vuelo),
               const Divider(height: 36, color: AppColors.divisor),
-              _Dato(icono: Icons.schedule, titulo: 'Duración', valor: Formatos.duracion(vuelo.duracion)),
-              _Dato(
+              FilaDetalle(icono: Icons.schedule, etiqueta: 'Duración', valor: Formatos.duracion(vuelo.duracion)),
+              FilaDetalle(
                 icono: Icons.event_seat_outlined,
-                titulo: 'Asientos',
+                etiqueta: 'Asientos',
                 valor: '${vuelo.asientosDisponibles} libres de ${vuelo.capacidad}',
               ),
               if (ocupados > 0)
@@ -111,9 +104,9 @@ class _Detalle extends ConsumerWidget {
                     ),
                   ),
                 ),
-              _Dato(
+              FilaDetalle(
                 icono: Icons.payments_outlined,
-                titulo: 'Precio por persona',
+                etiqueta: 'Precio por persona',
                 valor: Formatos.dinero(vuelo.precioCentavos),
                 destacado: true,
               ),
@@ -132,54 +125,4 @@ class _Detalle extends ConsumerWidget {
       ],
     );
   }
-}
-
-class _Dato extends StatelessWidget {
-  const _Dato({required this.icono, required this.titulo, required this.valor, this.destacado = false});
-
-  final IconData icono;
-  final String titulo;
-  final String valor;
-  final bool destacado;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          children: [
-            Icon(icono, size: 22, color: AppColors.azul),
-            const SizedBox(width: 14),
-            Expanded(child: Text(titulo, style: AppTextStyles.cuerpo)),
-            Text(
-              valor,
-              style: destacado
-                  ? const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.azul)
-                  : AppTextStyles.subtitulo.copyWith(fontSize: 16),
-            ),
-          ],
-        ),
-      );
-}
-
-class _Error extends StatelessWidget {
-  const _Error({required this.mensaje, required this.onReintentar});
-
-  final String mensaje;
-  final VoidCallback onReintentar;
-
-  @override
-  Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AvisoInline(texto: mensaje),
-          const SizedBox(height: 12),
-          Align(
-            child: OutlinedButton.icon(
-              onPressed: onReintentar,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Reintentar'),
-            ),
-          ),
-        ],
-      );
 }
