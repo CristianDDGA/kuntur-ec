@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 
 /// Identidad visual "Ecuador".
@@ -40,7 +41,8 @@ class AppColors {
   static const Color errorSuave = Color(0xFFF8E8E5);
   static const Color aviso = Color(0xFF8A5F00);
   static const Color avisoSuave = Color(0xFFFBF1D8);
-  static const Color info = Color(0xFF4F6D8F);
+  // Azul informativo oscurecido: 6.7:1 sobre infoSuave (antes 4.55:1, al límite).
+  static const Color info = Color(0xFF2E5278);
   static const Color infoSuave = Color(0xFFE8EDF3);
 }
 
@@ -80,18 +82,31 @@ class AppTextStyles {
   );
 
   static const TextStyle subtitulo = TextStyle(
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: FontWeight.w700,
     color: AppColors.textoPrincipal,
+    height: 1.25,
   );
 
+  // Cuerpo a 15 pt con interlineado holgado: lectura cómoda sin fatiga.
+  // Es una desviación deliberada del cuerpo por defecto de Apple (17 pt): la app
+  // mantiene su escala y la compensa con interlineado 1.5 (el mínimo HIG es 11 pt).
+  // El contraste se verificó por separado (textoSecundario sobre fondo ≥ 6:1).
   static const TextStyle cuerpo = TextStyle(
-    fontSize: 14,
+    fontSize: 15,
     color: AppColors.textoSecundario,
-    height: 1.45,
+    height: 1.5,
   );
 
-  static const TextStyle nota = TextStyle(fontSize: 12, color: AppColors.textoSuave);
+  static const TextStyle nota = TextStyle(fontSize: 12.5, color: AppColors.textoSuave, height: 1.35);
+
+  /// Etiquetas de campo y encabezados pequeños en mayúsculas discretas.
+  static const TextStyle etiqueta = TextStyle(
+    fontSize: 12.5,
+    fontWeight: FontWeight.w700,
+    color: AppColors.textoSecundario,
+    letterSpacing: 0.2,
+  );
 
   static const TextStyle boton = TextStyle(
     fontSize: 16,
@@ -118,9 +133,29 @@ class AppDecorations {
   );
 }
 
+/// Transición de ruta que se anula cuando el sistema pide "Reducir movimiento"
+/// (Apple HIG, `accessibility.md › Cognitive`: reducir animaciones automáticas,
+/// incluidas las de cambio de pantalla).
+class _TransicionQueRespetaElMovimiento extends PageTransitionsBuilder {
+  const _TransicionQueRespetaElMovimiento(this.base);
+
+  final PageTransitionsBuilder base;
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    if (MediaQuery.disableAnimationsOf(context)) return child;
+    return base.buildTransitions(route, context, animation, secondaryAnimation, child);
+  }
+}
+
 class AppTheme {
   const AppTheme._();
-
   /// La app usa un solo tema claro (los colores de marca no se invierten).
   static final ThemeData light = _build();
 
@@ -223,6 +258,42 @@ class AppTheme {
             color: estados.contains(WidgetState.selected) ? AppColors.azulNoche : AppColors.textoSecundario,
           ),
         ),
+      ),
+      // Transiciones suaves y coherentes entre rutas (fade-slide de Material 3 en
+      // Android/Web/Escritorio y deslizamiento nativo en iOS).
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: _TransicionQueRespetaElMovimiento(FadeForwardsPageTransitionsBuilder()),
+          TargetPlatform.iOS: _TransicionQueRespetaElMovimiento(CupertinoPageTransitionsBuilder()),
+          TargetPlatform.macOS: _TransicionQueRespetaElMovimiento(CupertinoPageTransitionsBuilder()),
+          TargetPlatform.windows: _TransicionQueRespetaElMovimiento(FadeForwardsPageTransitionsBuilder()),
+          TargetPlatform.linux: _TransicionQueRespetaElMovimiento(FadeForwardsPageTransitionsBuilder()),
+          TargetPlatform.fuchsia: _TransicionQueRespetaElMovimiento(FadeForwardsPageTransitionsBuilder()),
+        },
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.superficie,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        showDragHandle: true,
+        dragHandleColor: AppColors.borde,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: AppColors.superficie,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        titleTextStyle: AppTextStyles.subtitulo.copyWith(fontSize: 19),
+        contentTextStyle: AppTextStyles.cuerpo,
+      ),
+      cardTheme: CardThemeData(
+        color: AppColors.superficie,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
