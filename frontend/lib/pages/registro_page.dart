@@ -28,6 +28,14 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
   final _password = TextEditingController();
   final _confirmacion = TextEditingController();
 
+  /// Foco en cualquiera de las contraseñas: desplaza la onda líquida del panel.
+  bool _focoPassword = false;
+
+  void _cambioFocoPassword(bool enfocado) {
+    if (!mounted || _focoPassword == enfocado) return;
+    setState(() => _focoPassword = enfocado);
+  }
+
   @override
   void dispose() {
     _nombre.dispose();
@@ -56,6 +64,7 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
     return PanelAutenticacion(
       titulo: 'Cree su cuenta',
       subtitulo: 'Solo le tomará un minuto. Con ella podrá reservar vuelos por todo el país.',
+      faseLiquida: _focoPassword ? 1.0 : 0.0,
       child: AutofillGroup(
         child: Form(
           key: _formulario,
@@ -92,25 +101,34 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              CampoPassword(
-                controller: _password,
-                label: 'Contraseña',
-                enabled: !cargando,
-                validator: Validadores.password,
-                textInputAction: TextInputAction.next,
-                autofillHints: const [AutofillHints.newPassword],
-                onChanged: (_) => setState(() {}), // actualiza la lista de requisitos
+              // El foco en la contraseña mueve la onda líquida del fondo.
+              Focus(
+                skipTraversal: true,
+                onFocusChange: _cambioFocoPassword,
+                child: CampoPassword(
+                  controller: _password,
+                  label: 'Contraseña',
+                  enabled: !cargando,
+                  validator: Validadores.password,
+                  textInputAction: TextInputAction.next,
+                  autofillHints: const [AutofillHints.newPassword],
+                  onChanged: (_) => setState(() {}), // actualiza la lista de requisitos
+                ),
               ),
               const SizedBox(height: 8),
               RequisitosPassword(password: _password.text),
               const SizedBox(height: 16),
-              CampoPassword(
-                controller: _confirmacion,
-                label: 'Repita la contraseña',
-                enabled: !cargando,
-                validator: Validadores.confirmacion(() => _password.text),
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _enviar(),
+              Focus(
+                skipTraversal: true,
+                onFocusChange: _cambioFocoPassword,
+                child: CampoPassword(
+                  controller: _confirmacion,
+                  label: 'Repita la contraseña',
+                  enabled: !cargando,
+                  validator: Validadores.confirmacion(() => _password.text),
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _enviar(),
+                ),
               ),
               if (error != null) ...[
                 const SizedBox(height: 16),

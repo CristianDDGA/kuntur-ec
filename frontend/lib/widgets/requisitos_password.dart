@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../config/app_motion.dart';
 import '../config/app_theme.dart';
 import '../models/validadores.dart';
+import 'liquid_morph.dart';
 
 /// Lista de requisitos de la contraseña que se va marcando mientras el usuario escribe.
 ///
@@ -23,20 +24,9 @@ class RequisitosPassword extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0, end: cumplidos / 3),
-            duration: AppMotion.mediaDe(context),
-            curve: AppMotion.curvaEntrada,
-            builder: (context, valor, _) => ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: LinearProgressIndicator(
-                value: valor,
-                minHeight: 5,
-                backgroundColor: AppColors.divisor,
-                color: valor >= 1 ? AppColors.exito : AppColors.azul,
-              ),
-            ),
-          ),
+          // Relleno fluido: el mismo motor líquido que el resto de la app,
+          // con animación finita y Reduce Motion respetado.
+          BarraLiquidMorph(valor: cumplidos / 3, alto: 5),
           const SizedBox(height: 8),
           _Requisito(cumplido: r.largo, texto: 'Al menos ${Validadores.passwordMin} caracteres'),
           _Requisito(cumplido: r.letra, texto: 'Incluye letras'),
