@@ -9,11 +9,27 @@ import '../models/validadores_vuelo.dart';
 import '../models/vuelo.dart';
 import '../services/api_exception.dart';
 import '../widgets/aviso.dart';
-import '../widgets/barra_kuntur.dart';
 import '../widgets/boton_degradado.dart';
 import '../widgets/campo_selector.dart';
+import '../widgets/campo_texto_kuntur.dart';
+import '../widgets/fila_detalle.dart';
+import '../widgets/hoja_confirmacion.dart';
+import '../widgets/kuntur_scaffold.dart';
 import '../widgets/migas.dart';
 import '../widgets/navegacion_principal.dart';
+import '../widgets/selectores_fecha_hora.dart';
+
+/// Ciudades frecuentes del Ecuador como sugerencia rápida (nunca impiden escribir otra).
+const List<String> _ciudadesFrecuentes = [
+  'Quito',
+  'Guayaquil',
+  'Cuenca',
+  'Loja',
+  'Manta',
+  'Ambato',
+  'Esmeraldas',
+  'Ibarra',
+];
 
 /// Formulario "Nuevo vuelo" (V). Solo el administrador llega aquí (lo garantiza el router
 /// y, en última instancia, el servidor con 403).
@@ -35,12 +51,33 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
   Duration? _llegada;
 
   @override
+  void initState() {
+    super.initState();
+    // PopScope necesita saber si hay datos escritos para preguntar antes de salir.
+    for (final c in [_origen, _destino, _precio, _capacidad]) {
+      c.addListener(_alCambiar);
+    }
+  }
+
+  void _alCambiar() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   void dispose() {
     for (final c in [_origen, _destino, _precio, _capacidad]) {
+      c.removeListener(_alCambiar);
       c.dispose();
     }
     super.dispose();
   }
+
+  /// Hay algo escrito o elegido: salir sin guardar perdería el formulario.
+  bool get _sucio =>
+      [_origen, _destino, _precio, _capacidad].any((c) => c.text.trim().isNotEmpty) ||
+      _fecha != null ||
+      _salida != null ||
+      _llegada != null;
 
   Future<void> _enviar() async {
     if (!_formulario.currentState!.validate()) return;
@@ -63,12 +100,12 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
   Future<DateTime?> _elegirFecha() {
     final hoy = DateTime.now();
     final dia = DateTime(hoy.year, hoy.month, hoy.day);
-    return showDatePicker(
-      context: context,
-      initialDate: _fecha ?? dia,
-      firstDate: dia,
-      lastDate: dia.add(const Duration(days: ValidadoresVuelo.diasMaxAdelante)),
-      helpText: 'Fecha del vuelo',
+    return elegirFechaKuntur(
+      context,
+      inicial: _fecha ?? dia,
+      primera: dia,
+      ultima: dia.add(const Duration(days: ValidadoresVuelo.diasMaxAdelante)),
+      ayuda: 'Fecha del vuelo',
     );
   }
 
@@ -81,34 +118,60 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
     return ahora.hour < 23 ? Duration(hours: ahora.hour + 1) : const Duration(hours: 23, minutes: 59);
   }
 
-  /// "X" para vaciar un campo de un toque; solo aparece cuando hay algo escrito.
-  Widget? _botonLimpiar(TextEditingController c) => ListenableBuilder(
-        listenable: c,
-        builder: (_, _) => c.text.isEmpty
-            ? const SizedBox.shrink()
-            : IconButton(
-                tooltip: 'Borrar',
-                icon: const Icon(Icons.close),
-                onPressed: () {
-                  c.clear();
-                  _formulario.currentState?.validate();
-                },
-              ),
-      );
-
   /// Selector de hora en formato 24 h. Si aún no hay hora, propone [sugerida].
   Future<Duration?> _elegirHora(Duration? actual, String ayuda, {Duration sugerida = const Duration(hours: 8)}) async {
     final inicial = actual ?? sugerida;
-    final hora = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(hour: inicial.inHours % 24, minute: inicial.inMinutes % 60),
-      helpText: ayuda,
-      builder: (context, hijo) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-        child: hijo!,
-      ),
+    final hora = await elegirHoraKuntur(
+      context,
+      inicial: TimeOfDay(hour: inicial.inHours % 24, minute: inicial.inMinutes % 60),
+      ayuda: ayuda,
+      usar24Horas: true,
     );
     return hora == null ? null : Duration(hours: hora.hour, minutes: hora.minute);
+  }
+
+  /// Toca una ciudad sugerida: llena el primer campo vacío (origen y luego destino).
+  /// Si ambos ya tienen texto no pisa nada.
+  void _sugerirCiudad(String ciudad) {
+    if (_origen.text.trim().isEmpty) {
+      setState(() => _origen.text = ciudad);
+    } else if (_destino.text.trim().isEmpty) {
+      setState(() => _destino.text = ciudad);
+    }
+  }
+
+  /// Duración entre salida y llegada (si la llegada cruza la medianoche, suma un día).
+  String? get _duracionTexto {
+    final salida = _salida;
+    final llegada = _llegada;
+    if (salida == null || llegada == null) return null;
+    var minutos = llegada.inMinutes - salida.inMinutes;
+    if (minutos < 0) minutos += 24 * 60;
+    final horas = minutos ~/ 60;
+    final resto = minutos % 60;
+    return resto == 0 ? '$horas h' : '$horas h $resto min';
+  }
+
+  Future<bool> _confirmarSalidaSinGuardar() => mostrarConfirmacionKuntur(
+        context,
+        titulo: '¿Salir sin crear el vuelo?',
+        mensaje: 'Los datos que escribió se perderán.',
+        textoConfirmar: 'Salir',
+        textoCancelar: 'Seguir aquí',
+        estilo: EstiloConfirmacion.destructiva,
+        icono: Icons.flight_takeoff,
+      );
+
+  Future<void> _confirmarSalida() async {
+    final salir = await _confirmarSalidaSinGuardar();
+    if (salir && mounted) context.pop();
+  }
+
+  /// El logo de la barra también navega: con datos escritos se confirma antes.
+  Future<void> _salirAInicio() async {
+    if (!_sucio || await _confirmarSalidaSinGuardar()) {
+      if (mounted) context.go(AppRoutes.inicio);
+    }
   }
 
   @override
@@ -117,51 +180,45 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
     final enviando = estado.isLoading;
     final error = estado.hasError && !enviando ? mensajeDeError(estado.error!) : null;
 
-    final origen = TextFormField(
-      autovalidateMode: AutovalidateMode.onUserInteraction,
-      controller: _origen,
+    final origen = CampoTextoKuntur(
+      etiqueta: 'Origen',
+      controlador: _origen,
+      icono: Icons.flight_takeoff,
       inputFormatters: ValidadoresVuelo.entradaCiudad,
       textInputAction: TextInputAction.next,
-      decoration: const InputDecoration(labelText: 'Origen', prefixIcon: Icon(Icons.flight_takeoff)),
-      validator: (v) => ValidadoresVuelo.ciudad(v, nombre: 'El origen'),
+      validador: (v) => ValidadoresVuelo.ciudad(v, nombre: 'El origen'),
     );
-    final destino = TextFormField(
-      autovalidateMode: AutovalidateMode.onUserInteraction,
-      controller: _destino,
+    final destino = CampoTextoKuntur(
+      etiqueta: 'Destino',
+      controlador: _destino,
+      icono: Icons.flight_land,
       inputFormatters: ValidadoresVuelo.entradaCiudad,
       textInputAction: TextInputAction.next,
-      decoration: const InputDecoration(labelText: 'Destino', prefixIcon: Icon(Icons.flight_land)),
-      validator: (v) => ValidadoresVuelo.destinoDistinto(v, _origen.text),
+      validador: (v) => ValidadoresVuelo.destinoDistinto(v, _origen.text),
     );
-    final precio = TextFormField(
-      autovalidateMode: AutovalidateMode.onUserInteraction,
-      controller: _precio,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+    final precio = CampoTextoKuntur(
+      etiqueta: 'Precio por persona (USD)',
+      controlador: _precio,
+      icono: Icons.attach_money,
+      mostrarLimpiar: true,
+      hint: '75.50',
+      ayuda: 'Máximo \$10000, hasta 2 decimales.',
+      tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: ValidadoresVuelo.entradaPrecio,
-      decoration: InputDecoration(
-        labelText: 'Precio por persona (USD)',
-        hintText: '75.50',
-        helperText: 'Máximo \$10000, hasta 2 decimales.',
-        prefixIcon: const Icon(Icons.attach_money),
-        suffixIcon: _botonLimpiar(_precio),
-      ),
-      validator: ValidadoresVuelo.precio,
+      validador: ValidadoresVuelo.precio,
     );
-    final capacidad = TextFormField(
-      autovalidateMode: AutovalidateMode.onUserInteraction,
-      controller: _capacidad,
-      keyboardType: TextInputType.number,
+    final capacidad = CampoTextoKuntur(
+      etiqueta: 'Capacidad (asientos)',
+      controlador: _capacidad,
+      icono: Icons.event_seat_outlined,
+      mostrarLimpiar: true,
+      hint: '80',
+      ayuda: 'De 1 a ${ValidadoresVuelo.capacidadMax} asientos.',
+      tipoTeclado: TextInputType.number,
       inputFormatters: ValidadoresVuelo.entradaCapacidad,
       textInputAction: TextInputAction.done,
-      onFieldSubmitted: (_) => _enviar(),
-      decoration: InputDecoration(
-        labelText: 'Capacidad (asientos)',
-        hintText: '80',
-        helperText: 'De 1 a ${ValidadoresVuelo.capacidadMax} asientos.',
-        prefixIcon: const Icon(Icons.event_seat_outlined),
-        suffixIcon: _botonLimpiar(_capacidad),
-      ),
-      validator: ValidadoresVuelo.capacidad,
+      onEnviado: (_) => _enviar(),
+      validador: ValidadoresVuelo.capacidad,
     );
     final fecha = CampoSelector<DateTime>(
       etiqueta: 'Fecha',
@@ -199,21 +256,30 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
       errorEnVivo: _llegada == null ? null : ValidadoresVuelo.llegada(_llegada, _salida),
     );
 
-    return Scaffold(
-      appBar: const BarraKuntur(conAtras: true),
-      bottomNavigationBar: const NavegacionPrincipal(actual: Seccion.administracion),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Migas([Miga('Administración', ruta: AppRoutes.admin), Miga('Nuevo vuelo')]),
-                  const SizedBox(height: 12),
-                  Container(
+    return PopScope(
+      canPop: !_sucio,
+      onPopInvokedWithResult: (salio, _) async {
+        if (salio || !_sucio) return;
+        await _confirmarSalida();
+      },
+      child: KunturScaffold(
+        conAtras: true,
+        // Mientras hay datos sin guardar se oculta la navegación inferior:
+        // con `context.go` no pasaría por PopScope y se perdería el formulario.
+        seccion: _sucio ? null : Seccion.administracion,
+        alTocarInicio: _sucio ? _salirAInicio : null,
+        maxAncho: 640,
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Migas([
+                Miga('Administración', ruta: _sucio ? null : AppRoutes.admin),
+                const Miga('Nuevo vuelo'),
+              ]),
+              const SizedBox(height: 12),
+              Container(
                 padding: const EdgeInsets.all(22),
                 decoration: AppDecorations.tarjeta,
                 child: Form(
@@ -228,6 +294,7 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
                               Expanded(child: b),
                             ])
                           : Column(children: [a, const SizedBox(height: 14), b]);
+                      final duracion = _duracionTexto;
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -239,10 +306,28 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
                           ),
                           const SizedBox(height: 20),
                           fila(origen, destino),
+                          const SizedBox(height: 10),
+                          const Text('Ciudades frecuentes', style: AppTextStyles.nota),
+                          const SizedBox(height: 4),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 2,
+                            children: [
+                              for (final ciudad in _ciudadesFrecuentes)
+                                ActionChip(
+                                  label: Text(ciudad),
+                                  onPressed: () => _sugerirCiudad(ciudad),
+                                ),
+                            ],
+                          ),
                           const SizedBox(height: 14),
                           fecha,
                           const SizedBox(height: 14),
                           fila(salida, llegada),
+                          if (duracion != null) ...[
+                            const SizedBox(height: 10),
+                            FilaDetalle(etiqueta: 'Duración estimada del vuelo', valor: duracion),
+                          ],
                           const SizedBox(height: 14),
                           fila(precio, capacidad),
                           if (error != null) ...[
@@ -257,9 +342,7 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
                   ),
                 ),
               ),
-                ],
-              ),
-            ),
+            ],
           ),
         ),
       ),
