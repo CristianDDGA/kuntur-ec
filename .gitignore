@@ -1,7 +1,10 @@
-# --- Secretos ---
+# --- Secretos y Agentes Locales ---
+# AGENTS.md y .agents/ son configuración local de agentes: no se suben al remoto.
 .env
 *.env
 !.env.example
+AGENTS.md
+.agents/
 
 # --- Python / backend ---
 __pycache__/
