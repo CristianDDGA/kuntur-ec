@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../config/app_motion.dart';
 import '../config/app_theme.dart';
 import '../controllers/sesion_controller.dart';
 import '../services/api_exception.dart';
@@ -28,7 +29,17 @@ class SplashPage extends ConsumerWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const MarcaKuntur(),
+                  // La marca aparece con un fundido corto (Reduce Motion lo salta).
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.92, end: 1),
+                    duration: AppMotion.lentaDe(context),
+                    curve: AppMotion.curvaEntrada,
+                    builder: (context, escala, hijo) => Opacity(
+                      opacity: ((escala - 0.92) / 0.08).clamp(0, 1),
+                      child: Transform.scale(scale: escala, child: hijo),
+                    ),
+                    child: const MarcaKuntur(),
+                  ),
                   const SizedBox(height: 32),
                   if (error == null) ...[
                     const SizedBox(height: 28, width: 28, child: CircularProgressIndicator(strokeWidth: 3)),

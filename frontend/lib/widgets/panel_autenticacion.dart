@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../config/app_motion.dart';
 import '../config/app_theme.dart';
 import 'franja_tricolor.dart';
 import 'logo_kuntur.dart';
@@ -34,7 +35,19 @@ class PanelAutenticacion extends StatelessWidget {
                     children: [
                       const MarcaKuntur(),
                       const SizedBox(height: 28),
-                      Container(
+                      // Entrada suave del formulario (una sola vez, respetando Reduce Motion).
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0, end: 1),
+                        duration: AppMotion.mediaDe(context),
+                        curve: AppMotion.curvaEntrada,
+                        builder: (context, avance, hijo) => Opacity(
+                          opacity: avance,
+                          child: Transform.translate(
+                            offset: Offset(0, (1 - avance) * 14),
+                            child: hijo,
+                          ),
+                        ),
+                        child: Container(
                         clipBehavior: Clip.antiAlias,
                         decoration: AppDecorations.tarjeta,
                         child: Column(
@@ -56,6 +69,7 @@ class PanelAutenticacion extends StatelessWidget {
                             ),
                           ],
                         ),
+                      ),
                       ),
                       const SizedBox(height: 18),
                       const Text('Vuelos nacionales por todo el Ecuador', style: AppTextStyles.nota),
