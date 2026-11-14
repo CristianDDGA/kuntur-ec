@@ -19,6 +19,8 @@ import '../widgets/aviso.dart';
 import '../widgets/boton_degradado.dart';
 import '../widgets/estado_vista.dart';
 import '../widgets/hoja_confirmacion.dart';
+import '../widgets/isometric_kuntur.dart';
+import '../widgets/kinetic_type.dart';
 import '../widgets/kuntur_scaffold.dart';
 import '../widgets/migas.dart';
 import '../widgets/tarjeta_vuelo.dart';
@@ -378,7 +380,11 @@ class _Muestra extends StatelessWidget {
       );
 }
 
-/// Las filas de asientos, con un pasillo entre las dos mitades de columnas.
+/// Las filas de asientos en la distribución visual **3 + pasillo + 3**.
+///
+/// El contrato del backend no cambia (A–D por fila lógica): la secuencia lineal
+/// [MapaAsientos.todos] se reparte en filas visuales de 6 asientos, 3 a cada
+/// lado del pasillo central, conservando los códigos reales de cada asiento.
 class _Cabina extends StatelessWidget {
   const _Cabina({required this.mapa, required this.ocupados, required this.seleccion, required this.onTocar});
 
@@ -387,79 +393,145 @@ class _Cabina extends StatelessWidget {
   final SeleccionAsientos seleccion;
   final ValueChanged<String> onTocar;
 
+  /// Asientos por lado del pasillo.
+  static const int columnasPorLado = 3;
+
+  /// Asientos por fila visual: 3 + 3.
+  static const int porFila = columnasPorLado * 2;
+
+  /// Ancho del pasillo central.
+  static const double _pasillo = 18;
+
+  /// Ancho del indicador de fila lógica (a la izquierda).
+  static const double _indicador = 26;
+
+  /// Holgura reservada para que la fila nunca desborde.
+  static const double _holgura = 8;
+
+  static const List<String> _posicionesIzquierda = ['I', 'II', 'III'];
+  static const List<String> _posicionesDerecha = ['IV', 'V', 'VI'];
+
   @override
   Widget build(BuildContext context) {
-    final mitad = mapa.columnas.length ~/ 2;
-    Widget asiento(int fila, int columna) {
-      final numero = mapa.asiento(fila, columna);
-      if (numero == null) return const SizedBox(width: AsientoBoton.tamano, height: AsientoBoton.tamano);
-      final estado = ocupados.contains(numero)
-          ? EstadoAsiento.ocupado
-          : seleccion.contiene(numero)
-              ? EstadoAsiento.seleccionado
-              : EstadoAsiento.libre;
-      return AsientoBoton(
-        numero: numero,
-        estado: estado,
-        atenuado: seleccion.llena && estado == EstadoAsiento.libre,
-        onTap: () => onTocar(numero),
-      );
-    }
+    final todos = mapa.todos;
+    final filasVisuales = (todos.length + porFila - 1) ~/ porFila;
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: AppDecorations.tarjeta,
       child: Column(
         children: [
-          // Silueta sutil de la proa: orienta el mapa sin dibujar un avión entero.
-          Container(
-            width: 150,
-            height: 20,
-            margin: const EdgeInsets.only(bottom: 8),
-            decoration: BoxDecoration(
-              color: AppColors.infoSuave,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(40), bottom: Radius.circular(6)),
-              border: Border.all(color: AppColors.divisor),
-            ),
+          // Proa isométrica 2.5D: sustituye la silueta plana de la cabina.
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 18),
+            child: ProaIsometricaAvion(alto: 54),
           ),
           Text('Frente del avión', style: AppTextStyles.nota.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
-          _filaLetras(mapa, mitad),
-          const SizedBox(height: 2),
-          for (var fila = 1; fila <= mapa.filas; fila++)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(width: 26, child: Text('$fila', textAlign: TextAlign.center, style: AppTextStyles.nota)),
-                for (var c = 0; c < mitad; c++) asiento(fila, c),
-                const SizedBox(width: 22), // pasillo
-                for (var c = mitad; c < mapa.columnas.length; c++) asiento(fila, c),
-                const SizedBox(width: 26),
-              ],
-            ),
+          LayoutBuilder(
+            builder: (context, caja) {
+              // 6 butacas (44–48) + pasillo (18) + indicador (26) + holgura (8).
+              final lado = ((caja.maxWidth - _pasillo - _indicador - _holgura) / porFila).clamp(44.0, 48.0);
+              final ancho = lado * porFila + _pasillo + _indicador;
+              final tablero = _tablero(lado, filasVisuales, todos);
+              if (caja.maxWidth >= ancho) return Center(child: tablero);
+              // En anchos menores que el mínimo HIG (menos de 340 pt de pantalla)
+              // se escala el tablero para no desbordar el contenedor.
+              return FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.topCenter,
+                child: SizedBox(width: ancho, child: tablero),
+              );
+            },
+          ),
         ],
       ),
     );
   }
 
-  /// Encabezado de columnas (A B | C D) alineado con cada asiento y el pasillo.
-  Widget _filaLetras(MapaAsientos mapa, int mitad) => Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+  Widget _tablero(double lado, int filasVisuales, List<String> todos) => Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(width: 26),
-          for (var c = 0; c < mitad; c++) _letra(mapa.columnas[c]),
-          const SizedBox(width: 22),
-          for (var c = mitad; c < mapa.columnas.length; c++) _letra(mapa.columnas[c]),
-          const SizedBox(width: 26),
+          _encabezado(lado),
+          const SizedBox(height: 2),
+          Text(
+            'Ventana · Pasillo · Ventana',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.nota.copyWith(fontSize: 11),
+          ),
+          const SizedBox(height: 6),
+          for (var fila = 0; fila < filasVisuales; fila++)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 1),
+              child: _fila(fila, lado, todos),
+            ),
         ],
       );
 
-  Widget _letra(String columna) => SizedBox(
-        width: AsientoBoton.tamano,
-        child: Center(
-          child: Text(columna, style: AppTextStyles.nota.copyWith(fontWeight: FontWeight.w800)),
+  /// Encabezado superior de las 6 posiciones (`I II III | IV V VI`).
+  Widget _encabezado(double lado) {
+    Widget posicion(String etiqueta) => SizedBox(
+          width: lado,
+          child: Center(
+            child: Text(etiqueta, style: AppTextStyles.nota.copyWith(fontWeight: FontWeight.w800, fontSize: 11)),
+          ),
+        );
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox(width: _indicador),
+        for (final etiqueta in _posicionesIzquierda) posicion(etiqueta),
+        SizedBox(
+          width: _pasillo,
+          child: Center(
+            child: Text('|', style: AppTextStyles.nota.copyWith(color: AppColors.borde, fontWeight: FontWeight.w700)),
+          ),
         ),
-      );
+        for (final etiqueta in _posicionesDerecha) posicion(etiqueta),
+      ],
+    );
+  }
+
+  Widget _fila(int filaVisual, double lado, List<String> todos) {
+    final base = filaVisual * porFila;
+    final numeros = [
+      for (var posicion = 0; posicion < porFila; posicion++)
+        base + posicion < todos.length ? todos[base + posicion] : null,
+    ];
+    // Fila lógica real del primer asiento de esta fila visual.
+    final primerAsiento = numeros.firstWhere((numero) => numero != null)!;
+    final filaLogica = int.parse(primerAsiento.substring(0, primerAsiento.length - 1));
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: _indicador,
+          child: Text('$filaLogica', textAlign: TextAlign.center, style: AppTextStyles.nota),
+        ),
+        for (var posicion = 0; posicion < porFila; posicion++) ...[
+          if (posicion == columnasPorLado) const SizedBox(width: _pasillo, height: 1),
+          _celda(numeros[posicion], lado),
+        ],
+      ],
+    );
+  }
+
+  Widget _celda(String? numero, double lado) {
+    if (numero == null) return SizedBox(width: lado, height: lado);
+    final estado = ocupados.contains(numero)
+        ? EstadoAsiento.ocupado
+        : seleccion.contiene(numero)
+            ? EstadoAsiento.seleccionado
+            : EstadoAsiento.libre;
+    return AsientoBoton(
+      numero: numero,
+      estado: estado,
+      atenuado: seleccion.llena && estado == EstadoAsiento.libre,
+      lado: lado,
+      onTap: () => onTocar(numero),
+    );
+  }
 }
 
 class _Resumen extends StatelessWidget {
@@ -526,11 +598,18 @@ class _Resumen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Asientos (${seleccion.cantidad} de ${SeleccionAsientos.maximo}): $lista',
-                      style: AppTextStyles.cuerpo.copyWith(fontWeight: FontWeight.w600),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                    // La línea de asientos se reacomoda con AnimatedSize (Reduce Motion
+                    // la deja quieta); hay un solo Text, así find.text sigue encontrándolo.
+                    AnimatedSize(
+                      duration: AppMotion.mediaDe(context),
+                      curve: AppMotion.curvaEntrada,
+                      alignment: Alignment.topLeft,
+                      child: Text(
+                        'Asientos (${seleccion.cantidad} de ${SeleccionAsientos.maximo}): $lista',
+                        style: AppTextStyles.cuerpo.copyWith(fontWeight: FontWeight.w600),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     if (iva == null)
                       Text('Subtotal ${Formatos.dinero(subtotal)} · el IVA se calcula al confirmar', style: AppTextStyles.nota)
@@ -543,41 +622,41 @@ class _Resumen extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              // El total entra con un pulso corto al cambiar la selección (Reduce Motion lo anula).
-              // Se reinicia por clave: hay un solo Text en el árbol, nunca un valor viejo a la vista.
-              TweenAnimationBuilder<double>(
-                key: ValueKey(subtotal + (iva ?? 0)),
-                tween: Tween<double>(begin: 0.88, end: 1),
-                duration: AppMotion.rapidaDe(context),
-                curve: AppMotion.curvaEntrada,
-                builder: (context, avance, hijo) => Opacity(
-                  opacity: avance.clamp(0, 1),
-                  child: Transform.scale(scale: avance, child: hijo),
-                ),
-                child: Text(
-                  Formatos.dinero(subtotal + (iva ?? 0)),
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.azul),
-                ),
+              // Total cinético: cada cambio de la selección reasienta el monto.
+              OdometroCinetico(
+                texto: Formatos.dinero(subtotal + (iva ?? 0)),
+                estilo: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.azul),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              TextButton.icon(
+          // En pantallas angostas las acciones se apilan: nunca desbordan.
+          LayoutBuilder(
+            builder: (context, caja) {
+              final reiniciar = TextButton.icon(
                 onPressed: enviando || (seleccion.vacia && !editando) || sinCambios ? null : onReiniciar,
                 icon: const Icon(Icons.restart_alt),
                 label: Text(editando ? 'Restablecer' : 'Reiniciar selección'),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: BotonDegradado(
-                  texto: editando ? 'Guardar cambios' : 'Confirmar reserva',
-                  cargando: enviando,
-                  onPressed: puedeConfirmar ? onConfirmar : null,
-                ),
-              ),
-            ],
+              );
+              final confirmar = BotonDegradado(
+                texto: editando ? 'Guardar cambios' : 'Confirmar reserva',
+                cargando: enviando,
+                onPressed: puedeConfirmar ? onConfirmar : null,
+              );
+              if (caja.maxWidth < 390) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [confirmar, reiniciar],
+                );
+              }
+              return Row(
+                children: [
+                  reiniciar,
+                  const SizedBox(width: 8),
+                  Expanded(child: confirmar),
+                ],
+              );
+            },
           ),
         ],
       ),

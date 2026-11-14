@@ -14,7 +14,9 @@ import '../widgets/campo_selector.dart';
 import '../widgets/campo_texto_kuntur.dart';
 import '../widgets/control_paginas.dart';
 import '../widgets/estado_vista.dart';
+import '../widgets/kinetic_type.dart';
 import '../widgets/kuntur_scaffold.dart';
+import '../widgets/liquid_morph.dart';
 import '../widgets/navegacion_principal.dart';
 import '../widgets/selectores_fecha_hora.dart';
 import '../widgets/tarjeta_vuelo.dart';
@@ -46,7 +48,10 @@ class VuelosPage extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Hola, ${usuario.nombre.split(' ').first}', style: AppTextStyles.titulo),
+                    TituloCinetico(
+                      'Hola, ${usuario.nombre.split(' ').first}',
+                      estilo: AppTextStyles.titulo,
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       usuario.esAdmin
@@ -212,17 +217,7 @@ class _FormularioBusquedaState extends ConsumerState<_FormularioBusqueda> {
     _destino.text = origen;
   }
 
-  Future<DateTime?> _elegirFecha() {
-    final hoy = DateTime.now();
-    final dia = DateTime(hoy.year, hoy.month, hoy.day);
-    return elegirFechaKuntur(
-      context,
-      inicial: _fecha ?? dia,
-      primera: dia,
-      ultima: dia.add(const Duration(days: ValidadoresVuelo.diasMaxAdelante)),
-      ayuda: 'Fecha del vuelo',
-    );
-  }
+  Future<DateTime?> _elegirFecha() => elegirFechaDeVuelo(context, inicial: _fecha);
 
   /// Quita un filtro activo desde su chip (sin perder los demás).
   void _quitarFiltro({bool origen = false, bool destino = false, bool fecha = false}) {
@@ -263,38 +258,44 @@ class _FormularioBusquedaState extends ConsumerState<_FormularioBusqueda> {
                 ),
               ],
             ),
-            AnimatedSize(
-              duration: AppMotion.mediaDe(context),
-              curve: AppMotion.curvaEntrada,
-              child: _abierto ? _campos(context) : const SizedBox.shrink(),
-            ),
-            if (_hayFiltros && _abierto) ...[
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 6,
+            // El formulario se pliega y despliega con geometría líquida.
+            ContenedorLiquidMorph(
+              expandido: _abierto,
+              radio: 16,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (widget.inicial.origen.isNotEmpty)
-                    InputChip(
-                      label: Text('Origen: ${widget.inicial.origen}'),
-                      onDeleted: () => _quitarFiltro(origen: true),
-                      deleteButtonTooltipMessage: 'Quitar filtro de origen',
+                  _campos(context),
+                  if (_hayFiltros) ...[
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        if (widget.inicial.origen.isNotEmpty)
+                          InputChip(
+                            label: Text('Origen: ${widget.inicial.origen}'),
+                            onDeleted: () => _quitarFiltro(origen: true),
+                            deleteButtonTooltipMessage: 'Quitar filtro de origen',
+                          ),
+                        if (widget.inicial.destino.isNotEmpty)
+                          InputChip(
+                            label: Text('Destino: ${widget.inicial.destino}'),
+                            onDeleted: () => _quitarFiltro(destino: true),
+                            deleteButtonTooltipMessage: 'Quitar filtro de destino',
+                          ),
+                        if (widget.inicial.fecha != null)
+                          InputChip(
+                            label: Text('Fecha: ${Formatos.fecha(widget.inicial.fecha!)}'),
+                            onDeleted: () => _quitarFiltro(fecha: true),
+                            deleteButtonTooltipMessage: 'Quitar filtro de fecha',
+                          ),
+                      ],
                     ),
-                  if (widget.inicial.destino.isNotEmpty)
-                    InputChip(
-                      label: Text('Destino: ${widget.inicial.destino}'),
-                      onDeleted: () => _quitarFiltro(destino: true),
-                      deleteButtonTooltipMessage: 'Quitar filtro de destino',
-                    ),
-                  if (widget.inicial.fecha != null)
-                    InputChip(
-                      label: Text('Fecha: ${Formatos.fecha(widget.inicial.fecha!)}'),
-                      onDeleted: () => _quitarFiltro(fecha: true),
-                      deleteButtonTooltipMessage: 'Quitar filtro de fecha',
-                    ),
+                  ],
                 ],
               ),
-            ],
+            ),
           ],
         ),
       ),
@@ -343,6 +344,29 @@ class _FormularioBusquedaState extends ConsumerState<_FormularioBusqueda> {
             ),
             Expanded(child: destino),
           ],
+        ),
+        // La ruta escrita se compone en tipografía cinética solo cuando hay ambos
+        // datos. Ocupa una altura fija para no desplazar los botones mientras se
+        // escribe (el layout no baila entre pulsaciones).
+        ListenableBuilder(
+          listenable: Listenable.merge([_origen, _destino]),
+          builder: (context, _) {
+            final desde = _origen.text.trim();
+            final hacia = _destino.text.trim();
+            return SizedBox(
+              height: 28,
+              child: desde.isEmpty || hacia.isEmpty
+                  ? const SizedBox.shrink()
+                  : Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextoRutaCinetica(
+                        origen: desde,
+                        destino: hacia,
+                        estilo: AppTextStyles.cuerpo.copyWith(fontWeight: FontWeight.w800, color: AppColors.azul),
+                      ),
+                    ),
+            );
+          },
         ),
         const SizedBox(height: 12),
         fecha,

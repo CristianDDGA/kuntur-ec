@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 import '../models/vuelo.dart';
 import 'etiqueta_asientos.dart';
+import 'isometric_kuntur.dart';
+import 'kinetic_type.dart';
 
 /// Un vuelo en la lista: ruta, horario, precio y disponibilidad.
 class TarjetaVuelo extends StatelessWidget {
@@ -41,11 +43,18 @@ class TarjetaVuelo extends StatelessWidget {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      const Text('Por persona', style: AppTextStyles.nota),
-                      const Spacer(),
-                      Text(
-                        Formatos.dinero(vuelo.precioCentavos),
-                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.azul),
+                      const Expanded(child: Text('Por persona', style: AppTextStyles.nota)),
+                      const SizedBox(width: 8),
+                      // FittedBox: el precio nunca desborda en tarjetas angostas.
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: OdometroCinetico(
+                            texto: Formatos.dinero(vuelo.precioCentavos),
+                            estilo: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.azul),
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -92,13 +101,8 @@ class RutaVuelo extends StatelessWidget {
               child: Column(
                 children: [
                   Text(Formatos.duracion(vuelo.duracion), style: AppTextStyles.nota),
-                  const Row(
-                    children: [
-                      Expanded(child: Divider(color: AppColors.borde, thickness: 1.5)),
-                      Icon(Icons.flight, size: 18, color: AppColors.azul),
-                      Expanded(child: Divider(color: AppColors.borde, thickness: 1.5)),
-                    ],
-                  ),
+                  // Arco de vuelo isométrico 2.5D en lugar del divisor plano.
+                  const ArcoVueloIsometrico(alto: 46),
                 ],
               ),
             ),

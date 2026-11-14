@@ -11,6 +11,7 @@ import '../widgets/estado_vista.dart';
 import '../widgets/etiqueta_asientos.dart';
 import '../widgets/fila_detalle.dart';
 import '../widgets/kuntur_scaffold.dart';
+import '../widgets/liquid_morph.dart';
 import '../widgets/panel_reserva.dart';
 import '../widgets/tarjeta_vuelo.dart';
 import '../config/app_router.dart';
@@ -94,14 +95,10 @@ class _Detalle extends ConsumerWidget {
               if (ocupados > 0)
                 Padding(
                   padding: const EdgeInsets.only(left: 36, bottom: 8),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: LinearProgressIndicator(
-                      value: ocupados / vuelo.capacidad,
-                      minHeight: 8,
-                      backgroundColor: AppColors.divisor,
-                      color: vuelo.pocosAsientos || vuelo.agotado ? AppColors.rojo : AppColors.azul,
-                    ),
+                  // Ocupación con relleno líquido: el chorro de pasajeros se lee de un vistazo.
+                  child: BarraLiquidMorph(
+                    valor: ocupados / vuelo.capacidad,
+                    color: vuelo.pocosAsientos || vuelo.agotado ? AppColors.rojo : AppColors.azul,
                   ),
                 ),
               FilaDetalle(

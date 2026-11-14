@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../config/app_motion.dart';
 import '../config/app_theme.dart';
+import 'isometric_kuntur.dart';
 
 enum EstadoAsiento { libre, seleccionado, ocupado }
 
 /// Un asiento del mapa. Libre (blanco), seleccionado (azul) u ocupado (rojo, no se puede tocar).
 ///
-/// El área táctil completa mide [tamano] (48 pt: por encima del mínimo de 44 pt
-/// de Apple HIG) aunque la forma visible del asiento siga siendo compacta: así
-/// se toca cómodo en móvil y en web no se rompe la silueta de la cabina.
+/// El área táctil completa mide [lado] (por defecto [tamano] = 48 pt, por encima
+/// del mínimo de 44 pt de Apple HIG) y el dibujo interior es una butaca
+/// isométrica 2.5D ([AsientoIsometrico3D]). La cabina ajusta [lado] entre 44 y 48
+/// pt para que 3 butacas + pasillo + 3 butacas entren sin desbordar.
 class AsientoBoton extends StatelessWidget {
   const AsientoBoton({
     super.key,
@@ -17,7 +18,8 @@ class AsientoBoton extends StatelessWidget {
     required this.estado,
     required this.onTap,
     this.atenuado = false,
-  });
+    this.lado = tamano,
+  }) : assert(lado >= 44, 'El área táctil del asiento debe cumplir el mínimo HIG de 44 pt.');
 
   static const double tamano = 48;
 
@@ -27,6 +29,9 @@ class AsientoBoton extends StatelessWidget {
 
   /// Se ve más tenue (cuando ya se eligió el máximo de asientos y este no está elegido).
   final bool atenuado;
+
+  /// Lado del área táctil en puntos lógicos (44–48 según el ancho disponible).
+  final double lado;
 
   @override
   Widget build(BuildContext context) {
@@ -48,42 +53,24 @@ class AsientoBoton extends StatelessWidget {
       // La acción se declara en el nodo semántico: el InkWell queda excluido.
       onTap: estado == EstadoAsiento.ocupado ? null : onTap,
       excludeSemantics: true,
-      child: Opacity(
-        opacity: atenuado ? 0.45 : 1,
-        child: SizedBox(
-          width: tamano,
-          height: tamano,
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: estado == EstadoAsiento.ocupado ? null : onTap,
-              child: Center(
-                child: AnimatedContainer(
-                  duration: AppMotion.rapidaDe(context),
-                  curve: AppMotion.curvaTactil,
-                  width: tamano - 10,
-                  height: tamano - 10,
-                  decoration: BoxDecoration(
-                    color: fondo,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: borde,
-                      width: estado == EstadoAsiento.libre ? 1.5 : 1,
-                    ),
-                  ),
-                  child: Center(
-                    child: estado == EstadoAsiento.ocupado
-                        ? Icon(Icons.close, size: 18, color: texto)
-                        : FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              numero,
-                              style: TextStyle(color: texto, fontSize: 12.5, fontWeight: FontWeight.w800),
-                            ),
-                          ),
-                  ),
-                ),
+      child: SizedBox(
+        width: lado,
+        height: lado,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(lado * 0.26),
+            onTap: estado == EstadoAsiento.ocupado ? null : onTap,
+            child: Padding(
+              padding: EdgeInsets.all(lado * 0.09),
+              child: AsientoIsometrico3D(
+                numero: numero,
+                fondo: fondo,
+                borde: borde,
+                texto: texto,
+                seleccionado: estado == EstadoAsiento.seleccionado,
+                ocupado: estado == EstadoAsiento.ocupado,
+                atenuado: atenuado,
               ),
             ),
           ),
