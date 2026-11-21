@@ -52,7 +52,7 @@ Kuntur EC es una **página web que se adapta** al dispositivo (no una app móvil
 | Barra de desplazamiento | Dentro de la columna central, angosta y lejos del borde | Una sola barra pegada al borde de la ventana | Consistencia con las convenciones web |
 | Vuelos y reservas | Una tarjeta por fila siempre | 2 columnas en pantallas anchas, 1 en celular (`RejillaAdaptable`) | Reconocer antes que recordar: se ven más resultados a la vez |
 | Portada | Carrusel en tarjeta centrada, destinos en tarjetas fijas | Carrusel a pantalla completa (420 px de alto), destinos y beneficios en hasta 4 columnas | Estética; la portada es la primera impresión |
-| Carrusel | Solo degradado e ícono | Fondo con GIF por región (`assets/regiones/*.gif`); si falta, degradado de respaldo | Robustez: la portada nunca queda rota |
+| Carrusel | Solo degradado e ícono | Fondo con foto por región (`assets/regiones/*.jpg`); si falta, degradado de respaldo | Robustez: la portada nunca queda rota |
 | Migas de pan | Se apilaban y parecían enlaces planos subrayados | En una línea, enlaces en azul y la miga actual en negrita | Visibilidad del estado del sistema |
 | Factura XML | «Descargar» solo copiaba al portapapeles | Descarga un archivo `factura-<número>.xml` en el navegador | Control y libertad del usuario |
 

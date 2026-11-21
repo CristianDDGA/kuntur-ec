@@ -25,9 +25,9 @@ Hecho (detalle en `docs/PLANIFICACION.md`, sección 8):
 
 **Diseño web adaptable (rama `feature/ajuste-ancho-web`, pendiente de PR a `develop`):** ancho de contenido 1200 px (portada 1240 px),
 barra de desplazamiento en el borde de la ventana, `RejillaAdaptable` (2 columnas en `VuelosPage`/`ReservasPage`, hasta 4 en la portada),
-carrusel a pantalla completa con GIF por región, `migas.dart` corregido y descarga real del XML (`services/descarga_web.dart`).
-Los GIFs de `frontend/assets/regiones/` (`sierra.gif`, `costa.gif`, `amazonia.gif`, `galapagos.gif`, 960×360, ~150–230 KB) son animaciones ilustradas propias
-(sin derechos de terceros); se pueden reemplazar por otros con el mismo nombre. Si falta alguno, se ve el degradado. Detalle para el informe en `docs/USABILIDAD.md` y fila Z7 de `docs/PLANIFICACION.md`. Pruebas: `flutter test` **429**, `flutter analyze` limpio.
+carrusel a pantalla completa con foto por región, `migas.dart` corregido y descarga real del XML (`services/descarga_web.dart`).
+Las fotos de `frontend/assets/regiones/` (`sierra.jpg`, `costa.jpg`, `oriente.jpg`, `galapagos.jpg`) son el fondo del carrusel; se pueden
+reemplazar por otras con el mismo nombre. Si falta alguna, se ve el degradado. Detalle para el informe en `docs/USABILIDAD.md` y fila Z7 de `docs/PLANIFICACION.md`. Pruebas: `flutter test` **429**, `flutter analyze` limpio.
 
 **Pendientes finales (rama `feature/pendientes-final`):** destinos de la portada desde la BD (`GET /api/vuelos/destinos`, público; con respaldo si la API
 no responde) y **resumen de ventas** del administrador (`GET /api/reservas/resumen` + tarjeta en `AdminPage`). Pruebas: pytest **650**, flutter test **430**.

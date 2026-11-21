@@ -207,13 +207,13 @@ class _CarruselRegionesEcuadorState extends State<_CarruselRegionesEcuador> {
     super.dispose();
   }
 
-  /// GIF (o imagen) de cada región, en el mismo orden que [_regiones]. Si el archivo no existe
+  /// Foto de cada región, en el mismo orden que [_regiones]. Si el archivo no existe
   /// se muestra el degradado con el ícono, así la portada nunca queda rota.
   static const _fondos = [
-    'assets/regiones/sierra.gif',
-    'assets/regiones/costa.gif',
-    'assets/regiones/amazonia.gif',
-    'assets/regiones/galapagos.gif',
+    'assets/regiones/sierra.jpg',
+    'assets/regiones/costa.jpg',
+    'assets/regiones/oriente.jpg',
+    'assets/regiones/galapagos.jpg',
   ];
 
   @override

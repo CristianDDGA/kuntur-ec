@@ -183,7 +183,7 @@ Excepciones documentadas: `flasgger==0.9.7.1` (la 0.9.4 no funciona con Flask 3)
 | Z4 | Correo real: código de 6 dígitos por SMTP antes de poder iniciar sesión | ✅ Hecho |
 | Z5 | Inicio de sesión con Google + completar la cédula | ✅ Hecho |
 | Z6 | Rediseño de la portada (carrusel de las 4 regiones, banner, destinos) y formato monetario `$ 10,000.00` | ✅ Hecho |
-| Z7 | Diseño web adaptable a todo el ancho: contenido hasta 1200–1240 px, barra de desplazamiento en el borde de la ventana, listas de vuelos y reservas en 2 columnas, portada a pantalla completa con GIF por región, migas corregidas y descarga real de la factura XML | ✅ Hecho |
+| Z7 | Diseño web adaptable a todo el ancho: contenido hasta 1200–1240 px, barra de desplazamiento en el borde de la ventana, listas de vuelos y reservas en 2 columnas, portada a pantalla completa con foto por región, migas corregidas y descarga real de la factura XML | ✅ Hecho |
 | Z8 | Destinos de la portada desde la BD (`GET /api/vuelos/destinos`, público) y resumen de ventas para el administrador (`GET /api/reservas/resumen`) | ✅ Hecho |
 | Z9 | Preparación para Render: gunicorn, `wsgi.py`, `PORT`, `render.yaml`, script para cambiar la clave del administrador y guía `docs/DESPLIEGUE_RENDER.md` | ✅ Hecho (falta ejecutar el despliegue) |
 | P | Pruebas funcionales y capturas | Parcial: pruebas automáticas y recorrido manual hechos; faltan capturas de las pantallas nuevas |
