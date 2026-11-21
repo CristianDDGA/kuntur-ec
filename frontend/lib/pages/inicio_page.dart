@@ -9,6 +9,10 @@ import '../controllers/vuelos_controller.dart';
 import '../models/vuelo.dart';
 import '../widgets/franja_tricolor.dart';
 import '../widgets/logo_kuntur.dart';
+import '../widgets/rejilla_adaptable.dart';
+
+/// Ancho máximo del contenido en pantallas grandes (los fondos y el carrusel llegan al borde).
+const double _anchoContenido = 1240;
 
 final destinosPopularesProvider = FutureProvider<List<_DestinoResumen>>((ref) async {
   return _destinosRealesBase;
@@ -165,7 +169,7 @@ class _CarruselRegionesEcuador extends StatefulWidget {
 }
 
 class _CarruselRegionesEcuadorState extends State<_CarruselRegionesEcuador> {
-  final PageController _controller = PageController(viewportFraction: 0.94);
+  final PageController _controller = PageController(viewportFraction: 1);
   int _paginaActual = 0;
   Timer? _timer;
 
@@ -229,162 +233,195 @@ class _CarruselRegionesEcuadorState extends State<_CarruselRegionesEcuador> {
     super.dispose();
   }
 
+  /// GIF (o imagen) de cada región, en el mismo orden que [_regiones]. Si el archivo no existe
+  /// se muestra el degradado con el ícono, así la portada nunca queda rota.
+  static const _fondos = [
+    'assets/regiones/sierra.gif',
+    'assets/regiones/costa.gif',
+    'assets/regiones/amazonia.gif',
+    'assets/regiones/galapagos.gif',
+  ];
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 960),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+    return LayoutBuilder(
+      builder: (context, caja) {
+        final ancho = caja.maxWidth >= 900;
+        final alto = ancho ? 420.0 : 260.0;
+        return Column(
+          children: [
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: _anchoContenido),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
                     children: [
-                      Text(
-                        'Descubre las 4 regiones del Ecuador',
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: AppColors.azulNoche),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Vuela a través de paisajes únicos con la flota y calidez de Kuntur EC.',
-                        style: TextStyle(fontSize: 13, color: AppColors.textoSecundario),
-                      ),
-                    ],
-                  ),
-                ),
-                Row(
-                  children: [
-                    IconButton(
-                      tooltip: 'Región anterior',
-                      icon: const Icon(Icons.arrow_back_ios, size: 16),
-                      onPressed: () => _controller.previousPage(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeOut,
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Siguiente región',
-                      icon: const Icon(Icons.arrow_forward_ios, size: 16),
-                      onPressed: () => _controller.nextPage(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeOut,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 14),
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 980),
-          child: SizedBox(
-            height: 195,
-            child: PageView.builder(
-              controller: _controller,
-              itemCount: _regiones.length,
-              onPageChanged: (idx) => setState(() => _paginaActual = idx),
-              itemBuilder: (context, index) {
-                final r = _regiones[index];
-                return Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [r.$5, r.$6],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(22),
-                    boxShadow: [
-                      BoxShadow(
-                        color: r.$5.withValues(alpha: 0.32),
-                        blurRadius: 18,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(22),
-                      onTap: () => context.go(AppRoutes.login),
-                      child: Padding(
-                        padding: const EdgeInsets.all(22),
-                        child: Row(
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.22),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      r.$7,
-                                      style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    r.$1,
-                                    style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    r.$3,
-                                    style: TextStyle(color: Colors.white.withValues(alpha: 0.92), fontSize: 13, height: 1.35),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
+                            Text(
+                              'Descubre las 4 regiones del Ecuador',
+                              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: AppColors.azulNoche),
                             ),
-                            const SizedBox(width: 16),
-                            Container(
-                              padding: const EdgeInsets.all(18),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.16),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(r.$4, size: 44, color: Colors.white),
+                            SizedBox(height: 4),
+                            Text(
+                              'Vuela a través de paisajes únicos con la flota y calidez de Kuntur EC.',
+                              style: TextStyle(fontSize: 14, color: AppColors.textoSecundario),
                             ),
                           ],
                         ),
                       ),
-                    ),
+                      IconButton(
+                        tooltip: 'Región anterior',
+                        icon: const Icon(Icons.arrow_back_ios, size: 16),
+                        onPressed: () => _controller.previousPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOut,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Siguiente región',
+                        icon: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onPressed: () => _controller.nextPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOut,
+                        ),
+                      ),
+                    ],
                   ),
-                );
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        // Indicadores de puntos
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(
-            _regiones.length,
-            (idx) => Container(
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              width: _paginaActual == idx ? 24 : 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: _paginaActual == idx ? AppColors.azul : const Color(0xFFCBD5E1),
-                borderRadius: BorderRadius.circular(4),
+                ),
               ),
             ),
-          ),
-        ),
-      ],
+            const SizedBox(height: 16),
+            // A todo el ancho de la ventana (sin márgenes laterales vacíos).
+            SizedBox(
+              height: alto,
+              width: double.infinity,
+              child: PageView.builder(
+                controller: _controller,
+                itemCount: _regiones.length,
+                onPageChanged: (idx) => setState(() => _paginaActual = idx),
+                itemBuilder: (context, index) {
+                  final r = _regiones[index];
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [r.$5, r.$6],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                      ),
+                      Image.asset(
+                        _fondos[index],
+                        fit: BoxFit.cover,
+                        gaplessPlayback: true,
+                        excludeFromSemantics: true,
+                        errorBuilder: (_, __, ___) => Align(
+                          alignment: Alignment.centerRight,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 80),
+                            child: Icon(r.$4, size: alto * 0.7, color: Colors.white.withValues(alpha: 0.14)),
+                          ),
+                        ),
+                      ),
+                      // Degradado oscuro a la izquierda para que el texto se lea sobre cualquier GIF.
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Colors.black.withValues(alpha: 0.62), Colors.black.withValues(alpha: 0.05)],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
+                        ),
+                      ),
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => context.go(AppRoutes.login),
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: _anchoContenido),
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(horizontal: ancho ? 40 : 22),
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(maxWidth: 620),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(alpha: 0.22),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            r.$7,
+                                            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 14),
+                                        Text(
+                                          r.$1,
+                                          style: TextStyle(color: Colors.white, fontSize: ancho ? 44 : 30, fontWeight: FontWeight.w900),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          r.$2,
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: ancho ? 18 : 15,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          r.$3,
+                                          style: TextStyle(color: Colors.white.withValues(alpha: 0.92), fontSize: ancho ? 15 : 13, height: 1.4),
+                                          maxLines: 3,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                _regiones.length,
+                (idx) => Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  width: _paginaActual == idx ? 24 : 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: _paginaActual == idx ? AppColors.azul : const Color(0xFFCBD5E1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -400,7 +437,7 @@ class _BannerExperienciaViajero extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 880),
+        constraints: const BoxConstraints(maxWidth: _anchoContenido),
         child: Container(
           decoration: BoxDecoration(
             gradient: const LinearGradient(
@@ -493,7 +530,7 @@ class _SeccionDestinosDinamicos extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 880),
+        constraints: const BoxConstraints(maxWidth: _anchoContenido),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -510,10 +547,10 @@ class _SeccionDestinosDinamicos extends StatelessWidget {
             Consumer(
               builder: (context, ref, _) {
                 final destinos = ref.watch(destinosPopularesProvider).value ?? _destinosRealesBase;
-                return Wrap(
-                  spacing: 14,
-                  runSpacing: 14,
-                  children: [
+                return RejillaAdaptable(
+                  espacio: 14,
+                  anchoMinimoColumna: 230,
+                  hijos: [
                     for (final d in destinos)
                       InkWell(
                         borderRadius: BorderRadius.circular(14),
@@ -612,7 +649,7 @@ class _SeccionBeneficiosCliente extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 16),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 880),
+          constraints: const BoxConstraints(maxWidth: _anchoContenido),
           child: Column(
             children: [
               const Text(
@@ -625,11 +662,10 @@ class _SeccionBeneficiosCliente extends StatelessWidget {
                 style: TextStyle(fontSize: 13, color: AppColors.textoSecundario),
               ),
               const SizedBox(height: 24),
-              Wrap(
-                spacing: 16,
-                runSpacing: 16,
-                alignment: WrapAlignment.center,
-                children: [
+              RejillaAdaptable(
+                espacio: 24,
+                anchoMinimoColumna: 240,
+                hijos: [
                   for (final v in _ventajas)
                     SizedBox(
                       width: 200,
@@ -675,7 +711,7 @@ class _PieDePagina extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 16),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 880),
+          constraints: const BoxConstraints(maxWidth: _anchoContenido),
           child: Column(
             children: [
               Wrap(

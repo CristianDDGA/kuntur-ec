@@ -18,7 +18,7 @@ class KunturScaffold extends StatelessWidget {
     required this.body,
     this.conAtras = false,
     this.seccion,
-    this.maxAncho = 980,
+    this.maxAncho = 1200,
     this.onRefrescar,
     this.floatingActionButton,
     this.sinSafeArea = false,
@@ -52,9 +52,15 @@ class KunturScaffold extends StatelessWidget {
     contenido = Center(
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxAncho),
-        child: contenido,
+        // Sin barra propia: la barra de desplazamiento va en el borde de la ventana (abajo).
+        child: ScrollConfiguration(
+          behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+          child: contenido,
+        ),
       ),
     );
+    // La barra queda pegada al borde derecho de la ventana, no al borde de la columna centrada.
+    contenido = Scrollbar(child: contenido);
     if (!sinSafeArea) contenido = SafeArea(child: contenido);
 
     return Scaffold(

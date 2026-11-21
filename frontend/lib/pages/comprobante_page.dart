@@ -11,6 +11,7 @@ import '../models/factura.dart';
 import '../models/reserva.dart';
 import '../models/vuelo.dart';
 import '../services/api_exception.dart';
+import '../services/descarga_otros.dart' if (dart.library.js_interop) '../services/descarga_web.dart';
 import '../widgets/aviso.dart';
 import '../widgets/estado_vista.dart';
 import '../widgets/fila_detalle.dart';
@@ -46,7 +47,7 @@ class _ComprobantePageState extends ConsumerState<ComprobantePage> {
     return KunturScaffold(
       conAtras: true,
       seccion: Seccion.reservas,
-      maxAncho: 880,
+      maxAncho: 1000,
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         children: [
@@ -297,6 +298,15 @@ class _VistaXmlState extends State<_VistaXml> {
     mostrarAviso(context, 'XML copiado al portapapeles.');
   }
 
+  Future<void> _descargar() async {
+    final nombre = 'factura-${widget.factura.numero}.xml';
+    if (descargarTexto(nombre, widget.factura.xml)) {
+      mostrarAviso(context, 'Descargando $nombre.');
+    } else {
+      await _copiar(); // fuera de la web no hay descarga directa
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -330,7 +340,7 @@ class _VistaXmlState extends State<_VistaXml> {
                       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                    onPressed: _copiar,
+                    onPressed: _descargar,
                     icon: const Icon(Icons.download, size: 16),
                     label: const Text('Descargar factura (XML)', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                   ),

@@ -33,7 +33,7 @@ class AdminPage extends ConsumerWidget {
 
     return KunturScaffold(
       seccion: Seccion.administracion,
-      maxAncho: 680,
+      maxAncho: 900,
       onRefrescar: () async {
         ref.invalidate(ivaControllerProvider);
         // Espera la respuesta: así el indicador de refresco no termina antes de llegar los datos.

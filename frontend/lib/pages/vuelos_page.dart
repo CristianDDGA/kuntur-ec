@@ -18,6 +18,7 @@ import '../widgets/kinetic_type.dart';
 import '../widgets/kuntur_scaffold.dart';
 import '../widgets/liquid_morph.dart';
 import '../widgets/navegacion_principal.dart';
+import '../widgets/rejilla_adaptable.dart';
 import '../widgets/selectores_fecha_hora.dart';
 import '../widgets/tarjeta_vuelo.dart';
 
@@ -148,13 +149,10 @@ class VuelosPage extends ConsumerWidget {
       ),
       Opacity(
         opacity: actualizando ? 0.5 : 1,
-        child: Column(
-          children: [
+        child: RejillaAdaptable(
+          hijos: [
             for (final vuelo in lista)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: TarjetaVuelo(vuelo: vuelo, onTap: () => context.push(AppRoutes.vuelo(vuelo.id))),
-              ),
+              TarjetaVuelo(vuelo: vuelo, onTap: () => context.push(AppRoutes.vuelo(vuelo.id))),
           ],
         ),
       ),

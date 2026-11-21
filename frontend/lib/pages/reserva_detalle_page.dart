@@ -32,7 +32,7 @@ class ReservaDetallePage extends ConsumerWidget {
     return KunturScaffold(
       conAtras: true,
       seccion: Seccion.reservas,
-      maxAncho: 880,
+      maxAncho: 1100,
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         child: Column(

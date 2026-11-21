@@ -31,7 +31,7 @@ class VueloDetallePage extends ConsumerWidget {
     return KunturScaffold(
       conAtras: true,
       seccion: Seccion.vuelos,
-      maxAncho: 640,
+      maxAncho: 1000,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

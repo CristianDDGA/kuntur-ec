@@ -24,7 +24,7 @@ class EstadoApiPage extends ConsumerWidget {
 
     return KunturScaffold(
       conAtras: true,
-      maxAncho: 640,
+      maxAncho: 800,
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: ListView(

@@ -44,12 +44,12 @@ class SeleccionAsientosPage extends ConsumerWidget {
     return reserva.when(
       loading: () => const KunturScaffold(
         conAtras: true,
-        maxAncho: 640,
+        maxAncho: 1000,
         body: Padding(padding: EdgeInsets.all(16), child: CargandoDetalleVista()),
       ),
       error: (e, _) => KunturScaffold(
         conAtras: true,
-        maxAncho: 640,
+        maxAncho: 1000,
         body: Padding(
           padding: const EdgeInsets.all(16),
           child: ErrorVista(
@@ -62,7 +62,7 @@ class SeleccionAsientosPage extends ConsumerWidget {
           ? _Mapa(vueloId: r.vueloId, reserva: r)
           : const KunturScaffold(
               conAtras: true,
-              maxAncho: 640,
+              maxAncho: 1000,
               body: Padding(
                 padding: EdgeInsets.all(16),
                 child: AvisoInline(
@@ -196,7 +196,7 @@ class _MapaState extends ConsumerState<_Mapa> {
         conAtras: true,
         // Mientras hay asientos elegidos, el logo confirma antes de salir (context.go no pasa por PopScope).
         alTocarInicio: conCambios ? _salirAInicio : null,
-        maxAncho: 640,
+        maxAncho: 1000,
         body: _contenido(vuelo, mapa, iva?.porcentaje, conCambios),
       ),
     );

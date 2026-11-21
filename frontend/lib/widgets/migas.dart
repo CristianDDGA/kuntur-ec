@@ -42,20 +42,15 @@ class Migas extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                   onTap: () => context.go(miga.ruta!),
                   // Área táctil mínima de 44 pt de alto (Apple HIG `accessibility.md › Mobility`).
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 44),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-                      child: Center(
-                        child: Text(
-                          miga.texto,
-                          style: AppTextStyles.nota.copyWith(
-                            fontSize: 13,
-                            color: AppColors.azul,
-                            fontWeight: FontWeight.w700,
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
+                  child: Padding(
+                    // Alto táctil ≈ 44 pt sin forzar un Center dentro del Wrap (que apilaba las migas).
+                    padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 4),
+                    child: Text(
+                      miga.texto,
+                      style: AppTextStyles.nota.copyWith(
+                        fontSize: 13,
+                        color: AppColors.azul,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),

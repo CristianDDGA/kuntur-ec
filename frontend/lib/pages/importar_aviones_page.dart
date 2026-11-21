@@ -68,7 +68,7 @@ class ImportarAvionesPage extends ConsumerWidget {
     return KunturScaffold(
       conAtras: true,
       seccion: Seccion.administracion,
-      maxAncho: 760,
+      maxAncho: 900,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

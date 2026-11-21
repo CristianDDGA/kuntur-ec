@@ -11,6 +11,7 @@ import '../widgets/estado_vista.dart';
 import '../widgets/kinetic_type.dart';
 import '../widgets/kuntur_scaffold.dart';
 import '../widgets/navegacion_principal.dart';
+import '../widgets/rejilla_adaptable.dart';
 import '../widgets/tarjeta_reserva.dart';
 
 /// "Mis reservas" (V): historial paginado del cliente.
@@ -76,13 +77,10 @@ class ReservasPage extends ConsumerWidget {
       ),
       Opacity(
         opacity: actualizando ? 0.5 : 1,
-        child: Column(
-          children: [
+        child: RejillaAdaptable(
+          hijos: [
             for (final r in pagina.reservas)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: TarjetaReserva(reserva: r, onTap: () => context.push(AppRoutes.reserva(r.id))),
-              ),
+              TarjetaReserva(reserva: r, onTap: () => context.push(AppRoutes.reserva(r.id))),
           ],
         ),
       ),

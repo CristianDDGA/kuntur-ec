@@ -41,3 +41,21 @@ sabía cómo ir al inicio ni a sus reservas.
 ## Pendiente (ideas, no bloquea)
 - Descargar el comprobante como archivo `.xml`/PDF.
 - Recordar la sesión en varias pestañas y mostrar el tiempo restante del token.
+
+## Diseño web adaptable (rama `feature/ajuste-ancho-web`)
+
+Kuntur EC es una **página web que se adapta** al dispositivo (no una app móvil). Cambios y su motivo:
+
+| Cambio | Antes | Ahora | Heurística / criterio |
+|---|---|---|---|
+| Ancho del contenido | Columna de 640–980 px con grandes márgenes vacíos en escritorio | Hasta 1200 px (1240 px en la portada); en celular ocupa todo el ancho | Diseño estético y minimalista; uso eficiente del espacio |
+| Barra de desplazamiento | Dentro de la columna central, angosta y lejos del borde | Una sola barra pegada al borde de la ventana | Consistencia con las convenciones web |
+| Vuelos y reservas | Una tarjeta por fila siempre | 2 columnas en pantallas anchas, 1 en celular (`RejillaAdaptable`) | Reconocer antes que recordar: se ven más resultados a la vez |
+| Portada | Carrusel en tarjeta centrada, destinos en tarjetas fijas | Carrusel a pantalla completa (420 px de alto), destinos y beneficios en hasta 4 columnas | Estética; la portada es la primera impresión |
+| Carrusel | Solo degradado e ícono | Fondo con GIF por región (`assets/regiones/*.gif`); si falta, degradado de respaldo | Robustez: la portada nunca queda rota |
+| Migas de pan | Se apilaban y parecían enlaces planos subrayados | En una línea, enlaces en azul y la miga actual en negrita | Visibilidad del estado del sistema |
+| Factura XML | «Descargar» solo copiaba al portapapeles | Descarga un archivo `factura-<número>.xml` en el navegador | Control y libertad del usuario |
+
+Técnica: `KunturScaffold` limita el ancho y dibuja la barra de desplazamiento; `RejillaAdaptable` calcula las columnas según el
+ancho disponible; la descarga usa importación condicional (`descarga_web.dart` / `descarga_otros.dart`) sin paquetes nuevos.
+
