@@ -379,7 +379,7 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
         // con `context.go` no pasaría por PopScope y se perdería el formulario.
         seccion: _sucio ? null : Seccion.administracion,
         alTocarInicio: _sucio ? _salirAInicio : null,
-        maxAncho: 640,
+        maxAncho: 800,
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(

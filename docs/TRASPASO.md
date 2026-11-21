@@ -16,12 +16,18 @@ Hecho (detalle en `docs/PLANIFICACION.md`, sección 8):
 - Documentación al día: `README.md`, `backend/README.md`, `frontend/README.md`, `docs/PRUEBAS.md`, `docs/USABILIDAD.md`,
   `docs/PRIVACIDAD.md`, colección de Postman (`docs/postman/`, 125 comprobaciones, verificada).
 
-**Trabajo en rama `feature/redeno-landing-vuelos` (pendiente de PR a `develop`):**
+**Rediseño de la portada (ya en `develop`, PR #19):**
 - `InicioPage` (`frontend/lib/pages/inicio_page.dart`): nueva portada comercial orientada al cliente (sin textos técnicos, sin buscador en la portada ni pill `Ecuador · USD $`), con el carrusel de las 4 regiones del Ecuador arriba, banner de experiencia y destinos populares.
 - `CompletarCedulaPage` (`frontend/lib/pages/completar_cedula_page.dart`) y `backend/services/usuario_service.py`: muestra nombre precargado de Google (editable; solo se envía en `PUT /usuarios/cedula` si cambia), correo verificado y cédula; `PanelAutenticacion` ahora incluye regreso al inicio.
 - `Formatos.dinero` (`frontend/lib/models/vuelo.dart`): formato `Símbolo + Espacio + Miles con coma + Decimales con punto` (ej. `$ 10,000.00`).
 - Mejoras de tarjetas (`tarjeta_vuelo.dart`, `tarjeta_reserva.dart`), ancho web (`kuntur_scaffold.dart` a 980 px), `reserva_detalle_page.dart` y `comprobante_page.dart` (botón `Volver a reserva`, `Copiar XML` y `Descargar factura (XML)`).
 - Pruebas verificadas en esta rama: `pytest` **646** pasadas, `flutter test` **429** pasadas, `flutter analyze` sin avisos.
+
+**Diseño web adaptable (rama `feature/ajuste-ancho-web`, pendiente de PR a `develop`):** ancho de contenido 1200 px (portada 1240 px),
+barra de desplazamiento en el borde de la ventana, `RejillaAdaptable` (2 columnas en `VuelosPage`/`ReservasPage`, hasta 4 en la portada),
+carrusel a pantalla completa con GIF por región, `migas.dart` corregido y descarga real del XML (`services/descarga_web.dart`).
+Los GIFs van en `frontend/assets/regiones/` (`sierra.gif`, `costa.gif`, `amazonia.gif`, `galapagos.gif`; ≤ 2 MB y ≤ 1280 px); si faltan, se ve el
+degradado. Detalle para el informe en `docs/USABILIDAD.md` y fila Z7 de `docs/PLANIFICACION.md`. Pruebas: `flutter test` **429**, `flutter analyze` limpio.
 
 ## 2. Cómo correrlo
 
@@ -70,11 +76,8 @@ Ejemplo para probar la importación de aviones: `docs/ejemplos/aviones.csv` (for
    `JWT_SECRET_KEY`, `CORS_ORIGINS=http://localhost:8080`, `SMTP_*`, `GOOGLE_CLIENT_ID`; añadir `gunicorn` a `requirements.txt`;
    Dockerfile opcional; el frontend con `--dart-define=API_BASE_URL=https://<servicio>.onrender.com/api`. El plan gratuito duerme el servicio.
    Antes de publicar, cambiar la contraseña del administrador de `seed.sql`.
-4. **Ajustes de diseño web pendientes (continuación de `feature/redeno-landing-vuelos`):**
-   - Pulir el diseño web adaptable de `VuelosPage`, `ReservasPage` y `SeleccionAsientosPage` (desglose de factura/compra más detallado en selección de asientos).
-   - Mejorar `frontend/lib/widgets/migas.dart` (quitar `Center` dentro de `Wrap` y subrayado de hipervínculo para que las migas no se apilen ni parezcan links planos).
-   - Implementar descarga real de archivo `.xml` en el navegador en `comprobante_page.dart` (actualmente copia al portapapeles).
-   - Evaluar cargar los destinos populares de `InicioPage` desde un endpoint público de la BD (manteniendo que `app_router_test.dart` exige no llamar a la API al arrancar sin token, o actualizar la prueba).
+4. **Ajustes de diseño web pendientes:** desglose de factura/compra más detallado en `SeleccionAsientosPage`; guardar los 4 GIFs de las regiones;
+   evaluar cargar los destinos populares de `InicioPage` desde un endpoint público (`app_router_test.dart` exige no llamar a la API al arrancar sin token).
 5. Opcionales: editar/cancelar vuelos, historial de cambios de reservas, total esperado antes de reservar, resumen de ventas,
    pruebas de concurrencia automáticas, login con Google en Android.
 6. **Antes de la demostración:** ensayo con 2 o 3 cuentas de Google distintas, cada una con una cédula válida diferente; el Flutter
