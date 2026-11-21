@@ -54,7 +54,11 @@ class BarraKuntur extends ConsumerWidget implements PreferredSizeWidget {
               constraints: const BoxConstraints(minHeight: 44),
               child: const Padding(
                 padding: EdgeInsets.symmetric(vertical: 5, horizontal: 4),
-                child: MarcaKuntur(tamanoLogo: 34, vertical: false, enOscuro: true),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: MarcaKuntur(tamanoLogo: 34, vertical: false, enOscuro: true),
+                ),
               ),
             ),
           ),

@@ -87,42 +87,54 @@ class _BarraSuperiorPublica extends StatelessWidget {
         children: [
           SafeArea(
             bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Row(
-                children: [
-                  InkWell(
-                    onTap: () => context.go(AppRoutes.inicio),
-                    borderRadius: BorderRadius.circular(8),
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                      child: MarcaKuntur(tamanoLogo: 32, vertical: false, enOscuro: true),
+            child: LayoutBuilder(
+              builder: (context, caja) {
+                final estrecha = caja.maxWidth < 460;
+                final marca = InkWell(
+                  onTap: () => context.go(AppRoutes.inicio),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    child: MarcaKuntur(tamanoLogo: estrecha ? 28 : 32, vertical: false, enOscuro: true),
+                  ),
+                );
+                final iniciar = OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white70),
+                    padding: EdgeInsets.symmetric(horizontal: estrecha ? 12 : 16, vertical: 9),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                  ),
+                  onPressed: () => context.go(AppRoutes.login),
+                  child: Text('Iniciar sesión', style: TextStyle(fontWeight: FontWeight.w700, fontSize: estrecha ? 12.5 : 13)),
+                );
+                final crear = FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.amarillo,
+                    foregroundColor: AppColors.azulNoche,
+                    padding: EdgeInsets.symmetric(horizontal: estrecha ? 12 : 16, vertical: 9),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                  ),
+                  onPressed: () => context.go(AppRoutes.registro),
+                  child: Text('Crear cuenta', style: TextStyle(fontWeight: FontWeight.w800, fontSize: estrecha ? 12.5 : 13)),
+                );
+                return Padding(
+                  padding: EdgeInsets.symmetric(horizontal: estrecha ? 14 : 20, vertical: 12),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 12,
+                      runSpacing: 10,
+                      children: [
+                        marca,
+                        Wrap(spacing: 8, runSpacing: 8, children: [iniciar, crear]),
+                      ],
                     ),
                   ),
-                  const Spacer(),
-                  OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: Colors.white70),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                    ),
-                    onPressed: () => context.go(AppRoutes.login),
-                    child: const Text('Iniciar sesión', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                  ),
-                  const SizedBox(width: 10),
-                  FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.amarillo,
-                      foregroundColor: AppColors.azulNoche,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                    ),
-                    onPressed: () => context.go(AppRoutes.registro),
-                    child: const Text('Crear cuenta', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
           ),
           const FranjaTricolor(),
@@ -221,7 +233,8 @@ class _CarruselRegionesEcuadorState extends State<_CarruselRegionesEcuador> {
     return LayoutBuilder(
       builder: (context, caja) {
         final ancho = caja.maxWidth >= 900;
-        final alto = ancho ? 420.0 : 260.0;
+        final compacta = caja.maxWidth < 460;
+        final alto = ancho ? 420.0 : (compacta ? 300.0 : 280.0);
         return Column(
           children: [
             Center(
@@ -231,16 +244,20 @@ class _CarruselRegionesEcuadorState extends State<_CarruselRegionesEcuador> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               'Descubre las 4 regiones del Ecuador',
-                              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: AppColors.azulNoche),
+                              style: TextStyle(
+                                fontSize: compacta ? 21 : 26,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.azulNoche,
+                              ),
                             ),
-                            SizedBox(height: 4),
-                            Text(
+                            const SizedBox(height: 4),
+                            const Text(
                               'Vuela a través de paisajes únicos con la flota y calidez de Kuntur EC.',
                               style: TextStyle(fontSize: 14, color: AppColors.textoSecundario),
                             ),
@@ -327,43 +344,58 @@ class _CarruselRegionesEcuadorState extends State<_CarruselRegionesEcuador> {
                                   alignment: Alignment.centerLeft,
                                   child: ConstrainedBox(
                                     constraints: const BoxConstraints(maxWidth: 620),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white.withValues(alpha: 0.22),
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            r.$7,
-                                            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800),
-                                          ),
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.centerLeft,
+                                      child: SizedBox(
+                                        width: (caja.maxWidth - (ancho ? 80 : 44)).clamp(220.0, 620.0),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withValues(alpha: 0.22),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                r.$7,
+                                                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 12),
+                                            Text(
+                                              r.$1,
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: ancho ? 44 : (compacta ? 26 : 30),
+                                                fontWeight: FontWeight.w900,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              r.$2,
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: ancho ? 18 : 15,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              r.$3,
+                                              style: TextStyle(
+                                                color: Colors.white.withValues(alpha: 0.92),
+                                                fontSize: ancho ? 15 : 13,
+                                                height: 1.4,
+                                              ),
+                                              maxLines: 3,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
                                         ),
-                                        const SizedBox(height: 14),
-                                        Text(
-                                          r.$1,
-                                          style: TextStyle(color: Colors.white, fontSize: ancho ? 44 : 30, fontWeight: FontWeight.w900),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          r.$2,
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: ancho ? 18 : 15,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          r.$3,
-                                          style: TextStyle(color: Colors.white.withValues(alpha: 0.92), fontSize: ancho ? 15 : 13, height: 1.4),
-                                          maxLines: 3,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -430,49 +462,47 @@ class _BannerExperienciaViajero extends StatelessWidget {
           ),
           child: Padding(
             padding: const EdgeInsets.all(22),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppColors.amarillo,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Text(
-                          'EXPERIENCIA DE PRIMERA',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.azulNoche,
-                          ),
-                        ),
+            child: LayoutBuilder(
+              builder: (context, caja) {
+                final apilar = caja.maxWidth < 520;
+                final texto = Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.amarillo,
+                        borderRadius: BorderRadius.circular(6),
                       ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        'Puntualidad, calidez y confort en cada despegue',
+                      child: const Text(
+                        'EXPERIENCIA DE PRIMERA',
                         style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 19,
+                          fontSize: 10,
                           fontWeight: FontWeight.w900,
+                          color: AppColors.azulNoche,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'En Kuntur EC cuidamos cada detalle para que tu viaje sea placentero, seguro y memorable desde que reservas hasta tu destino final.',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.85),
-                          fontSize: 13,
-                        ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Puntualidad, calidez y confort en cada despegue',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w900,
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                FilledButton(
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'En Kuntur EC cuidamos cada detalle para que tu viaje sea placentero, seguro y memorable desde que reservas hasta tu destino final.',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                );
+                final boton = FilledButton(
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.amarillo,
                     foregroundColor: AppColors.azulNoche,
@@ -481,8 +511,25 @@ class _BannerExperienciaViajero extends StatelessWidget {
                   ),
                   onPressed: () => context.go(AppRoutes.login),
                   child: const Text('Comenzar viaje', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
-                ),
-              ],
+                );
+                if (apilar) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      texto,
+                      const SizedBox(height: 14),
+                      Align(alignment: Alignment.centerLeft, child: boton),
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(child: texto),
+                    const SizedBox(width: 16),
+                    boton,
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -530,8 +577,7 @@ class _SeccionDestinosDinamicos extends StatelessWidget {
                         borderRadius: BorderRadius.circular(14),
                         onTap: () => onSeleccionarDestino(d.ciudad),
                         child: Container(
-                          width: 195,
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(14),
@@ -641,25 +687,22 @@ class _SeccionBeneficiosCliente extends StatelessWidget {
                 anchoMinimoColumna: 240,
                 hijos: [
                   for (final v in _ventajas)
-                    SizedBox(
-                      width: 200,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: AppColors.azul.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(v.$1, color: AppColors.azul, size: 24),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.azul.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          const SizedBox(height: 10),
-                          Text(v.$2, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                          const SizedBox(height: 4),
-                          Text(v.$3, style: const TextStyle(fontSize: 12, color: AppColors.textoSuave, height: 1.3)),
-                        ],
-                      ),
+                          child: Icon(v.$1, color: AppColors.azul, size: 24),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(v.$2, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                        const SizedBox(height: 4),
+                        Text(v.$3, style: const TextStyle(fontSize: 12, color: AppColors.textoSuave, height: 1.3)),
+                      ],
                     ),
                 ],
               ),
@@ -694,9 +737,9 @@ class _PieDePagina extends StatelessWidget {
                 alignment: WrapAlignment.spaceBetween,
                 crossAxisAlignment: WrapCrossAlignment.start,
                 children: [
-                  const SizedBox(
-                    width: 320,
-                    child: Column(
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 320),
+                    child: const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         MarcaKuntur(tamanoLogo: 28, vertical: false, enOscuro: true),
@@ -708,8 +751,8 @@ class _PieDePagina extends StatelessWidget {
                       ],
                     ),
                   ),
-                  SizedBox(
-                    width: 200,
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 200),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -720,17 +763,24 @@ class _PieDePagina extends StatelessWidget {
                         const SizedBox(height: 6),
                         InkWell(
                           onTap: () => context.go(AppRoutes.login),
-                          child: const Text('Ingreso de clientes', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 4),
+                            child: Text('Ingreso de clientes', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                          ),
                         ),
-                        const SizedBox(height: 4),
                         InkWell(
                           onTap: () => context.go(AppRoutes.registro),
-                          child: const Text('Registro nuevo', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 4),
+                            child: Text('Registro nuevo', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                          ),
                         ),
-                        const SizedBox(height: 4),
                         InkWell(
                           onTap: () => context.push(AppRoutes.estado),
-                          child: const Text('Estado de vuelos', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 4),
+                            child: Text('Estado de vuelos', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                          ),
                         ),
                       ],
                     ),
