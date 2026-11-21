@@ -19,6 +19,17 @@ sabía cómo ir al inicio ni a sus reservas.
 | 9 | Ayudar a reconocer, diagnosticar y recuperarse de errores | — | Mensajes en español que dicen qué pasó y qué hacer ("Actualice el mapa y elija de nuevo"), botón "Reintentar", y si alguien toma un asiento la app lo quita de la selección y recarga el mapa. |
 | 10 | Ayuda y documentación | El mapa no explicaba cómo usarse. | Texto de ayuda breve sobre el mapa ("Toque los asientos que quiere (hasta 10)…"), textos auxiliares en los formularios ("Máximo $10000, hasta 2 decimales"). |
 
+## Flujos de cuenta (registro, correo, Google, cédula)
+
+| Heurística | Cómo se aplica |
+|---|---|
+| Visibilidad del estado | «Confirme su correo» dice **a qué dirección** se envió el código y cuánto vale (10 minutos); el botón «Reenviar código» muestra la cuenta atrás de 60 s; la importación de aviones muestra «Archivo correcto: 3 aviones nuevos» o «tiene 2 problemas». |
+| Prevención de errores | El campo de cédula y el del código solo admiten dígitos y cortan en 10 y 6; la cédula se valida con el dígito verificador **mientras se escribe**; «Importar» solo se activa con el archivo limpio (se revisa antes de guardar). |
+| Reconocer, diagnosticar y recuperarse de errores | Un código malo dice cuántos intentos quedan; los errores del CSV indican **la línea** y el motivo; si el correo no salió, la pantalla pide otro código sola; si Google falla, el mensaje lo explica sin tecnicismos. |
+| Control y libertad | «Volver a iniciar sesión» desde la verificación; «Cerrar sesión» desde «Complete su perfil»; un login con el correo sin verificar no muestra un error sino el siguiente paso (pedir el código). |
+| Flexibilidad y eficiencia | «Continuar con Google» evita crear contraseña y verificar el correo; tras verificar el código la app inicia sesión sola; Enter envía el código. |
+| Ayuda | Textos auxiliares: «10 dígitos. Se valida el número, no se consulta ningún registro» y las instrucciones del formato del CSV en la propia pantalla. |
+
 ## Navegación (resumen)
 
 - **Cliente:** Vuelos · Mis reservas (barra inferior). **Administrador:** Vuelos · Administración.

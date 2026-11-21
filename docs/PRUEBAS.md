@@ -4,12 +4,25 @@
 
 | Capa | Herramienta | Resultado |
 |---|---|---|
-| Backend (API, servicios, concurrencia, XML, IVA) | `pytest` | 516 pruebas, todas pasan (incluye pruebas contra la base real) |
-| Frontend (pantallas, router, sesión, formularios) | `flutter test` | 347 pruebas, todas pasan |
+| Backend (API, servicios, concurrencia, XML, IVA, aviones, cédula, correo, Google) | `pytest` | 646 pruebas, todas pasan (incluye pruebas contra la base real) |
+| Frontend (pantallas, router, sesión, formularios, Google, importación) | `flutter test` | 429 pruebas, todas pasan |
 | Análisis estático | `flutter analyze` | Sin avisos |
-| API manual | Postman (`docs/postman/`) | Colección con casos 2xx y de error (400/401/403/404/409) |
+| API manual | Postman (`docs/postman/`) | Colección con casos 2xx y de error (400/401/403/404/409/415) |
 
-Pruebas destacadas: reservas simultáneas sobre el mismo asiento (un solo ganador), contador de asientos
+Pruebas destacadas de las funciones nuevas:
+- **Cédula:** cambiar un solo dígito de una cédula válida siempre la invalida (se prueban las 90 variantes); provincias 01–24 y 30.
+- **Correo:** el código se guarda como huella (nunca en claro), vence, cuenta intentos (el intento fallido no se deshace),
+  un reenvío antes de 60 s no envía nada, y todo lo que no sirve responde lo mismo sin revelar si la cuenta existe.
+  Flujo completo contra la base real: registro → login bloqueado (403) → código → login.
+- **Google:** el servidor usa solo lo que firma Google (un cuerpo con `correo: admin@kuntur.ec` o `rol: admin` no cambia
+  nada); correo sin verificar, token ajeno o inventado → 401; cuenta existente por correo se vincula; otra cuenta de
+  Google con el mismo correo → 409; la cuenta creada con Google no entra con contraseña.
+- **Aviones:** el CSV con errores no importa ni una fila (todo o nada), matrículas repetidas se omiten, 413 sobre 1 MB,
+  415 si no es `text/csv`; un vuelo con avión toma su capacidad y rechaza asientos fuera del avión (fila 4 en un avión de 3).
+- **Seguridad:** ninguna ruta puede quedar abierta por olvido (`test_cerrado_por_defecto`); las pruebas automáticas
+  **nunca envían correos reales**.
+
+Pruebas destacadas anteriores: reservas simultáneas sobre el mismo asiento (un solo ganador), contador de asientos
 atómico, modificación con versión vieja (409), token revocado tras logout (401), cierre automático de la
 sesión al vencer el token, y `volver` a la pantalla anterior sin redirecciones abiertas.
 
@@ -38,6 +51,21 @@ Se recorrió la app como usuario (cliente y administrador) en vista móvil de 39
 | 17 | Dirección inexistente | Página «No encontramos esa página» | OK | `capturas/17-pagina-no-encontrada.jpg` |
 | 18 | Vista de escritorio (mapa de asientos) | Contenido centrado; recargar conserva la pantalla | OK | `capturas/18-escritorio-mapa-asientos.jpg` |
 | 19 | Sesión vencida | Vuelve al login con aviso | OK | `capturas/19-sesion-vencida.jpg` |
+
+### Recorrido manual de las funciones nuevas (navegador, backend real)
+
+Verificado el 20–21/11/2026 en el navegador contra Supabase. **Todavía no tienen captura** (pendiente para el informe).
+
+| # | Caso | Resultado | Estado |
+|---|---|---|---|
+| 20 | Página de inicio y paso a login/registro | Landing pública; con sesión redirige a `/vuelos` | OK |
+| 21 | Cédula `1550007998` (un dígito distinto) vs `1550007999` | La primera se rechaza al instante; la segunda se acepta | OK |
+| 22 | Registro con cédula válida | Pasa a «Confirme su correo» y la cuenta existe sin verificar | OK |
+| 23 | Código por correo real (Gmail) | Llega a la bandeja; al escribirlo la app verifica e inicia sesión sola | OK |
+| 24 | Importar aviones: archivo con una fila errónea | Dos errores en la línea 3, vista previa de las filas válidas y «Importar» desactivado | OK |
+| 25 | Importar aviones: archivo correcto | «Se importaron 3 aviones» y aparecen en la lista | OK |
+| 26 | Crear un vuelo eligiendo avión | Capacidad y cabina salen del avión (ATR de 18 filas → 72 asientos) | OK |
+| 27 | «Continuar con Google» con la cuenta de prueba | Crea la cuenta verificada, pide la cédula y entra a los vuelos | OK |
 
 ## 3. Expiración del token
 
