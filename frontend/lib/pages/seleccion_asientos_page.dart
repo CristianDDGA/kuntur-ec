@@ -215,7 +215,7 @@ class _MapaState extends ConsumerState<_Mapa> {
       );
 
   Future<void> _salirAInicio() async {
-    if (await _confirmarSalida() && mounted) context.go(AppRoutes.inicio);
+    if (await _confirmarSalida() && mounted) context.go(AppRoutes.vuelos);
   }
 
   Widget _contenido(AsyncValue<Vuelo> vuelo, AsyncValue<MapaAsientos> mapa, String? ivaPorcentaje, bool conCambios) {
@@ -255,7 +255,7 @@ class _MapaState extends ConsumerState<_Mapa> {
                       const Miga('Cambiar asientos'),
                     ]
                   : [
-                      Miga('Vuelos', ruta: conCambios ? null : AppRoutes.inicio),
+                      Miga('Vuelos', ruta: conCambios ? null : AppRoutes.vuelos),
                       Miga(v.codigo, ruta: conCambios ? null : AppRoutes.vuelo(v.id)),
                       const Miga('Elegir asientos'),
                     ]),

@@ -164,8 +164,23 @@ def test_crear_normaliza_datos_y_empieza_con_todos_los_asientos_libres():
     assert "INSERT INTO vuelos" in sql
     assert params == (
         "KT801", "Quito", "Esmeraldas", date(2026, 12, 28), time(8, 0), time(8, 45),
-        Decimal("75.5"), 80, 80,
+        Decimal("75.5"), 80, 80, None,  # sin avión
     )
+
+
+def test_crear_con_avion_toma_la_capacidad_del_avion():
+    db = BaseDatosFalsa(filas=[{"filas": 30}, _fila(codigo="KT801", capacidad=120, asientos_disponibles=120)])
+    datos = {k: v for k, v in NUEVO.items() if k != "capacidad"} | {"avion_id": 7}
+    _servicio(db).crear(datos)
+    sql, params = db.cursor.consultas[1]
+    assert "avion_id" in sql
+    assert params[-3:] == (120, 120, 7)  # 30 filas x 4 asientos
+
+
+def test_crear_con_avion_inexistente_es_404():
+    datos = {k: v for k, v in NUEVO.items() if k != "capacidad"} | {"avion_id": 99}
+    with pytest.raises(NotFoundError, match="avión"):
+        _servicio(BaseDatosFalsa()).crear(datos)
 
 
 @pytest.mark.parametrize(

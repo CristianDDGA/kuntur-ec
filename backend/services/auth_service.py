@@ -7,7 +7,8 @@ from typing import Any
 from database import Database
 from models import EstadoToken, Rol, Usuario
 from services.usuario_service import UsuarioService
-from utils.excepciones import UnauthorizedError, ValidationError
+from utils.excepciones import CorreoNoVerificadoError, ServiceUnavailableError, UnauthorizedError, ValidationError
+from utils.google import VerificadorGoogle
 from utils.limitador import LimitadorIntentos
 from utils.limites import CONTRASENA as MAX_LARGO_CONTRASENA_LOGIN
 from utils.seguridad import CifradorContrasenas, EmisorTokens, huella_token
@@ -45,12 +46,14 @@ class AuthService:
         emisor: EmisorTokens,
         cifrador: CifradorContrasenas | None = None,
         limitador: LimitadorIntentos | None = None,
+        verificador_google: VerificadorGoogle | None = None,
     ):
         self._db = db
         self._usuarios = usuarios
         self._emisor = emisor
         self._cifrador = cifrador or CifradorContrasenas()
         self._limitador = limitador or LimitadorIntentos()
+        self._google = verificador_google  # None = el inicio con Google no está configurado
 
     def login(self, datos: dict, origen: str = "") -> dict[str, Any]:
         """`origen` (la IP) junto con el correo identifica los intentos fallidos para el límite."""
@@ -71,7 +74,15 @@ class AuthService:
             self._limitador.registrar_fallo(clave)
             raise UnauthorizedError(_CREDENCIALES_INVALIDAS)
         self._limitador.limpiar(clave)
+        if not usuario.correo_verificado:  # la contraseña es correcta, pero falta confirmar el correo
+            raise CorreoNoVerificadoError(
+                "Falta verificar su correo. Ingrese el código que le enviamos.", correo=usuario.correo
+            )
 
+        return self._emitir_sesion(usuario)
+
+    def _emitir_sesion(self, usuario: Usuario) -> dict[str, Any]:
+        """Token de sesión (JWT firmado) y su huella en la tabla `tokens`, para poder revocarlo en el logout."""
         emitido = self._emisor.emitir(usuario.id, usuario.rol.value)  # type: ignore[arg-type]
         with self._db.transaccion() as cur:
             cur.execute(
@@ -85,12 +96,37 @@ class AuthService:
             "usuario": usuario.to_dict(),
         }
 
+    def login_google(self, datos: dict) -> dict[str, Any]:
+        """Inicia sesión con un `id_token` de Google. Si no hay cuenta con ese correo se crea (verificada); si ya
+        existía con correo y contraseña, se vincula. El servidor decide quién es la persona SOLO con lo que
+        Google firmó: nunca con un correo o nombre enviado por el cliente."""
+        token = datos.get("id_token")
+        if not isinstance(token, str) or not token.strip():
+            raise ValidationError("Falta el token de Google (id_token).")
+        if len(token) > 4096:
+            raise ValidationError("El token de Google supera el largo permitido.")
+        revisar_texto(token, "id_token")
+        if self._google is None:
+            raise ServiceUnavailableError("El inicio de sesión con Google no está disponible en este momento.")
+
+        identidad = self._google.verificar(token.strip())
+        usuario = self._usuarios.buscar_por_google_sub(identidad.sub)
+        nuevo = False
+        if usuario is None:
+            existente = self._usuarios.buscar_por_correo(identidad.correo)
+            if existente is not None:
+                usuario = self._usuarios.vincular_google(existente.id, identidad.sub)  # type: ignore[arg-type]
+            else:
+                usuario = self._usuarios.crear_desde_google(identidad)
+                nuevo = True
+        return self._emitir_sesion(usuario) | {"nuevo": nuevo}
+
     def validar(self, token: str) -> Sesion:
         """Comprueba firma, expiración y que el token no esté revocado en la BD."""
         datos = self._emisor.leer(token)
         with self._db.transaccion() as cur:
             cur.execute(
-                "SELECT u.id, u.nombre, u.correo, u.password_hash, u.rol, u.fecha_registro "
+                "SELECT u.id, u.nombre, u.correo, u.password_hash, u.rol, u.fecha_registro, u.cedula, u.correo_verificado "
                 "FROM tokens t JOIN usuarios u ON u.id = t.usuario_id "
                 "WHERE t.token = %s AND t.usuario_id = %s AND t.estado = %s AND t.expiracion > now()",
                 (huella_token(token), datos.usuario_id, EstadoToken.ACTIVO.value),

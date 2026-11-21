@@ -3,7 +3,7 @@ from flasgger import swag_from
 from flask import Blueprint, current_app, request
 
 from services.auth_service import AuthService
-from utils.autenticacion import sesion_actual, token_requerido
+from utils.autenticacion import sesion_actual, token_requerido, publica
 from utils.documentacion import contrato
 from utils.peticiones import cuerpo_json
 from utils.respuestas import respond
@@ -21,8 +21,43 @@ def _servicio() -> AuthService:
 
 @auth_bp.route("/login", methods=["POST"])
 @swag_from(contrato("auth", "login"))
+@publica
 def login():
     return respond(_servicio().login(cuerpo_json(), origen=request.remote_addr or ""), root="sesion")
+
+
+# =============================
+# POST - Iniciar sesión con Google
+# =============================
+
+@auth_bp.route("/google", methods=["POST"])
+@swag_from(contrato("auth", "google"))
+@publica
+def login_google():
+    return respond(_servicio().login_google(cuerpo_json()), root="sesion")
+
+
+# =============================
+# POST - Confirmar el correo con el código enviado
+# =============================
+
+@auth_bp.route("/verificar-correo", methods=["POST"])
+@swag_from(contrato("auth", "verificar_correo"))
+@publica
+def verificar_correo():
+    resultado = current_app.extensions["verificacion_service"].verificar(cuerpo_json())
+    return respond({"mensaje": "Correo verificado. Ya puede iniciar sesión.", **resultado}, root="verificacion")
+
+
+# =============================
+# POST - Pedir otro código
+# =============================
+
+@auth_bp.route("/reenviar-codigo", methods=["POST"])
+@swag_from(contrato("auth", "reenviar_codigo"))
+@publica
+def reenviar_codigo():
+    return respond(current_app.extensions["verificacion_service"].reenviar(cuerpo_json()), root="reenvio")
 
 
 # =============================

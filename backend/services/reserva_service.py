@@ -58,7 +58,7 @@ _ASIENTO_TOMADO = "Uno o más asientos ya fueron reservados por otra persona. Ac
 # Asientos de una reserva, ordenados por fila y columna ("2A" antes que "10A").
 _ASIENTOS_DE_LA_RESERVA = (
     "(SELECT array_agg(a.asiento ORDER BY length(a.asiento), a.asiento) "
-    "FROM reserva_asientos a WHERE a.reserva_id = r.id) AS asientos"
+    "FROM reserva_asientos a WHERE a.reserva_id = r.id AND NOT a.quitado) AS asientos"
 )
 
 
@@ -236,8 +236,10 @@ class ReservaService:
                 vuelo = actual.vuelo
 
             if quitar:
+                # No se borra: queda en el historial como retirado y el asiento se libera.
                 cur.execute(
-                    "DELETE FROM reserva_asientos WHERE reserva_id = %s AND asiento = ANY(%s)",
+                    "UPDATE reserva_asientos SET activo = FALSE, quitado = TRUE "
+                    "WHERE reserva_id = %s AND asiento = ANY(%s)",
                     (reserva_id, quitar),
                 )
             self._guardar_asientos(cur, reserva_id, actual.vuelo.id, agregar)
@@ -316,7 +318,9 @@ class ReservaService:
             return
         try:
             cur.executemany(
-                "INSERT INTO reserva_asientos (reserva_id, vuelo_id, asiento) VALUES (%s, %s, %s)",
+                "INSERT INTO reserva_asientos (reserva_id, vuelo_id, asiento) VALUES (%s, %s, %s) "
+                # Si la persona retiró este asiento antes y lo vuelve a pedir, se reactiva su fila.
+                "ON CONFLICT (reserva_id, asiento) DO UPDATE SET activo = TRUE, quitado = FALSE",
                 [(reserva_id, vuelo_id, a) for a in asientos],
             )
         except UniqueViolation:  # otra persona los tomó en este mismo instante

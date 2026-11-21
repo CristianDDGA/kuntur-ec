@@ -1,0 +1,34 @@
+# Contrato del servicio aviones: Importar un CSV de aviones (solo administrador)
+summary: "Importar aviones desde un CSV (solo administrador)"
+description: |
+  Mismo formato que la previsualización. Es todo o nada: si alguna fila tiene errores no se guarda ninguna y la
+  respuesta 400 lista los errores por línea. Las matrículas que ya existen se omiten (no se sobrescriben).
+tags: [Aviones]
+security: [{Bearer: []}]
+consumes: [text/csv]
+produces: [application/json, application/xml]
+parameters:
+  - in: body
+    name: body
+    required: true
+    schema: {type: string, example: "matricula;modelo;filas\nHC-ABC;Airbus A320;30"}
+responses:
+  201:
+    description: Aviones creados.
+    schema:
+      type: object
+      properties:
+        mensaje: {type: string}
+        creados: {type: integer, example: 2}
+        omitidos: {type: array, items: {type: string}, description: "Matrículas que ya existían"}
+        total_filas: {type: integer}
+  400:
+    description: El archivo o alguna fila no es válida (el cuerpo trae `errores` con la línea y el motivo).
+  401:
+    description: Sin token o token inválido.
+  403:
+    description: El usuario no es administrador.
+  413:
+    description: El archivo supera 1 MB.
+  415:
+    description: El Content-Type no es text/csv.

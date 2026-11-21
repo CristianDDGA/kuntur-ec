@@ -15,11 +15,29 @@ CREATE TABLE IF NOT EXISTS usuarios (
     correo          VARCHAR(150) NOT NULL,
     password_hash   VARCHAR(255) NOT NULL,
     rol             VARCHAR(10)  NOT NULL DEFAULT 'cliente' CHECK (rol IN ('cliente', 'admin')),
+    cedula          VARCHAR(10)  CHECK (cedula ~ '^[0-9]{10}$'),
+    correo_verificado BOOLEAN    NOT NULL DEFAULT TRUE,
+    google_sub      VARCHAR(255),
     fecha_registro  TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 
 -- El correo es único sin distinguir mayúsculas (Ana@x.com = ana@x.com).
 CREATE UNIQUE INDEX IF NOT EXISTS ux_usuarios_correo ON usuarios (lower(correo));
+
+-- Cédula ecuatoriana (10 dígitos). NULL en cuentas anteriores a pedirla (p. ej. el administrador); el
+-- registro la exige y valida el dígito verificador. Una cédula = una cuenta. (ADD COLUMN IF NOT EXISTS:
+-- agrega la columna en bases creadas antes.)
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS cedula VARCHAR(10) CHECK (cedula ~ '^[0-9]{10}$');
+CREATE UNIQUE INDEX IF NOT EXISTS ux_usuarios_cedula ON usuarios (cedula) WHERE cedula IS NOT NULL;
+
+-- Correo confirmado con un código. Las cuentas que ya existían quedan verificadas (DEFAULT TRUE); el registro
+-- inserta FALSE explícitamente, así que una cuenta nueva no puede iniciar sesión hasta confirmar su correo.
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS correo_verificado BOOLEAN NOT NULL DEFAULT TRUE;
+
+-- Cuenta de Google vinculada (campo `sub` del id_token: estable aunque la persona cambie de correo). NULL si la
+-- cuenta se creó con correo y contraseña. Una cuenta de Google = una cuenta de Kuntur EC.
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS google_sub VARCHAR(255);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_usuarios_google_sub ON usuarios (google_sub) WHERE google_sub IS NOT NULL;
 
 -- ---------------------------------------------------------------------
 -- vuelos
@@ -43,6 +61,24 @@ CREATE TABLE IF NOT EXISTS vuelos (
 
 -- Búsqueda de vuelos: GET /api/vuelos?origen=&destino=&fecha=
 CREATE INDEX IF NOT EXISTS ix_vuelos_busqueda ON vuelos (lower(origen), lower(destino), fecha);
+
+-- ---------------------------------------------------------------------
+-- aviones: se cargan con un CSV (matrícula, modelo, filas). Cada fila del avión tiene 4 asientos
+-- (A-D), así que la capacidad = filas x 4 y los asientos "1A"... se generan a partir de ahí.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS aviones (
+    id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    matricula   VARCHAR(10) NOT NULL CHECK (matricula ~ '^[A-Z0-9-]{3,10}$'),
+    modelo      VARCHAR(60) NOT NULL CHECK (btrim(modelo) <> ''),
+    filas       INTEGER     NOT NULL CHECK (filas BETWEEN 1 AND 50),
+    fecha_alta  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_aviones_matricula ON aviones (matricula);
+
+-- El vuelo recuerda con qué avión se opera (NULL en los vuelos creados antes de existir los aviones).
+ALTER TABLE vuelos ADD COLUMN IF NOT EXISTS avion_id BIGINT REFERENCES aviones (id) ON DELETE RESTRICT;
+CREATE INDEX IF NOT EXISTS ix_vuelos_avion ON vuelos (avion_id);
 
 -- ---------------------------------------------------------------------
 -- tarifas_iva: historial del IVA (cambiarlo = insertar una tarifa nueva)
@@ -95,6 +131,9 @@ CREATE TABLE IF NOT EXISTS reserva_asientos (
     PRIMARY KEY (reserva_id, asiento)
 );
 
+-- `quitado`: la persona retiró el asiento al modificar la reserva (no se borra: queda en el historial).
+ALTER TABLE reserva_asientos ADD COLUMN IF NOT EXISTS quitado BOOLEAN NOT NULL DEFAULT FALSE;
+
 CREATE UNIQUE INDEX IF NOT EXISTS ux_asiento_activo_por_vuelo ON reserva_asientos (vuelo_id, asiento) WHERE activo;
 
 -- ---------------------------------------------------------------------
@@ -110,6 +149,18 @@ CREATE TABLE IF NOT EXISTS tokens (
 );
 
 CREATE INDEX IF NOT EXISTS ix_tokens_usuario ON tokens (usuario_id);
+
+-- ---------------------------------------------------------------------
+-- codigos_verificacion: código de 6 dígitos enviado al correo al registrarse. Hay uno vigente por cuenta
+-- (uno nuevo reemplaza al anterior). Se guarda su huella HMAC, nunca el código.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS codigos_verificacion (
+    usuario_id   BIGINT      PRIMARY KEY REFERENCES usuarios (id) ON DELETE CASCADE,
+    codigo_hash  TEXT        NOT NULL,
+    expira       TIMESTAMPTZ NOT NULL,
+    intentos     INTEGER     NOT NULL DEFAULT 0 CHECK (intentos >= 0),
+    enviado_en   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
 -- ---------------------------------------------------------------------
 -- Control de concurrencia optimista (columna version)
@@ -133,8 +184,10 @@ ALTER TABLE vuelos ADD CONSTRAINT ck_vuelos_capacidad_maxima CHECK (capacidad BE
 -- leerlas; solo nuestro backend, que se conecta como dueño de las tablas.
 -- ---------------------------------------------------------------------
 ALTER TABLE usuarios    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE aviones     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vuelos      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tarifas_iva ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reservas    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reserva_asientos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tokens      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE codigos_verificacion ENABLE ROW LEVEL SECURITY;

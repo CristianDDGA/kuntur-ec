@@ -4,7 +4,7 @@ from flask import Blueprint, current_app, request
 
 from models import Rol
 from services.vuelo_service import VueloService
-from utils.autenticacion import rol_requerido
+from utils.autenticacion import publica, rol_requerido
 from utils.documentacion import contrato
 from utils.peticiones import cuerpo_json
 from utils.respuestas import respond
@@ -22,6 +22,7 @@ def _servicio() -> VueloService:
 
 @vuelos_bp.route("", methods=["GET"])
 @swag_from(contrato("vuelos", "buscar"))
+@publica
 def buscar():
     pagina = _servicio().buscar(
         origen=request.args.get("origen"),
@@ -39,6 +40,7 @@ def buscar():
 
 @vuelos_bp.route("/<id:vuelo_id>", methods=["GET"])
 @swag_from(contrato("vuelos", "detalle"))
+@publica
 def detalle(vuelo_id: int):
     return respond(_servicio().obtener(vuelo_id).to_dict(), root="vuelo")
 
@@ -49,6 +51,7 @@ def detalle(vuelo_id: int):
 
 @vuelos_bp.route("/<id:vuelo_id>/asientos", methods=["GET"])
 @swag_from(contrato("vuelos", "asientos"))
+@publica
 def asientos(vuelo_id: int):
     return respond(_servicio().asientos(vuelo_id), root="asientos")
 

@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/auth_service.dart';
+import '../services/google_proveedor.dart';
+import '../services/avion_service.dart';
 import '../services/http_rest_client.dart';
 import '../services/iva_service.dart';
 import '../services/reserva_service.dart';
@@ -59,4 +61,12 @@ final ivaServiceProvider = Provider<IvaService>(
 
 final reservaServiceProvider = Provider<ReservaService>(
   (ref) => ReservaService(ref.watch(restClientProvider)),
+);
+
+final proveedorGoogleProvider = Provider<ProveedorGoogle>(
+  (ref) => ProveedorGoogleReal(AppConfig.googleClientId),
+);
+
+final avionServiceProvider = Provider<AvionService>(
+  (ref) => AvionService(ref.watch(restClientProvider)),
 );

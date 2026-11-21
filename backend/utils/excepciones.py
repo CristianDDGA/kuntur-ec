@@ -37,6 +37,12 @@ class ForbiddenError(AppError):
     code = "sin_permiso"
 
 
+class CorreoNoVerificadoError(ForbiddenError):
+    """Las credenciales son correctas pero la cuenta aún no confirmó su correo (403)."""
+
+    code = "correo_no_verificado"
+
+
 class TooManyRequestsError(AppError):
     """Demasiados intentos (p. ej. logins fallidos). Se responde 429 con Retry-After."""
 

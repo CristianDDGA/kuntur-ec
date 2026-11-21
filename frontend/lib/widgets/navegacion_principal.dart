@@ -31,7 +31,7 @@ class NavegacionPrincipal extends ConsumerWidget {
     return NavigationBar(
       selectedIndex: indice,
       onDestinationSelected: (i) => context.go(switch (secciones[i]) {
-        Seccion.vuelos => AppRoutes.inicio,
+        Seccion.vuelos => AppRoutes.vuelos,
         Seccion.reservas => AppRoutes.reservas,
         Seccion.administracion => AppRoutes.admin,
       }),

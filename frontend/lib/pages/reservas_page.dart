@@ -62,7 +62,7 @@ class ReservasPage extends ConsumerWidget {
           textoAccion: fueraDeRango ? 'Ir a la primera página' : 'Buscar vuelos',
           onAccion: () => fueraDeRango
               ? ref.read(paginaReservasProvider.notifier).primera()
-              : context.go(AppRoutes.inicio),
+              : context.go(AppRoutes.vuelos),
         ),
       ];
     }

@@ -43,19 +43,85 @@ void main() {
     });
   });
 
+  group('Google y cédula', () {
+    test('loginGoogle envía solo el id_token y guarda el JWT de la sesión', () async {
+      final tokens = InMemoryTokenStorage();
+      final client = RouteFakeRestClient({'POST /auth/google': {...respuestaLogin, 'nuevo': true}});
+      final sesion = await AuthService(client, tokens).loginGoogle('id-token');
+
+      expect(client.llamada('POST', '/auth/google').cuerpo, {'id_token': 'id-token'});
+      expect(sesion.usuario.correo, 'ana@correo.com');
+      expect(await tokens.leer(), 'jwt-de-prueba');
+    });
+
+    test('un token que el servidor rechaza no deja sesión guardada', () async {
+      final tokens = InMemoryTokenStorage();
+      final client = RouteFakeRestClient({'POST /auth/google': const UnauthorizedFailure('No se pudo validar su cuenta de Google.')});
+      await expectLater(AuthService(client, tokens).loginGoogle('malo'), throwsA(isA<UnauthorizedFailure>()));
+      expect(await tokens.leer(), isNull);
+    });
+
+    test('completarCedula usa PUT, recorta la cédula y devuelve el usuario con ella', () async {
+      final client = RouteFakeRestClient({'PUT /usuarios/cedula': {'mensaje': 'ok', 'usuario': usuarioAna}});
+      final usuario = await _servicio(client).completarCedula(' 1710034065 ');
+
+      expect(client.llamada('PUT', '/usuarios/cedula').cuerpo, {'cedula': '1710034065'});
+      expect(usuario.cedula, '1710034065');
+    });
+
+    test('un usuario sin cédula en la respuesta queda con cedula nula', () {
+      final sin = {...usuarioAna}..remove('cedula');
+      expect(Usuario.fromJson(sin).cedula, isNull);
+    });
+  });
+
+  group('verificar el correo', () {
+    test('verificarCorreo envía correo y código recortados', () async {
+      final client = RouteFakeRestClient({'POST /auth/verificar-correo': {'mensaje': 'ok', 'correo': 'ana@correo.com'}});
+      await _servicio(client).verificarCorreo(correo: ' ana@correo.com ', codigo: ' 123456 ');
+      expect(client.llamada('POST', '/auth/verificar-correo').cuerpo, {'correo': 'ana@correo.com', 'codigo': '123456'});
+    });
+
+    test('un código malo llega como ServerFailure 400 con el mensaje de la API', () {
+      final client = RouteFakeRestClient({
+        'POST /auth/verificar-correo': const ServerFailure('El código no es correcto. Le quedan 4 intentos.', statusCode: 400),
+      });
+      expect(
+        _servicio(client).verificarCorreo(correo: 'ana@correo.com', codigo: '000000'),
+        throwsA(isA<ServerFailure>().having((e) => e.mensaje, 'mensaje', contains('Le quedan 4'))),
+      );
+    });
+
+    test('reenviarCodigo manda solo el correo', () async {
+      final client = RouteFakeRestClient({'POST /auth/reenviar-codigo': {'mensaje': 'ok'}});
+      await _servicio(client).reenviarCodigo(correo: ' ana@correo.com ');
+      expect(client.llamada('POST', '/auth/reenviar-codigo').cuerpo, {'correo': 'ana@correo.com'});
+    });
+
+    test('si el correo del registro no salió, codigoEnviado es false', () async {
+      final client = RouteFakeRestClient({
+        'POST /usuarios/registro': {'mensaje': 'ok', 'usuario': usuarioAna, 'verificacion_pendiente': true, 'codigo_enviado': false},
+      });
+      final r = await _servicio(client).registrar(nombre: 'Ana', cedula: '1710034065', correo: 'ana@correo.com', password: 'Clave2026');
+      expect(r.codigoEnviado, isFalse);
+    });
+  });
+
   group('registrar', () {
     test('devuelve el usuario creado y envía los datos tal cual', () async {
       final client = RouteFakeRestClient({'POST /usuarios/registro': {'mensaje': 'ok', 'usuario': usuarioAna}});
 
       final usuario = await _servicio(client).registrar(
         nombre: 'Ana Torres',
+        cedula: ' 1710034065 ',
         correo: ' ana@correo.com ',
         password: 'Clave2026',
       );
 
-      expect(usuario.rol, Rol.cliente);
+      expect(usuario.usuario.rol, Rol.cliente);
+      expect(usuario.codigoEnviado, isTrue);
       expect(client.llamada('POST', '/usuarios/registro').cuerpo,
-          {'nombre': 'Ana Torres', 'correo': 'ana@correo.com', 'password': 'Clave2026'});
+          {'nombre': 'Ana Torres', 'cedula': '1710034065', 'correo': 'ana@correo.com', 'password': 'Clave2026'});
     });
 
     test('un correo repetido llega como ServerFailure 409 con el mensaje de la API', () async {
@@ -64,7 +130,7 @@ void main() {
             statusCode: 409, codigo: 'conflicto'),
       });
       await expectLater(
-        _servicio(client).registrar(nombre: 'Ana', correo: 'ana@correo.com', password: 'Clave2026'),
+        _servicio(client).registrar(nombre: 'Ana', cedula: '1710034065', correo: 'ana@correo.com', password: 'Clave2026'),
         throwsA(isA<ServerFailure>().having((e) => e.statusCode, 'statusCode', 409)),
       );
     });

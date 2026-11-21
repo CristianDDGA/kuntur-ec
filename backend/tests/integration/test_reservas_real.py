@@ -12,6 +12,7 @@ from database import Database
 from models import EstadoReserva, Rol, Usuario
 from services.auth_service import Sesion
 from services.reserva_service import ReservaService
+from tests.iva_vigente import porcentaje_vigente, total_con_iva
 from utils.excepciones import ConflictError, NotFoundError, ValidationError
 
 load_dotenv()
@@ -70,9 +71,10 @@ def test_crear_descuenta_asientos_y_aplica_iva_vigente(db, escenario):
     servicio, vuelo_id, (ana, _) = escenario
     detalle = servicio.crear(ana, {"vuelo_id": vuelo_id, "cantidad": 2})
     r = detalle.reserva
-    assert (r.subtotal, r.iva_porcentaje, r.iva_valor, r.total) == (
-        Decimal("200.00"), Decimal("15.00"), Decimal("30.00"), Decimal("230.00"),
-    )
+    pct = porcentaje_vigente(db)
+    total = total_con_iva("200.00", pct)
+    assert (r.subtotal, r.iva_porcentaje, r.total) == (Decimal("200.00"), pct, total)
+    assert r.iva_valor == total - Decimal("200.00")
     assert r.estado is EstadoReserva.CONFIRMADA
     assert _asientos(db, vuelo_id) == 1
 
@@ -97,11 +99,11 @@ def test_modificar_ampliar_reducir_y_sin_asientos(db, escenario):
     assert creada.version == 1
 
     ampliada = servicio.modificar(ana, creada.id, {"cantidad": 3, "version": 1}).reserva
-    assert (ampliada.cantidad_asientos, ampliada.total, ampliada.version) == (3, Decimal("345.00"), 2)
+    assert (ampliada.cantidad_asientos, ampliada.total, ampliada.version) == (3, total_con_iva("300.00", porcentaje_vigente(db)), 2)
     assert _asientos(db, vuelo_id) == 0
 
     reducida = servicio.modificar(ana, creada.id, {"cantidad": 2, "version": 2}).reserva
-    assert (reducida.cantidad_asientos, reducida.total, reducida.version) == (2, Decimal("230.00"), 3)
+    assert (reducida.cantidad_asientos, reducida.total, reducida.version) == (2, total_con_iva("200.00", porcentaje_vigente(db)), 3)
     assert _asientos(db, vuelo_id) == 1
 
     with pytest.raises(ConflictError, match="ampliar"):

@@ -184,7 +184,7 @@ class NuevoVuelo {
     required this.horaSalida,
     required this.horaLlegada,
     required this.precio,
-    required this.capacidad,
+    required this.avionId,
   });
 
   final String origen;
@@ -195,7 +195,9 @@ class NuevoVuelo {
 
   /// Texto con hasta 2 decimales, tal como lo escribió el usuario ("75.50").
   final String precio;
-  final int capacidad;
+
+  /// Avión que opera el vuelo: su capacidad (filas x 4) define los asientos.
+  final int avionId;
 
   JsonMap toJson() => {
         'origen': origen,
@@ -204,7 +206,7 @@ class NuevoVuelo {
         'hora_salida': Formatos.hora(horaSalida),
         'hora_llegada': Formatos.hora(horaLlegada),
         'precio': precio, // como texto: así no se pierde precisión con decimales
-        'capacidad': capacidad,
+        'avion_id': avionId,
       };
 }
 

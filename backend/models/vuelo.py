@@ -19,6 +19,7 @@ class Vuelo(Modelo):
     capacidad: int
     asientos_disponibles: int
     version: int = 1  # control de concurrencia optimista
+    avion_id: int | None = None  # avión que opera el vuelo (None en vuelos anteriores a los aviones)
 
     def tiene_asientos(self, cantidad: int) -> bool:
         return 0 < cantidad <= self.asientos_disponibles

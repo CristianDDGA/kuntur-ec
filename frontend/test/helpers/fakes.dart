@@ -120,6 +120,7 @@ const usuarioAna = {
   'correo': 'ana@correo.com',
   'rol': 'cliente',
   'fecha_registro': '2026-11-10T15:04:04+00:00',
+  'cedula': '1710034065', // sin cédula el router la pediría antes de dejar usar la app
 };
 
 const respuestaLogin = {
@@ -315,3 +316,10 @@ String jwtQueVenceEn(Duration duracion, {DateTime? ahora}) {
   final exp = ((ahora ?? DateTime.now()).toUtc().add(duracion).millisecondsSinceEpoch / 1000).round();
   return '${parte({'alg': 'HS256', 'typ': 'JWT'})}.${parte({'sub': '7', 'exp': exp})}.firma';
 }
+
+const avionA320 = {'id': 7, 'matricula': 'HC-ABC', 'modelo': 'Airbus A320', 'filas': 20, 'capacidad': 80};
+
+const listaAviones = {
+  'total': 1,
+  'aviones': [avionA320],
+};

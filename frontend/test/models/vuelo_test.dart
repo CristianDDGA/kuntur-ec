@@ -90,7 +90,7 @@ void main() {
       horaSalida: const Duration(hours: 8),
       horaLlegada: const Duration(hours: 8, minutes: 45),
       precio: '75.50',
-      capacidad: 80,
+      avionId: 7,
     ).toJson();
     expect(cuerpo, {
       'origen': 'Quito',
@@ -99,7 +99,7 @@ void main() {
       'hora_salida': '08:00',
       'hora_llegada': '08:45',
       'precio': '75.50',
-      'capacidad': 80,
+      'avion_id': 7,
     });
   });
 }

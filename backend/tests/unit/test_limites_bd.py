@@ -21,10 +21,13 @@ LIMITES_DE_ENTRADA = {
     ("vuelos", "origen"): limites.CIUDAD,
     ("vuelos", "destino"): limites.CIUDAD,
     ("reserva_asientos", "asiento"): limites.ASIENTO,
+    ("usuarios", "cedula"): limites.CEDULA,
+    ("aviones", "matricula"): limites.MATRICULA,
+    ("aviones", "modelo"): limites.MODELO_AVION,
 }
 # VARCHAR que NO escribe el usuario: los llena el sistema con valores controlados.
 VARCHAR_INTERNOS = {
-    ("usuarios", "password_hash"), ("usuarios", "rol"), ("reservas", "estado"), ("tokens", "estado"),
+    ("usuarios", "password_hash"), ("usuarios", "google_sub"), ("usuarios", "rol"), ("reservas", "estado"), ("tokens", "estado"),
 }
 
 

@@ -57,6 +57,9 @@ class SesionController extends AsyncNotifier<Usuario?> {
     _programarVencimiento();
   }
 
+  /// El servidor devolvió el usuario con datos nuevos (p. ej. al completar la cédula): se reemplaza sin cerrar sesión.
+  void actualizarUsuario(Usuario usuario) => state = AsyncData(usuario);
+
   Future<void> cerrarSesion() async {
     _vencimiento?.cancel();
     await ref.read(authServiceProvider).cerrarSesion();

@@ -3,7 +3,8 @@ import '../services/rest_client.dart';
 
 enum Rol { cliente, admin }
 
-/// Usuario autenticado. Contrato: {"id", "nombre", "correo", "rol", "fecha_registro"}.
+/// Usuario autenticado. Contrato: {"id", "nombre", "correo", "rol", "fecha_registro", "cedula"}
+/// (`cedula` es null en cuentas anteriores a pedirla, como la del administrador).
 /// La API nunca envía la contraseña.
 class Usuario {
   const Usuario({
@@ -12,6 +13,7 @@ class Usuario {
     required this.correo,
     required this.rol,
     this.fechaRegistro,
+    this.cedula,
   });
 
   factory Usuario.fromJson(JsonMap json) {
@@ -28,6 +30,7 @@ class Usuario {
       correo: correo,
       rol: rol,
       fechaRegistro: DateTime.tryParse(json['fecha_registro']?.toString() ?? ''),
+      cedula: json['cedula'] is String ? json['cedula'] as String : null,
     );
   }
 
@@ -36,6 +39,7 @@ class Usuario {
   final String correo;
   final Rol rol;
   final DateTime? fechaRegistro;
+  final String? cedula;
 
   bool get esAdmin => rol == Rol.admin;
 

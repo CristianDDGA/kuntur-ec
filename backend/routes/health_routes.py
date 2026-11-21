@@ -5,6 +5,7 @@ from flasgger import swag_from
 from flask import Blueprint, current_app
 
 from utils.documentacion import contrato
+from utils.autenticacion import publica
 from utils.respuestas import respond
 
 health_bp = Blueprint("health", __name__)
@@ -23,6 +24,7 @@ def _estado_base_datos() -> str:
 
 @health_bp.route("/health", methods=["GET"])
 @swag_from(contrato("sistema", "health"))
+@publica
 def health():
     return respond(
         {

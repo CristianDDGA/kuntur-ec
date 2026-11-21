@@ -10,6 +10,7 @@ import '../models/validadores.dart';
 import '../services/api_exception.dart';
 import '../widgets/aviso.dart';
 import '../widgets/boton_degradado.dart';
+import '../widgets/boton_google.dart';
 import '../widgets/campo_password.dart';
 import '../widgets/panel_autenticacion.dart';
 
@@ -44,10 +45,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Future<void> _enviar() async {
     if (!_formulario.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
-    await ref.read(loginControllerProvider.notifier).ingresar(
+    final faltaVerificar = await ref.read(loginControllerProvider.notifier).ingresar(
           correo: _correo.text,
           password: _password.text,
         );
+    if (faltaVerificar && mounted) context.go(AppRoutes.verificarCorreo);
   }
 
   @override
@@ -106,6 +108,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               ],
               const SizedBox(height: 24),
               BotonDegradado(texto: 'Iniciar sesión', cargando: cargando, onPressed: _enviar),
+              const BotonGoogle(),
               const SizedBox(height: 12),
               // Wrap: si no cabe en una línea (pantallas angostas) el enlace baja a la siguiente.
               Wrap(

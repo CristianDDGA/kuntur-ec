@@ -13,6 +13,8 @@ class Validadores {
   // Largos = columnas de la base de datos (usuarios.nombre 100, usuarios.correo 150).
   static const int nombreMax = 100;
   static const int correoMax = 150;
+  static const int cedulaLargo = 10;
+  static const int codigoLargo = 6;
   static const int passwordMin = 8;
   static const int passwordMax = 128;
   static const int passwordBytesMax = 72; // bcrypt solo considera los primeros 72 bytes
@@ -50,6 +52,49 @@ class Validadores {
   /// Quita espacios sobrantes: "  Ana   Torres " -> "Ana Torres".
   static String normalizarNombre(String? valor) =>
       (valor ?? '').trim().replaceAll(RegExp(r'\s+'), ' ');
+
+  /// Cédula ecuatoriana: 10 dígitos, provincia 01-24 (o 30), tercer dígito menor que 6 y dígito
+  /// verificador correcto (módulo 10). Es la misma comprobación del backend; no consulta al Registro Civil.
+  static String? cedula(String? valor) {
+    final texto = (valor ?? '').trim();
+    if (texto.isEmpty) return 'Ingrese su número de cédula.';
+    if (!RegExp(r'^[0-9]+$').hasMatch(texto)) return 'La cédula solo lleva números.';
+    if (texto.length < cedulaLargo) return 'La cédula tiene $cedulaLargo dígitos.';
+    if (!esCedula(texto)) return 'Esta cédula no es válida. Revise los $cedulaLargo dígitos.';
+    return null;
+  }
+
+  static bool esCedula(String texto) {
+    if (!RegExp(r'^[0-9]{10}$').hasMatch(texto)) return false;
+    final d = texto.codeUnits.map((c) => c - 48).toList();
+    final provincia = d[0] * 10 + d[1];
+    if (!((provincia >= 1 && provincia <= 24) || provincia == 30) || d[2] >= 6) return false;
+    var suma = 0;
+    for (var i = 0; i < 9; i++) {
+      final producto = d[i] * (i.isEven ? 2 : 1);
+      suma += producto > 9 ? producto - 9 : producto;
+    }
+    return (10 - suma % 10) % 10 == d[9];
+  }
+
+  /// Solo dígitos y como máximo 10 al escribir.
+  static List<TextInputFormatter> get entradaCedula => [
+        FilteringTextInputFormatter.digitsOnly,
+        LengthLimitingTextInputFormatter(cedulaLargo),
+      ];
+
+  /// Código de verificación del correo: 6 dígitos.
+  static String? codigoVerificacion(String? valor) {
+    final texto = (valor ?? '').trim();
+    if (texto.isEmpty) return 'Ingrese el código que le enviamos.';
+    if (!RegExp('^[0-9]{$codigoLargo}\$').hasMatch(texto)) return 'El código tiene $codigoLargo dígitos.';
+    return null;
+  }
+
+  static List<TextInputFormatter> get entradaCodigo => [
+        FilteringTextInputFormatter.digitsOnly,
+        LengthLimitingTextInputFormatter(codigoLargo),
+      ];
 
   static String? correo(String? valor) {
     final texto = (valor ?? '').trim();

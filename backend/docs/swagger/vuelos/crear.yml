@@ -10,7 +10,7 @@ parameters:
     required: true
     schema:
       type: object
-      required: [origen, destino, fecha, hora_salida, hora_llegada, precio, capacidad]
+      required: [origen, destino, fecha, hora_salida, hora_llegada, precio]
       properties:
         codigo: {type: string, example: KT801, description: "Opcional. Si no se envía, el sistema genera el siguiente (KT101, KT102...)."}
         origen: {type: string, example: Quito}
@@ -19,7 +19,8 @@ parameters:
         hora_salida: {type: string, example: "08:00", description: "HH:MM"}
         hora_llegada: {type: string, example: "08:45", description: "HH:MM"}
         precio: {type: number, example: 75.50}
-        capacidad: {type: integer, example: 80}
+        avion_id: {type: integer, example: 1, description: "Avión que opera el vuelo (ver GET /api/aviones). Su capacidad (filas x 4) define los asientos."}
+        capacidad: {type: integer, example: 80, description: "Solo si no se envía avion_id. Obligatoria en ese caso."}
 responses:
   201:
     description: Vuelo creado con todos sus asientos disponibles.

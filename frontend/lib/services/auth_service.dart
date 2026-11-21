@@ -4,6 +4,14 @@ import 'api_exception.dart';
 import 'rest_client.dart';
 import 'token_storage.dart';
 
+/// Cuenta recién creada y si el correo con el código salió.
+class ResultadoRegistro {
+  const ResultadoRegistro({required this.usuario, required this.codigoEnviado});
+
+  final Usuario usuario;
+  final bool codigoEnviado;
+}
+
 /// Consume los servicios de Usuarios y Autenticación de la API
 /// (`/usuarios/registro`, `/auth/login`, `/auth/perfil`, `/auth/logout`).
 class AuthService {
@@ -23,19 +31,49 @@ class AuthService {
     return sesion;
   }
 
-  /// Crea una cuenta de cliente. No inicia sesión: eso lo decide el controlador.
-  Future<Usuario> registrar({
+  /// Crea una cuenta de cliente (sin verificar). No inicia sesión: antes hay que confirmar el correo con el código
+  /// que llega por correo ([verificarCorreo]).
+  Future<ResultadoRegistro> registrar({
     required String nombre,
+    required String cedula,
     required String correo,
     required String password,
   }) async {
     final json = asJsonMap(await _client.post(
       '/usuarios/registro',
-      body: {'nombre': nombre, 'correo': correo.trim(), 'password': password},
+      body: {'nombre': nombre, 'cedula': cedula.trim(), 'correo': correo.trim(), 'password': password},
     ));
     final usuario = json['usuario'];
     if (usuario is! JsonMap) throw const InvalidResponseFailure();
+    // `codigo_enviado` es false si el correo no salió: la persona puede pedir otro código en la pantalla de verificación.
+    return ResultadoRegistro(usuario: Usuario.fromJson(usuario), codigoEnviado: json['codigo_enviado'] != false);
+  }
+
+  /// `POST /auth/google`: inicia sesión con el `id_token` que entregó Google. El servidor lo valida; si la cuenta no
+  /// existe la crea (con el correo ya verificado y sin cédula). Guarda el JWT igual que [login].
+  Future<Sesion> loginGoogle(String idToken) async {
+    final json = asJsonMap(await _client.post('/auth/google', body: {'id_token': idToken}));
+    final sesion = Sesion.fromJson(json);
+    await _tokens.guardar(sesion.token);
+    return sesion;
+  }
+
+  /// `PUT /usuarios/cedula`: guarda la cédula de una cuenta que no la tiene. Devuelve el usuario actualizado.
+  Future<Usuario> completarCedula(String cedula) async {
+    final json = asJsonMap(await _client.put('/usuarios/cedula', body: {'cedula': cedula.trim()}));
+    final usuario = json['usuario'];
+    if (usuario is! JsonMap) throw const InvalidResponseFailure();
     return Usuario.fromJson(usuario);
+  }
+
+  /// `POST /auth/verificar-correo`: confirma el correo con el código de 6 dígitos.
+  Future<void> verificarCorreo({required String correo, required String codigo}) async {
+    asJsonMap(await _client.post('/auth/verificar-correo', body: {'correo': correo.trim(), 'codigo': codigo.trim()}));
+  }
+
+  /// `POST /auth/reenviar-codigo`: pide un código nuevo. Responde igual exista o no la cuenta.
+  Future<void> reenviarCodigo({required String correo}) async {
+    asJsonMap(await _client.post('/auth/reenviar-codigo', body: {'correo': correo.trim()}));
   }
 
   /// Usuario dueño del token guardado. Lanza [UnauthorizedFailure] si el token venció o fue revocado.

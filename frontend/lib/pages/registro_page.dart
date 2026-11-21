@@ -9,6 +9,7 @@ import '../models/validadores.dart';
 import '../services/api_exception.dart';
 import '../widgets/aviso.dart';
 import '../widgets/boton_degradado.dart';
+import '../widgets/boton_google.dart';
 import '../widgets/campo_password.dart';
 import '../widgets/panel_autenticacion.dart';
 import '../widgets/requisitos_password.dart';
@@ -24,6 +25,7 @@ class RegistroPage extends ConsumerStatefulWidget {
 class _RegistroPageState extends ConsumerState<RegistroPage> {
   final _formulario = GlobalKey<FormState>();
   final _nombre = TextEditingController();
+  final _cedula = TextEditingController();
   final _correo = TextEditingController();
   final _password = TextEditingController();
   final _confirmacion = TextEditingController();
@@ -39,6 +41,7 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
   @override
   void dispose() {
     _nombre.dispose();
+    _cedula.dispose();
     _correo.dispose();
     _password.dispose();
     _confirmacion.dispose();
@@ -48,11 +51,13 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
   Future<void> _enviar() async {
     if (!_formulario.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
-    await ref.read(registroControllerProvider.notifier).registrar(
+    final creada = await ref.read(registroControllerProvider.notifier).registrar(
           nombre: _nombre.text,
+          cedula: _cedula.text,
           correo: _correo.text,
           password: _password.text,
         );
+    if (creada && mounted) context.go(AppRoutes.verificarCorreo); // falta confirmar el correo
   }
 
   @override
@@ -83,6 +88,21 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
                 decoration: const InputDecoration(
                   labelText: 'Nombre completo',
                   prefixIcon: Icon(Icons.person_outline),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                controller: _cedula,
+                enabled: !cargando,
+                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.next,
+                validator: Validadores.cedula,
+                inputFormatters: Validadores.entradaCedula,
+                decoration: const InputDecoration(
+                  labelText: 'Cédula de identidad',
+                  helperText: '10 dígitos. Se valida el número, no se consulta ningún registro.',
+                  prefixIcon: Icon(Icons.badge_outlined),
                 ),
               ),
               const SizedBox(height: 16),
@@ -136,6 +156,7 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
               ],
               const SizedBox(height: 24),
               BotonDegradado(texto: 'Crear cuenta', cargando: cargando, onPressed: _enviar),
+              const BotonGoogle(),
               const SizedBox(height: 12),
               // Wrap: si no cabe en una línea (pantallas angostas) el enlace baja a la siguiente.
               Wrap(
