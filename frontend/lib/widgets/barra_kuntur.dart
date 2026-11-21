@@ -6,6 +6,8 @@ import '../config/app_router.dart';
 import '../config/app_theme.dart';
 import '../controllers/sesion_controller.dart';
 import 'franja_tricolor.dart';
+import 'hoja_confirmacion.dart';
+import 'insignia_estado.dart';
 import 'logo_kuntur.dart';
 
 /// Barra superior de las pantallas con sesión.
@@ -14,9 +16,13 @@ import 'logo_kuntur.dart';
 /// - Flecha "Volver" (si [conAtras]).
 /// - Menú de cuenta: quién está conectado, estado del servicio y cerrar sesión (con confirmación).
 class BarraKuntur extends ConsumerWidget implements PreferredSizeWidget {
-  const BarraKuntur({super.key, this.conAtras = false});
+  const BarraKuntur({super.key, this.conAtras = false, this.alTocarInicio});
 
   final bool conAtras;
+
+  /// Sustituye la navegación al inicio del logo (las pantallas con datos sin
+  /// guardar lo usan para pedir confirmación antes de salir).
+  final VoidCallback? alTocarInicio;
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight + 5);
@@ -37,15 +43,19 @@ class BarraKuntur extends ConsumerWidget implements PreferredSizeWidget {
       title: Semantics(
         button: true,
         label: 'Kuntur EC, ir al inicio',
+        onTap: alTocarInicio ?? () => context.go(AppRoutes.inicio),
         excludeSemantics: true,
         child: Tooltip(
           message: 'Ir al inicio',
           child: InkWell(
             borderRadius: BorderRadius.circular(10),
-            onTap: () => context.go(AppRoutes.inicio),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-              child: MarcaKuntur(tamanoLogo: 34, vertical: false, enOscuro: true),
+            onTap: alTocarInicio ?? () => context.go(AppRoutes.inicio),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 44),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 5, horizontal: 4),
+                child: MarcaKuntur(tamanoLogo: 34, vertical: false, enOscuro: true),
+              ),
             ),
           ),
         ),
@@ -64,18 +74,16 @@ class MenuCuenta extends ConsumerWidget {
   static const _salir = 'salir';
 
   Future<void> _cerrarSesion(BuildContext context, WidgetRef ref) async {
-    final confirmado = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('¿Cerrar sesión?'),
-        content: const Text('Tendrá que volver a ingresar su correo y contraseña para entrar.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Seguir conectado')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Sí, cerrar sesión')),
-        ],
-      ),
+    final confirmado = await mostrarConfirmacionKuntur(
+      context,
+      titulo: '¿Cerrar sesión?',
+      mensaje: 'Tendrá que volver a ingresar su correo y contraseña para entrar.',
+      textoConfirmar: 'Sí, cerrar sesión',
+      textoCancelar: 'Seguir conectado',
+      estilo: EstiloConfirmacion.destructiva,
+      icono: Icons.logout,
     );
-    if (confirmado == true) await ref.read(sesionControllerProvider.notifier).cerrarSesion();
+    if (confirmado) await ref.read(sesionControllerProvider.notifier).cerrarSesion();
   }
 
   @override
@@ -100,16 +108,9 @@ class MenuCuenta extends ConsumerWidget {
               Text(usuario.nombre, style: AppTextStyles.subtitulo.copyWith(fontSize: 15)),
               Text(usuario.correo, style: AppTextStyles.nota),
               const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                decoration: BoxDecoration(
-                  color: usuario.esAdmin ? AppColors.avisoSuave : AppColors.infoSuave,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  usuario.esAdmin ? 'Administrador' : 'Cliente',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textoPrincipal),
-                ),
+              InsigniaEstado(
+                texto: usuario.esAdmin ? 'Administrador' : 'Cliente',
+                tipo: usuario.esAdmin ? TipoInsignia.aviso : TipoInsignia.info,
               ),
             ],
           ),

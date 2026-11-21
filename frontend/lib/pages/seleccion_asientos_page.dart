@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../config/app_motion.dart';
 import '../config/app_router.dart';
 import '../config/app_theme.dart';
 import '../controllers/iva_controller.dart';
@@ -15,8 +16,12 @@ import '../models/vuelo.dart';
 import '../services/api_exception.dart';
 import '../widgets/asiento_boton.dart';
 import '../widgets/aviso.dart';
-import '../widgets/barra_kuntur.dart';
 import '../widgets/boton_degradado.dart';
+import '../widgets/estado_vista.dart';
+import '../widgets/hoja_confirmacion.dart';
+import '../widgets/isometric_kuntur.dart';
+import '../widgets/kinetic_type.dart';
+import '../widgets/kuntur_scaffold.dart';
 import '../widgets/migas.dart';
 import '../widgets/tarjeta_vuelo.dart';
 
@@ -37,15 +42,27 @@ class SeleccionAsientosPage extends ConsumerWidget {
     // Modificar: primero se lee la reserva para saber el vuelo y los asientos actuales.
     final reserva = ref.watch(reservaDetalleControllerProvider(reservaId!));
     return reserva.when(
-      loading: () => const Scaffold(appBar: BarraKuntur(conAtras: true), body: Center(child: CircularProgressIndicator())),
-      error: (e, _) => Scaffold(
-        appBar: const BarraKuntur(conAtras: true),
-        body: Padding(padding: const EdgeInsets.all(16), child: AvisoInline(texto: mensajeDeError(e))),
+      loading: () => const KunturScaffold(
+        conAtras: true,
+        maxAncho: 640,
+        body: Padding(padding: EdgeInsets.all(16), child: CargandoDetalleVista()),
+      ),
+      error: (e, _) => KunturScaffold(
+        conAtras: true,
+        maxAncho: 640,
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: ErrorVista(
+            mensaje: mensajeDeError(e),
+            onReintentar: () => ref.invalidate(reservaDetalleControllerProvider(reservaId!)),
+          ),
+        ),
       ),
       data: (r) => r.puedeEditarse()
           ? _Mapa(vueloId: r.vueloId, reserva: r)
-          : const Scaffold(
-              appBar: BarraKuntur(conAtras: true),
+          : const KunturScaffold(
+              conAtras: true,
+              maxAncho: 640,
               body: Padding(
                 padding: EdgeInsets.all(16),
                 child: AvisoInline(
@@ -172,60 +189,49 @@ class _MapaState extends ConsumerState<_Mapa> {
       canPop: !conCambios,
       onPopInvokedWithResult: (salio, _) async {
         if (salio) return;
-        final salir = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('¿Salir sin guardar?'),
-            content: Text(_editando
-                ? 'Los cambios en sus asientos no se guardarán.'
-                : 'Los asientos que eligió no se reservarán.'),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Seguir eligiendo')),
-              FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Salir')),
-            ],
-          ),
-        );
-        if (salir == true && context.mounted) context.pop();
+        final salir = await _confirmarSalida();
+        if (salir && context.mounted) context.pop();
       },
-      child: Scaffold(
-        appBar: const BarraKuntur(conAtras: true),
-        body: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 640),
-              child: _contenido(vuelo, mapa, iva?.porcentaje),
-            ),
-          ),
-        ),
+      child: KunturScaffold(
+        conAtras: true,
+        // Mientras hay asientos elegidos, el logo confirma antes de salir (context.go no pasa por PopScope).
+        alTocarInicio: conCambios ? _salirAInicio : null,
+        maxAncho: 640,
+        body: _contenido(vuelo, mapa, iva?.porcentaje, conCambios),
       ),
     );
   }
 
-  Widget _contenido(AsyncValue<Vuelo> vuelo, AsyncValue<MapaAsientos> mapa, String? ivaPorcentaje) {
+  Future<bool> _confirmarSalida() => mostrarConfirmacionKuntur(
+        context,
+        titulo: '¿Salir sin guardar?',
+        mensaje: _editando
+            ? 'Los cambios en sus asientos no se guardarán.'
+            : 'Los asientos que eligió no se reservarán.',
+        textoConfirmar: 'Salir',
+        textoCancelar: 'Seguir eligiendo',
+        estilo: EstiloConfirmacion.destructiva,
+        icono: Icons.event_seat_outlined,
+      );
+
+  Future<void> _salirAInicio() async {
+    if (await _confirmarSalida() && mounted) context.go(AppRoutes.inicio);
+  }
+
+  Widget _contenido(AsyncValue<Vuelo> vuelo, AsyncValue<MapaAsientos> mapa, String? ivaPorcentaje, bool conCambios) {
     if ((vuelo.isLoading && !vuelo.hasValue) || (mapa.isLoading && !mapa.hasValue)) {
-      return const Center(child: CircularProgressIndicator());
+      return const Padding(padding: EdgeInsets.all(16), child: CargandoDetalleVista());
     }
     final fallo = (vuelo.hasValue ? null : vuelo.error) ?? (mapa.hasValue ? null : mapa.error);
     if (fallo != null) {
       return Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AvisoInline(texto: mensajeDeError(fallo)),
-            const SizedBox(height: 12),
-            Align(
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  ref.invalidate(vueloDetalleControllerProvider(widget.vueloId));
-                  ref.invalidate(mapaAsientosControllerProvider(widget.vueloId));
-                },
-                icon: const Icon(Icons.refresh),
-                label: const Text('Reintentar'),
-              ),
-            ),
-          ],
+        child: ErrorVista(
+          mensaje: mensajeDeError(fallo),
+          onReintentar: () {
+            ref.invalidate(vueloDetalleControllerProvider(widget.vueloId));
+            ref.invalidate(mapaAsientosControllerProvider(widget.vueloId));
+          },
         ),
       );
     }
@@ -244,13 +250,13 @@ class _MapaState extends ConsumerState<_Mapa> {
             children: [
               Migas(_editando
                   ? [
-                      const Miga('Mis reservas', ruta: AppRoutes.reservas),
-                      Miga(widget.reserva!.numero, ruta: AppRoutes.reserva(widget.reserva!.id)),
+                      Miga('Mis reservas', ruta: conCambios ? null : AppRoutes.reservas),
+                      Miga(widget.reserva!.numero, ruta: conCambios ? null : AppRoutes.reserva(widget.reserva!.id)),
                       const Miga('Cambiar asientos'),
                     ]
                   : [
-                      const Miga('Vuelos', ruta: AppRoutes.inicio),
-                      Miga(v.codigo, ruta: AppRoutes.vuelo(v.id)),
+                      Miga('Vuelos', ruta: conCambios ? null : AppRoutes.inicio),
+                      Miga(v.codigo, ruta: conCambios ? null : AppRoutes.vuelo(v.id)),
                       const Miga('Elegir asientos'),
                     ]),
               const SizedBox(height: 10),
@@ -374,7 +380,11 @@ class _Muestra extends StatelessWidget {
       );
 }
 
-/// Las filas de asientos, con un pasillo entre las dos mitades de columnas.
+/// Las filas de asientos en la distribución visual **3 + pasillo + 3**.
+///
+/// El contrato del backend no cambia (A–D por fila lógica): la secuencia lineal
+/// [MapaAsientos.todos] se reparte en filas visuales de 6 asientos, 3 a cada
+/// lado del pasillo central, conservando los códigos reales de cada asiento.
 class _Cabina extends StatelessWidget {
   const _Cabina({required this.mapa, required this.ocupados, required this.seleccion, required this.onTocar});
 
@@ -383,45 +393,143 @@ class _Cabina extends StatelessWidget {
   final SeleccionAsientos seleccion;
   final ValueChanged<String> onTocar;
 
+  /// Asientos por lado del pasillo.
+  static const int columnasPorLado = 3;
+
+  /// Asientos por fila visual: 3 + 3.
+  static const int porFila = columnasPorLado * 2;
+
+  /// Ancho del pasillo central.
+  static const double _pasillo = 18;
+
+  /// Ancho del indicador de fila lógica (a la izquierda).
+  static const double _indicador = 26;
+
+  /// Holgura reservada para que la fila nunca desborde.
+  static const double _holgura = 8;
+
+  static const List<String> _posicionesIzquierda = ['I', 'II', 'III'];
+  static const List<String> _posicionesDerecha = ['IV', 'V', 'VI'];
+
   @override
   Widget build(BuildContext context) {
-    final mitad = mapa.columnas.length ~/ 2;
-    Widget asiento(int fila, int columna) {
-      final numero = mapa.asiento(fila, columna);
-      if (numero == null) return const SizedBox(width: AsientoBoton.tamano, height: AsientoBoton.tamano);
-      final estado = ocupados.contains(numero)
-          ? EstadoAsiento.ocupado
-          : seleccion.contiene(numero)
-              ? EstadoAsiento.seleccionado
-              : EstadoAsiento.libre;
-      return AsientoBoton(
-        numero: numero,
-        estado: estado,
-        atenuado: seleccion.llena && estado == EstadoAsiento.libre,
-        onTap: () => onTocar(numero),
-      );
-    }
+    final todos = mapa.todos;
+    final filasVisuales = (todos.length + porFila - 1) ~/ porFila;
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: AppDecorations.tarjeta,
       child: Column(
         children: [
+          // Proa isométrica 2.5D: sustituye la silueta plana de la cabina.
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 18),
+            child: ProaIsometricaAvion(alto: 54),
+          ),
           Text('Frente del avión', style: AppTextStyles.nota.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
-          for (var fila = 1; fila <= mapa.filas; fila++)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(width: 26, child: Text('$fila', textAlign: TextAlign.center, style: AppTextStyles.nota)),
-                for (var c = 0; c < mitad; c++) asiento(fila, c),
-                const SizedBox(width: 22), // pasillo
-                for (var c = mitad; c < mapa.columnas.length; c++) asiento(fila, c),
-                const SizedBox(width: 26),
-              ],
-            ),
+          LayoutBuilder(
+            builder: (context, caja) {
+              // 6 butacas (44–48) + pasillo (18) + indicador (26) + holgura (8).
+              final lado = ((caja.maxWidth - _pasillo - _indicador - _holgura) / porFila).clamp(44.0, 48.0);
+              final ancho = lado * porFila + _pasillo + _indicador;
+              final tablero = _tablero(lado, filasVisuales, todos);
+              if (caja.maxWidth >= ancho) return Center(child: tablero);
+              // En anchos menores que el mínimo HIG (menos de 340 pt de pantalla)
+              // se escala el tablero para no desbordar el contenedor.
+              return FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.topCenter,
+                child: SizedBox(width: ancho, child: tablero),
+              );
+            },
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _tablero(double lado, int filasVisuales, List<String> todos) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _encabezado(lado),
+          const SizedBox(height: 2),
+          Text(
+            'Ventana · Pasillo · Ventana',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.nota.copyWith(fontSize: 11),
+          ),
+          const SizedBox(height: 6),
+          for (var fila = 0; fila < filasVisuales; fila++)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 1),
+              child: _fila(fila, lado, todos),
+            ),
+        ],
+      );
+
+  /// Encabezado superior de las 6 posiciones (`I II III | IV V VI`).
+  Widget _encabezado(double lado) {
+    Widget posicion(String etiqueta) => SizedBox(
+          width: lado,
+          child: Center(
+            child: Text(etiqueta, style: AppTextStyles.nota.copyWith(fontWeight: FontWeight.w800, fontSize: 11)),
+          ),
+        );
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox(width: _indicador),
+        for (final etiqueta in _posicionesIzquierda) posicion(etiqueta),
+        SizedBox(
+          width: _pasillo,
+          child: Center(
+            child: Text('|', style: AppTextStyles.nota.copyWith(color: AppColors.borde, fontWeight: FontWeight.w700)),
+          ),
+        ),
+        for (final etiqueta in _posicionesDerecha) posicion(etiqueta),
+      ],
+    );
+  }
+
+  Widget _fila(int filaVisual, double lado, List<String> todos) {
+    final base = filaVisual * porFila;
+    final numeros = [
+      for (var posicion = 0; posicion < porFila; posicion++)
+        base + posicion < todos.length ? todos[base + posicion] : null,
+    ];
+    // Fila lógica real del primer asiento de esta fila visual.
+    final primerAsiento = numeros.firstWhere((numero) => numero != null)!;
+    final filaLogica = int.parse(primerAsiento.substring(0, primerAsiento.length - 1));
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: _indicador,
+          child: Text('$filaLogica', textAlign: TextAlign.center, style: AppTextStyles.nota),
+        ),
+        for (var posicion = 0; posicion < porFila; posicion++) ...[
+          if (posicion == columnasPorLado) const SizedBox(width: _pasillo, height: 1),
+          _celda(numeros[posicion], lado),
+        ],
+      ],
+    );
+  }
+
+  Widget _celda(String? numero, double lado) {
+    if (numero == null) return SizedBox(width: lado, height: lado);
+    final estado = ocupados.contains(numero)
+        ? EstadoAsiento.ocupado
+        : seleccion.contiene(numero)
+            ? EstadoAsiento.seleccionado
+            : EstadoAsiento.libre;
+    return AsientoBoton(
+      numero: numero,
+      estado: estado,
+      atenuado: seleccion.llena && estado == EstadoAsiento.libre,
+      lado: lado,
+      onTap: () => onTocar(numero),
     );
   }
 }
@@ -490,11 +598,18 @@ class _Resumen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Asientos (${seleccion.cantidad} de ${SeleccionAsientos.maximo}): $lista',
-                      style: AppTextStyles.cuerpo.copyWith(fontWeight: FontWeight.w600),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                    // La línea de asientos se reacomoda con AnimatedSize (Reduce Motion
+                    // la deja quieta); hay un solo Text, así find.text sigue encontrándolo.
+                    AnimatedSize(
+                      duration: AppMotion.mediaDe(context),
+                      curve: AppMotion.curvaEntrada,
+                      alignment: Alignment.topLeft,
+                      child: Text(
+                        'Asientos (${seleccion.cantidad} de ${SeleccionAsientos.maximo}): $lista',
+                        style: AppTextStyles.cuerpo.copyWith(fontWeight: FontWeight.w600),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     if (iva == null)
                       Text('Subtotal ${Formatos.dinero(subtotal)} · el IVA se calcula al confirmar', style: AppTextStyles.nota)
@@ -507,29 +622,41 @@ class _Resumen extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              Text(
-                Formatos.dinero(subtotal + (iva ?? 0)),
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.azul),
+              // Total cinético: cada cambio de la selección reasienta el monto.
+              OdometroCinetico(
+                texto: Formatos.dinero(subtotal + (iva ?? 0)),
+                estilo: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.azul),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              TextButton.icon(
+          // En pantallas angostas las acciones se apilan: nunca desbordan.
+          LayoutBuilder(
+            builder: (context, caja) {
+              final reiniciar = TextButton.icon(
                 onPressed: enviando || (seleccion.vacia && !editando) || sinCambios ? null : onReiniciar,
                 icon: const Icon(Icons.restart_alt),
                 label: Text(editando ? 'Restablecer' : 'Reiniciar selección'),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: BotonDegradado(
-                  texto: editando ? 'Guardar cambios' : 'Confirmar reserva',
-                  cargando: enviando,
-                  onPressed: puedeConfirmar ? onConfirmar : null,
-                ),
-              ),
-            ],
+              );
+              final confirmar = BotonDegradado(
+                texto: editando ? 'Guardar cambios' : 'Confirmar reserva',
+                cargando: enviando,
+                onPressed: puedeConfirmar ? onConfirmar : null,
+              );
+              if (caja.maxWidth < 390) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [confirmar, reiniciar],
+                );
+              }
+              return Row(
+                children: [
+                  reiniciar,
+                  const SizedBox(width: 8),
+                  Expanded(child: confirmar),
+                ],
+              );
+            },
           ),
         ],
       ),
