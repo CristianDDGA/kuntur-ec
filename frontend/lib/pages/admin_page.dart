@@ -10,10 +10,17 @@ import '../models/validadores_vuelo.dart';
 import '../models/vuelo.dart';
 import '../services/api_exception.dart';
 import '../widgets/aviso.dart';
-import '../widgets/barra_kuntur.dart';
 import '../widgets/boton_degradado.dart';
 import '../widgets/campo_selector.dart';
+import '../widgets/campo_texto_kuntur.dart';
+import '../widgets/estado_vista.dart';
+import '../widgets/hoja_confirmacion.dart';
+import '../widgets/insignia_estado.dart';
+import '../widgets/isometric_kuntur.dart';
+import '../widgets/kinetic_type.dart';
+import '../widgets/kuntur_scaffold.dart';
 import '../widgets/navegacion_principal.dart';
+import '../widgets/selectores_fecha_hora.dart';
 
 /// Panel del administrador (V): acceso a crear vuelos y gestión del IVA.
 /// Solo lo ve quien tiene rol admin (lo garantiza el router y, además, el servidor con 403).
@@ -24,40 +31,34 @@ class AdminPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final iva = ref.watch(ivaControllerProvider);
 
-    return Scaffold(
-      appBar: const BarraKuntur(),
-      bottomNavigationBar: const NavegacionPrincipal(actual: Seccion.administracion),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 680),
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                const Text('Administración', style: AppTextStyles.titulo),
-                const SizedBox(height: 4),
-                const Text('Gestione los vuelos y el impuesto que se cobra en las reservas.', style: AppTextStyles.cuerpo),
-                const SizedBox(height: 16),
-                _TarjetaVuelos(onCrear: () => context.push(AppRoutes.nuevoVuelo)),
-                const SizedBox(height: 16),
-                if (iva.isLoading && !iva.hasValue)
-                  const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator()))
-                else if (iva.hasError && !iva.hasValue) ...[
-                  AvisoInline(texto: mensajeDeError(iva.error!)),
-                  const SizedBox(height: 12),
-                  Align(
-                    child: OutlinedButton.icon(
-                      onPressed: () => ref.invalidate(ivaControllerProvider),
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Reintentar'),
-                    ),
-                  ),
-                ] else
-                  _SeccionIva(resumen: iva.value!),
-              ],
-            ),
-          ),
-        ),
+    return KunturScaffold(
+      seccion: Seccion.administracion,
+      maxAncho: 680,
+      onRefrescar: () async {
+        ref.invalidate(ivaControllerProvider);
+        // Espera la respuesta: así el indicador de refresco no termina antes de llegar los datos.
+        await ref.read(ivaControllerProvider.future);
+      },
+      body: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text('Administración', style: AppTextStyles.titulo),
+          const SizedBox(height: 4),
+          const Text('Gestione los vuelos y el impuesto que se cobra en las reservas.', style: AppTextStyles.cuerpo),
+          const SizedBox(height: 16),
+          _TarjetaVuelos(onCrear: () => context.push(AppRoutes.nuevoVuelo)),
+          const SizedBox(height: 16),
+          if (iva.isLoading && !iva.hasValue)
+            const CargandoDetalleVista()
+          else if (iva.hasError && !iva.hasValue)
+            ErrorVista(
+              mensaje: mensajeDeError(iva.error!),
+              onReintentar: () => ref.invalidate(ivaControllerProvider),
+            )
+          else
+            _SeccionIva(resumen: iva.value!),
+        ],
       ),
     );
   }
@@ -116,17 +117,7 @@ class _SeccionIvaState extends ConsumerState<_SeccionIva> {
     super.dispose();
   }
 
-  Future<DateTime?> _elegirFecha() {
-    final hoy = DateTime.now();
-    final dia = DateTime(hoy.year, hoy.month, hoy.day);
-    return showDatePicker(
-      context: context,
-      initialDate: _desde ?? dia,
-      firstDate: dia,
-      lastDate: dia.add(const Duration(days: ValidadoresVuelo.diasMaxAdelante)),
-      helpText: 'La tarifa rige desde',
-    );
-  }
+  Future<DateTime?> _elegirFecha() => elegirFechaDeTarifa(context, inicial: _desde);
 
   Future<void> _enviar() async {
     if (_ocupado || !_formulario.currentState!.validate()) return;
@@ -138,22 +129,22 @@ class _SeccionIvaState extends ConsumerState<_SeccionIva> {
     setState(() => _error = null);
 
     // Cambiar el impuesto afecta a todas las reservas nuevas: se pide confirmar.
-    final confirmado = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('¿Cambiar el IVA?'),
-        content: Text(
-          'El IVA será de $texto % desde el ${Formatos.fecha(desde)}.\n\n'
-          'Las reservas ya hechas conservan el IVA con el que se cobraron.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Sí, cambiar')),
-        ],
-      ),
+    final actual = widget.resumen.vigente?.porcentajeCorto;
+    final nuevo = _porcentajeCorto(texto);
+    final desdeTexto = Formatos.fecha(desde);
+    final confirmado = await mostrarConfirmacionKuntur(
+      context,
+      titulo: '¿Cambiar el IVA?',
+      mensaje: actual == null
+          ? 'No hay una tarifa vigente. Se programará $nuevo % desde el $desdeTexto. Las reservas ya hechas no cambian.'
+          : 'El IVA pasará de $actual a $nuevo % desde el $desdeTexto.\n\n'
+              'Las reservas ya hechas conservan el IVA con el que se cobraron.',
+      textoConfirmar: 'Sí, cambiar',
+      textoCancelar: 'Cancelar',
+      icono: Icons.percent,
     );
     if (!mounted) return;
-    if (confirmado != true) {
+    if (!confirmado) {
       _ocupado = false;
       return;
     }
@@ -184,6 +175,13 @@ class _SeccionIvaState extends ConsumerState<_SeccionIva> {
   @override
   Widget build(BuildContext context) {
     final vigente = widget.resumen.vigente;
+    TarifaIva? programada;
+    for (final t in widget.resumen.tarifas) {
+      if (t.estado == EstadoTarifa.programada) {
+        programada = t;
+        break;
+      }
+    }
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: AppDecorations.tarjeta,
@@ -203,18 +201,49 @@ class _SeccionIvaState extends ConsumerState<_SeccionIva> {
               tipo: TipoAviso.error,
               texto: 'No hay una tarifa de IVA vigente: nadie podrá reservar hasta que programe una.',
             )
-          else
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(vigente.porcentajeCorto,
-                    style: const TextStyle(fontSize: 38, fontWeight: FontWeight.w800, color: AppColors.azul, height: 1)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text('vigente desde ${Formatos.fecha(vigente.vigenteDesde)}', style: AppTextStyles.cuerpo),
+          else ...[
+            BloqueMetricaIsometrico(
+              etiqueta: 'IVA vigente',
+              valor: OdometroCinetico(
+                texto: vigente.porcentajeCorto,
+                estilo: const TextStyle(
+                  fontSize: 38,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.azul,
+                  height: 1,
                 ),
+              ),
+              pie: Text('vigente desde ${Formatos.fecha(vigente.vigenteDesde)}', style: AppTextStyles.cuerpo),
+            ),
+            const SizedBox(height: 10),
+            // Línea de tiempo del impuesto: pasado, presente y futuro en una sola lectura.
+            const Row(
+              children: [
+                Icon(Icons.timeline, size: 16, color: AppColors.textoSuave),
+                SizedBox(width: 8),
+                Text('Anterior · Ahora · Próxima', style: AppTextStyles.etiqueta),
               ],
             ),
+          ],
+          if (programada != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: AppColors.infoSuave, borderRadius: BorderRadius.circular(12)),
+              child: Row(
+                children: [
+                  const Icon(Icons.schedule, size: 18, color: AppColors.info),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Próxima tarifa programada: ${programada.porcentajeCorto} desde el ${Formatos.fecha(programada.vigenteDesde)}',
+                      style: AppTextStyles.cuerpo.copyWith(color: AppColors.info),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const Divider(height: 32, color: AppColors.divisor),
           const Text('Programar un cambio', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textoPrincipal)),
           const SizedBox(height: 4),
@@ -228,29 +257,16 @@ class _SeccionIvaState extends ConsumerState<_SeccionIva> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextFormField(
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                  controller: _porcentaje,
+                CampoTextoKuntur(
+                  etiqueta: 'Nuevo porcentaje',
+                  controlador: _porcentaje,
+                  icono: Icons.percent,
+                  mostrarLimpiar: true,
                   enabled: !_enviando,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  hint: '15',
+                  ayuda: 'De 0 a 100, hasta 2 decimales.',
                   inputFormatters: ValidadoresVuelo.entradaPorcentaje,
-                  decoration: InputDecoration(
-                    labelText: 'Nuevo porcentaje',
-                    hintText: '15',
-                    helperText: 'De 0 a 100, hasta 2 decimales.',
-                    prefixIcon: const Icon(Icons.percent),
-                    suffixIcon: ListenableBuilder(
-                      listenable: _porcentaje,
-                      builder: (_, _) => _porcentaje.text.isEmpty
-                          ? const SizedBox.shrink()
-                          : IconButton(
-                              tooltip: 'Borrar',
-                              icon: const Icon(Icons.close),
-                              onPressed: () => _porcentaje.clear(),
-                            ),
-                    ),
-                  ),
-                  validator: ValidadoresVuelo.porcentaje,
+                  validador: ValidadoresVuelo.porcentaje,
                 ),
                 const SizedBox(height: 14),
                 CampoSelector<DateTime>(
@@ -275,24 +291,38 @@ class _SeccionIvaState extends ConsumerState<_SeccionIva> {
           const Divider(height: 32, color: AppColors.divisor),
           const Text('Historial', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textoPrincipal)),
           const SizedBox(height: 8),
-          for (final t in widget.resumen.tarifas) _FilaTarifa(tarifa: t),
+          if (widget.resumen.tarifas.isEmpty)
+            const VacioVista(
+              icono: Icons.percent,
+              titulo: 'Sin historial de tarifas',
+              mensaje: 'Cuando programe la primera tarifa aparecerá aquí.',
+              elevada: false,
+            )
+          else
+            ...widget.resumen.tarifas.map((t) => _FilaTarifa(tarifa: t)),
         ],
       ),
     );
   }
 }
 
-class _FilaTarifa extends StatelessWidget {
-  const _FilaTarifa({required this.tarifa});
+/// "13.00" → "13", "12.50" → "12.5" (mismo formato que muestra una tarifa guardada).
+String _porcentajeCorto(String texto) {
+  final partes = texto.trim().split('.');
+  final decimales = partes.length > 1 ? partes[1].replaceFirst(RegExp(r'0+$'), '') : '';
+  return decimales.isEmpty ? partes[0] : '${partes[0]}.$decimales';
+}
+
+class _FilaTarifa extends StatelessWidget {  const _FilaTarifa({required this.tarifa});
 
   final TarifaIva tarifa;
 
   @override
   Widget build(BuildContext context) {
-    final (texto, color, fondo) = switch (tarifa.estado) {
-      EstadoTarifa.vigente => ('Vigente', AppColors.exito, AppColors.exitoSuave),
-      EstadoTarifa.programada => ('Programada', AppColors.aviso, AppColors.avisoSuave),
-      EstadoTarifa.anterior => ('Anterior', AppColors.textoSecundario, AppColors.divisor),
+    final (texto, tipo) = switch (tarifa.estado) {
+      EstadoTarifa.vigente => ('Vigente', TipoInsignia.exito),
+      EstadoTarifa.programada => ('Programada', TipoInsignia.aviso),
+      EstadoTarifa.anterior => ('Anterior', TipoInsignia.neutro),
     };
     final hasta = tarifa.vigenteHasta;
     return Padding(
@@ -311,11 +341,7 @@ class _FilaTarifa extends StatelessWidget {
               style: AppTextStyles.cuerpo,
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-            decoration: BoxDecoration(color: fondo, borderRadius: BorderRadius.circular(20)),
-            child: Text(texto, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w700)),
-          ),
+          InsigniaEstado(texto: texto, tipo: tipo),
         ],
       ),
     );

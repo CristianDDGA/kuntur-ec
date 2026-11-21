@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 import '../models/reserva.dart';
 import '../models/vuelo.dart';
+import 'insignia_estado.dart';
 import 'tarjeta_vuelo.dart';
 
 /// Una reserva en el historial: vuelo, fecha, asientos, total y estado.
@@ -84,15 +85,11 @@ class EtiquetaEstadoReserva extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (texto, color, fondo) = reserva.cancelada
-        ? ('Cancelada', AppColors.error, AppColors.errorSuave)
+    final (texto, tipo) = reserva.cancelada
+        ? ('Cancelada', TipoInsignia.error)
         : reserva.vuelo.yaPartio()
-            ? ('Vuelo realizado', AppColors.textoSecundario, AppColors.divisor)
-            : ('Confirmada', AppColors.exito, AppColors.exitoSuave);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: fondo, borderRadius: BorderRadius.circular(20)),
-      child: Text(texto, style: TextStyle(color: color, fontSize: 12.5, fontWeight: FontWeight.w700)),
-    );
+            ? ('Vuelo realizado', TipoInsignia.neutro)
+            : ('Confirmada', TipoInsignia.exito);
+    return InsigniaEstado(texto: texto, tipo: tipo);
   }
 }

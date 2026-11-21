@@ -26,6 +26,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _correo = TextEditingController();
   final _password = TextEditingController();
 
+  /// Foco en la contraseña: desplaza la onda líquida del fondo del panel.
+  bool _focoPassword = false;
+
+  void _cambioFocoPassword(bool enfocado) {
+    if (!mounted || _focoPassword == enfocado) return;
+    setState(() => _focoPassword = enfocado);
+  }
+
   @override
   void dispose() {
     _correo.dispose();
@@ -52,6 +60,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     return PanelAutenticacion(
       titulo: 'Bienvenido de vuelta',
       subtitulo: 'Inicie sesión para consultar y reservar sus vuelos.',
+      faseLiquida: _focoPassword ? 1.0 : 0.0,
       child: AutofillGroup(
         child: Form(
           key: _formulario,
@@ -77,14 +86,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              CampoPassword(
-                controller: _password,
-                label: 'Contraseña',
-                enabled: !cargando,
-                validator: Validadores.passwordIngreso,
-                textInputAction: TextInputAction.done,
-                autofillHints: const [AutofillHints.password],
-                onSubmitted: (_) => _enviar(),
+              // El foco en la contraseña mueve la onda líquida del fondo.
+              Focus(
+                skipTraversal: true,
+                onFocusChange: _cambioFocoPassword,
+                child: CampoPassword(
+                  controller: _password,
+                  label: 'Contraseña',
+                  enabled: !cargando,
+                  validator: Validadores.passwordIngreso,
+                  textInputAction: TextInputAction.done,
+                  autofillHints: const [AutofillHints.password],
+                  onSubmitted: (_) => _enviar(),
+                ),
               ),
               if (error != null) ...[
                 const SizedBox(height: 16),

@@ -35,7 +35,7 @@ class AvisoInline extends StatelessWidget {
             Expanded(
               child: Text(
                 texto,
-                style: TextStyle(color: color, fontSize: 13.5, fontWeight: FontWeight.w600, height: 1.35),
+                style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w600, height: 1.35),
               ),
             ),
           ],
