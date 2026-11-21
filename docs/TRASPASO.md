@@ -1,31 +1,77 @@
-# Traspaso: tareas que faltan (Kuntur EC)
+# Traspaso del proyecto (Kuntur EC)
 
-El sistema (backend Flask + frontend Flutter web + Supabase) está completo y probado
-(pytest 646, flutter test 429, analyze sin avisos). Incluye lo pedido por el docente: aviones por CSV, cédula,
-página de inicio, correo real con código e inicio de sesión con Google. Lo que queda son entregables.
+Documento para retomar el proyecto con cualquier herramienta o persona. El sistema está **completo y probado**; lo que
+queda son entregables y decisiones (sección 5).
 
-## Reglas del equipo
-- Commits **sin** coautoría/firma de ninguna IA. Ramas `feature/*`; el usuario abre y fusiona el PR a `develop`.
-- Dependencias: usar la antepenúltima versión estable.
-- Frontend con MVC (models/services/controllers/pages/widgets), Riverpod + go_router.
-- La base es Supabase **real**: no crear IVA, vuelos, aviones ni cuentas de prueba sin borrarlos después. Los tests automáticos
-  de la base real limpian lo que crean; las pruebas manuales deben hacerlo a mano.
-- No poner credenciales en el repositorio.
+## 1. Estado
 
-## Pendiente
-1. Informe + diagrama SOA.
-2. **Despliegue del backend en Render** (el Flutter se queda en local): ver `docs/PLANIFICACION.md` sección 9 y la
-   tabla de variables del `README.md`. Falta `gunicorn` en `requirements.txt`; Dockerfile opcional.
-3. Capturas de las pantallas nuevas (`docs/PRUEBAS.md`, recorrido 20–27).
-4. Opcional: descarga del comprobante; borrar vuelos de prueba (confirmar antes).
+Sistema de reservas de vuelos con **SOA**: API REST **Flask** (MVC) + cliente **Flutter web** + **Supabase** (PostgreSQL).
+Rama `develop` al día con todo lo hecho (PR #1–#17). Pruebas: **pytest 646**, **flutter test 429**, `flutter analyze` sin avisos.
 
-## Cuentas externas que usa el proyecto (no están en el repositorio)
-- **Gmail** (envío del código): contraseña de aplicación en `backend/.env` (`SMTP_*`). Se revoca en `myaccount.google.com/apppasswords`.
-- **Google Cloud**, proyecto «Kuntur EC» (`kuntur-ec`): cliente OAuth web con el origen `http://localhost:8080`, app en modo de
-  prueba (solo entran los usuarios de prueba). Si el Flutter se sirve en otro puerto hay que agregar ese origen.
+Hecho (detalle en `docs/PLANIFICACION.md`, sección 8):
+- Núcleo: usuarios, JWT, vuelos, reservas con asientos concretos y concurrencia, IVA con historial, comprobante XML.
+- Pedido por el docente: **aviones por CSV**, **cédula** (módulo 10), **página de inicio**, **correo real** (código de 6 dígitos
+  por SMTP) e **inicio de sesión con Google**.
+- Endurecimiento: rutas cerradas por defecto, CORS sin `*`, clave JWT ≥ 32 caracteres, límites de largo = columnas de la BD.
+- Documentación al día: `README.md`, `backend/README.md`, `frontend/README.md`, `docs/PRUEBAS.md`, `docs/USABILIDAD.md`,
+  `docs/PRIVACIDAD.md`, colección de Postman (`docs/postman/`, 125 comprobaciones, verificada).
 
-## Hecho en la revisión final
-- Cierre automático de sesión al vencer el JWT (temporizador + aviso en el login) y vuelta a la pantalla anterior al reingresar.
-- Recargar la página ya no pierde la pantalla actual.
-- Paleta nueva (azul pizarra, ámbar, ladrillo, fondo cálido), íconos y manifest de la web, semántica de accesibilidad activada.
-- Contraste del botón desactivado y del `SegmentedButton` seleccionado.
+## 2. Cómo correrlo
+
+```bash
+# Backend (http://localhost:5000/api/health · Swagger /api/docs/)
+cd backend && .venv\Scripts\python app.py
+# Frontend: DEBE ser el puerto 8080 (es el único origen autorizado en Google)
+cd frontend && flutter run -d chrome --web-port=8080
+# Pruebas
+cd backend && .venv\Scripts\python -m pytest -q
+cd frontend && flutter analyze && flutter test
+```
+
+Configuración en `backend/.env` (plantilla en `backend/.env.example`; **nunca subirlo**): `DATABASE_URL`, `JWT_SECRET_KEY`,
+`CORS_ORIGINS`, `SMTP_*`, `GOOGLE_CLIENT_ID`. Tabla completa en el `README.md`. El `.env` real ya está en el equipo del autor.
+
+Ejemplo para probar la importación de aviones: `docs/ejemplos/aviones.csv` (formato `matricula;modelo;filas`).
+
+## 3. Reglas del equipo
+- Commits **sin** coautoría ni firma de ninguna IA (ni `Co-Authored-By` ni «Generated with…»); tampoco menciones en código o informe.
+- Ramas `feature/*` desde `develop`; el **usuario** hace commit, push y abre/fusiona el PR a `develop`.
+- Dependencias: fijar la **antepenúltima** versión estable (excepciones documentadas en `PLANIFICACION.md`, sección 7).
+- Frontend: MVC (`models/services/controllers/pages/widgets`), Riverpod + go_router. Backend: `routes → services → models`.
+- Toda columna `VARCHAR` nueva necesita su límite en `backend/utils/limites.py` (lo verifica una prueba).
+- La base es **Supabase real**: no dejar datos de prueba; borrar lo que se cree a mano. Las pruebas automáticas limpian lo suyo.
+- No poner credenciales en el repositorio ni en los documentos.
+
+## 4. Cuentas y servicios externos (fuera del repositorio)
+- **Supabase:** proyecto «Kuntur EC»; conexión por *Session pooler* (plan gratuito: 15 conexiones).
+- **Gmail:** contraseña de aplicación para enviar el código (`SMTP_*`). Se revoca en `myaccount.google.com/apppasswords`.
+- **Google Cloud**, proyecto «Kuntur EC» (`kuntur-ec`): cliente OAuth web con el origen `http://localhost:8080`. La app está en
+  modo **«Prueba»**: solo entran los usuarios de prueba (hoy, la cuenta del autor). Ver el punto 5.1.
+- **Estado de la base al cerrar:** solo el administrador (`database/seed.sql`), 12 vuelos, 0 aviones, 0 reservas, IVA vigente 12 %.
+  Los vuelos `KT702` y `KT703` son de pruebas del autor; el IVA 12 % también lo programó él.
+
+## 5. Pendiente
+1. **Google para cualquier cuenta.** Hay que pasar la app de «Prueba» a «En producción» (Google Cloud → Google Auth Platform →
+   Público). Google exige URLs públicas de página principal y de política de privacidad. Plan: página principal
+   `https://github.com/CristianDDGA/kuntur-ec` y privacidad `https://github.com/CristianDDGA/kuntur-ec/blob/develop/docs/PRIVACIDAD.md`
+   (ya fusionada). Riesgo: Google puede exigir un dominio propio; si lo rechaza, alternativas: agregar usuarios de prueba (hasta 100)
+   o una página propia (p. ej. GitHub Pages). La app solo pide permisos básicos (sin verificación de Google).
+2. **Informe PDF con diagrama SOA** (entregable principal de la guía APE 4) y **capturas** de las pantallas nuevas
+   (`docs/PRUEBAS.md`, recorrido 20–27). Datos de los integrantes del grupo para la portada.
+3. **Despliegue del backend en Render** (solo el backend; el Flutter se queda en local): variables `DATABASE_URL`,
+   `JWT_SECRET_KEY`, `CORS_ORIGINS=http://localhost:8080`, `SMTP_*`, `GOOGLE_CLIENT_ID`; añadir `gunicorn` a `requirements.txt`;
+   Dockerfile opcional; el frontend con `--dart-define=API_BASE_URL=https://<servicio>.onrender.com/api`. El plan gratuito duerme el servicio.
+   Antes de publicar, cambiar la contraseña del administrador de `seed.sql`.
+4. Opcionales: editar/cancelar vuelos, historial de cambios de reservas, total esperado antes de reservar, resumen de ventas,
+   pruebas de concurrencia automáticas, descarga del comprobante, login con Google en Android.
+5. **Antes de la demostración:** ensayo con 2 o 3 cuentas de Google distintas, cada una con una cédula válida diferente; el Flutter
+   siempre en el puerto 8080; plan B = registro normal (cédula + código por correo), que no depende de Google.
+
+## 6. Trampas conocidas
+- `flutter build web`: si un plugin nuevo no entra al build (p. ej. `file_picker`), borrar `frontend/.dart_tool/flutter_build`. Al probar en el
+  navegador, quitar el *service worker* y la caché o se ve la versión vieja.
+- En la web, `file_picker` se usa con `pickFiles` (el singular no funciona). El botón de Google lo dibuja Google; los popups de Google solo
+  se abren con clic del usuario, no con automatización.
+- Una cuenta sin cédula (p. ej. creada con Google) es enviada a «Complete su perfil» antes de poder usar la app.
+- Las pruebas **nunca** envían correos reales (usan `EnviadorLocal`); el servidor real sí, si tiene `SMTP_*`.
+- En Windows, consola con emojis: ejecutar scripts con `PYTHONIOENCODING=utf-8`. Los procesos `app.py` huérfanos se cierran desde el administrador de tareas.
