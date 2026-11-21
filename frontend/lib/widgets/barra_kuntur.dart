@@ -36,20 +36,20 @@ class BarraKuntur extends ConsumerWidget implements PreferredSizeWidget {
               tooltip: 'Volver',
               icon: const Icon(Icons.arrow_back),
               // maybePop (y no pop) respeta los avisos de "¿Salir sin guardar?" de las pantallas que los tengan.
-              onPressed: () => context.canPop() ? Navigator.of(context).maybePop() : context.go(AppRoutes.inicio),
+              onPressed: () => context.canPop() ? Navigator.of(context).maybePop() : context.go(AppRoutes.vuelos),
             )
           : null,
       titleSpacing: conAtras ? 0 : null,
       title: Semantics(
         button: true,
         label: 'Kuntur EC, ir al inicio',
-        onTap: alTocarInicio ?? () => context.go(AppRoutes.inicio),
+        onTap: alTocarInicio ?? () => context.go(AppRoutes.vuelos),
         excludeSemantics: true,
         child: Tooltip(
           message: 'Ir al inicio',
           child: InkWell(
             borderRadius: BorderRadius.circular(10),
-            onTap: alTocarInicio ?? () => context.go(AppRoutes.inicio),
+            onTap: alTocarInicio ?? () => context.go(AppRoutes.vuelos),
             child: ConstrainedBox(
               constraints: const BoxConstraints(minHeight: 44),
               child: const Padding(

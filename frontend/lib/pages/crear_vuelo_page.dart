@@ -242,7 +242,7 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
   /// El logo de la barra también navega: con datos escritos se confirma antes.
   Future<void> _salirAInicio() async {
     if (!_sucio || await _confirmarSalidaSinGuardar()) {
-      if (mounted) context.go(AppRoutes.inicio);
+      if (mounted) context.go(AppRoutes.vuelos);
     }
   }
 

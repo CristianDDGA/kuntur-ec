@@ -38,7 +38,7 @@ class VueloDetallePage extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Migas([
-              const Miga('Vuelos', ruta: AppRoutes.inicio),
+              const Miga('Vuelos', ruta: AppRoutes.vuelos),
               Miga(vuelo.value?.codigo ?? 'Detalle del vuelo'),
             ]),
             const SizedBox(height: 12),

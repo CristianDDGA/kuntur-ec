@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vuelos_app/config/app_router.dart';
 import 'package:vuelos_app/config/providers.dart';
+import 'package:vuelos_app/pages/inicio_page.dart';
 import 'package:vuelos_app/main.dart';
 import 'package:vuelos_app/services/auth_service.dart';
 import 'package:vuelos_app/services/iva_service.dart';
@@ -25,6 +27,8 @@ Future<void> abrirApp(
   required RouteFakeRestClient client,
   InMemoryTokenStorage? tokens,
   bool esperar = true,
+  // Sin sesión la app abre en la página de inicio; casi todas las pruebas parten del login.
+  bool desdeLogin = true,
 }) async {
   usarPantallaGrande(tester);
   await tester.pumpWidget(ProviderScope(
@@ -38,6 +42,11 @@ Future<void> abrirApp(
     child: const KunturApp(),
   ));
   if (esperar) await tester.pumpAndSettle();
+  if (esperar && desdeLogin && find.byType(InicioPage).evaluate().isNotEmpty) {
+    final container = ProviderScope.containerOf(tester.element(find.byType(MaterialApp)));
+    container.read(appRouterProvider).go(AppRoutes.login);
+    await tester.pumpAndSettle();
+  }
 }
 
 /// Campo de texto por su etiqueta visible.

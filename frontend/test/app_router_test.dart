@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vuelos_app/config/app_router.dart';
 import 'package:vuelos_app/pages/estado_api_page.dart';
+import 'package:vuelos_app/pages/inicio_page.dart';
 import 'package:vuelos_app/pages/vuelos_page.dart';
 import 'package:vuelos_app/pages/login_page.dart';
+import 'package:vuelos_app/pages/registro_page.dart';
 import 'package:vuelos_app/pages/splash_page.dart';
 import 'package:vuelos_app/services/api_exception.dart';
 
@@ -21,11 +23,11 @@ void main() {
   }
 
   group('al arrancar', () {
-    testWidgets('sin token no llama a la API y muestra el login', (tester) async {
+    testWidgets('sin token no llama a la API y muestra la página de inicio', (tester) async {
       final client = api({});
-      await abrirApp(tester, client: client);
+      await abrirApp(tester, client: client, desdeLogin: false);
 
-      expect(find.byType(LoginPage), findsOneWidget);
+      expect(find.byType(InicioPage), findsOneWidget);
       expect(client.llamadas, isEmpty);
     });
 
@@ -89,10 +91,35 @@ void main() {
   });
 
   group('rutas protegidas', () {
-    testWidgets('sin sesión no se puede entrar al inicio', (tester) async {
-      await abrirApp(tester, client: api({}));
+    testWidgets('la página de inicio es pública y lleva al login y al registro', (tester) async {
+      await abrirApp(tester, client: api({}), desdeLogin: false);
+
+      await tocarBoton(tester, 'Iniciar sesión');
+      await tester.pumpAndSettle();
+      expect(find.byType(LoginPage), findsOneWidget);
 
       irA(tester, AppRoutes.inicio);
+      await tester.pumpAndSettle();
+      await tocarBoton(tester, 'Crear cuenta');
+      await tester.pumpAndSettle();
+      expect(find.byType(RegistroPage), findsOneWidget);
+    });
+
+    testWidgets('con sesión, la página de inicio lleva a la lista de vuelos', (tester) async {
+      await abrirApp(tester,
+          client: api({'GET /auth/perfil': {'usuario': usuarioAna}, 'GET /vuelos': sinVuelos}), tokens: InMemoryTokenStorage('jwt'));
+
+      irA(tester, AppRoutes.inicio);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(VuelosPage), findsOneWidget);
+      expect(find.byType(InicioPage), findsNothing);
+    });
+
+    testWidgets('sin sesión no se puede entrar a la lista de vuelos', (tester) async {
+      await abrirApp(tester, client: api({}));
+
+      irA(tester, AppRoutes.vuelos);
       await tester.pumpAndSettle();
 
       expect(find.byType(LoginPage), findsOneWidget);

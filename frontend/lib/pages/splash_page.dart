@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../config/app_motion.dart';
+import '../config/app_router.dart';
 import '../config/app_theme.dart';
 import '../controllers/sesion_controller.dart';
 import '../services/api_exception.dart';
@@ -66,7 +68,10 @@ class SplashPage extends ConsumerWidget {
                             child: const Text('Reintentar'),
                           ),
                           TextButton(
-                            onPressed: ref.read(sesionControllerProvider.notifier).continuarSinSesion,
+                            onPressed: () {
+                              ref.read(sesionControllerProvider.notifier).continuarSinSesion();
+                              context.go(AppRoutes.login);
+                            },
                             child: const Text('Ir a iniciar sesión'),
                           ),
                         ],

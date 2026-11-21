@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../controllers/sesion_controller.dart';
 import '../pages/estado_api_page.dart';
+import '../pages/inicio_page.dart';
 import '../pages/admin_page.dart';
 import '../pages/comprobante_page.dart';
 import '../pages/crear_vuelo_page.dart';
@@ -25,6 +26,7 @@ class AppRoutes {
   static const login = '/login';
   static const registro = '/registro';
   static const inicio = '/';
+  static const vuelos = '/vuelos';
   static const estado = '/estado';
   static const reservas = '/reservas';
   static String reserva(int id) => '/reservas/$id';
@@ -36,7 +38,7 @@ class AppRoutes {
   static String vuelo(int id) => '/vuelos/$id';
 
   /// Se pueden ver sin haber iniciado sesión.
-  static const publicas = {login, registro, estado};
+  static const publicas = {inicio, login, registro, estado};
 }
 
 /// A dónde volver después de la carga o del login ("/reservas/58"), o `null` si no es un destino seguro.
@@ -81,15 +83,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
       final autenticado = sesion.value != null;
       if (!autenticado) {
-        if (ruta == AppRoutes.cargando) return _con(AppRoutes.login, volver); // la carga terminó sin sesión
+        // La carga terminó sin sesión: a la página de inicio, o al login si iba a una pantalla protegida.
+        if (ruta == AppRoutes.cargando) return volver == null || volver == AppRoutes.inicio ? AppRoutes.inicio : _con(AppRoutes.login, volver);
         if (AppRoutes.publicas.contains(ruta)) return null;
         // Solo se recuerda el destino si la sesión se perdió sin querer (venció); al cerrarla a propósito, no.
         final seVencio = ref.read(avisoLoginProvider) != null;
         return _con(AppRoutes.login, seVencio ? destinoSeguro(state.uri.toString()) : null);
       }
       if (ruta == AppRoutes.cargando || ruta == AppRoutes.login || ruta == AppRoutes.registro) {
-        return volver ?? AppRoutes.inicio;
+        return volver ?? AppRoutes.vuelos;
       }
+      if (ruta == AppRoutes.inicio) return AppRoutes.vuelos; // con sesión, la página de inicio es la lista de vuelos
       // Crear vuelos es cosa del administrador (el servidor también lo exige con 403).
       if (ruta.startsWith(AppRoutes.admin) && !sesion.value!.esAdmin) return AppRoutes.inicio;
       // El administrador no reserva: sus pantallas de reservas no existen (el servidor también responde 403).
@@ -100,7 +104,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: AppRoutes.cargando, builder: (_, _) => const SplashPage()),
       GoRoute(path: AppRoutes.login, builder: (_, _) => const LoginPage()),
       GoRoute(path: AppRoutes.registro, builder: (_, _) => const RegistroPage()),
-      GoRoute(path: AppRoutes.inicio, builder: (_, _) => const VuelosPage()),
+      GoRoute(path: AppRoutes.inicio, builder: (_, _) => const InicioPage()),
+      GoRoute(path: AppRoutes.vuelos, builder: (_, _) => const VuelosPage()),
       GoRoute(path: AppRoutes.reservas, builder: (_, _) => const ReservasPage()),
       GoRoute(
         path: '/reservas/:id',
