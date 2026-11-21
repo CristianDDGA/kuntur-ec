@@ -31,6 +31,7 @@ from utils.autenticacion import exigir_acceso_declarado
 from utils.convertidores import IdConverter
 from utils.correo import EnviadorLocal, EnviadorSmtp
 from utils.documentacion import init_docs
+from utils.google import VerificadorGoogleReal
 from utils.formatos import JsonFormato, XmlFormato
 from utils.manejador_errores import register_error_handlers
 from utils.respuestas import ContentNegotiator
@@ -70,7 +71,10 @@ def _registrar_servicios(app: Flask, settings: Settings, db: Database | None) ->
     app.extensions["verificacion_service"] = VerificacionService(db, enviador, settings.jwt_secret_key)
     app.extensions["usuario_service"] = usuarios
     app.extensions["auth_service"] = AuthService(
-        db, usuarios, EmisorTokens(settings.jwt_secret_key, settings.jwt_expires_minutes)
+        db,
+        usuarios,
+        EmisorTokens(settings.jwt_secret_key, settings.jwt_expires_minutes),
+        verificador_google=VerificadorGoogleReal(settings.google_client_id) if settings.google_client_id else None,
     )
 
 

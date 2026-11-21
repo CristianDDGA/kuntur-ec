@@ -43,6 +43,38 @@ void main() {
     });
   });
 
+  group('Google y cédula', () {
+    test('loginGoogle envía solo el id_token y guarda el JWT de la sesión', () async {
+      final tokens = InMemoryTokenStorage();
+      final client = RouteFakeRestClient({'POST /auth/google': {...respuestaLogin, 'nuevo': true}});
+      final sesion = await AuthService(client, tokens).loginGoogle('id-token');
+
+      expect(client.llamada('POST', '/auth/google').cuerpo, {'id_token': 'id-token'});
+      expect(sesion.usuario.correo, 'ana@correo.com');
+      expect(await tokens.leer(), 'jwt-de-prueba');
+    });
+
+    test('un token que el servidor rechaza no deja sesión guardada', () async {
+      final tokens = InMemoryTokenStorage();
+      final client = RouteFakeRestClient({'POST /auth/google': const UnauthorizedFailure('No se pudo validar su cuenta de Google.')});
+      await expectLater(AuthService(client, tokens).loginGoogle('malo'), throwsA(isA<UnauthorizedFailure>()));
+      expect(await tokens.leer(), isNull);
+    });
+
+    test('completarCedula usa PUT, recorta la cédula y devuelve el usuario con ella', () async {
+      final client = RouteFakeRestClient({'PUT /usuarios/cedula': {'mensaje': 'ok', 'usuario': usuarioAna}});
+      final usuario = await _servicio(client).completarCedula(' 1710034065 ');
+
+      expect(client.llamada('PUT', '/usuarios/cedula').cuerpo, {'cedula': '1710034065'});
+      expect(usuario.cedula, '1710034065');
+    });
+
+    test('un usuario sin cédula en la respuesta queda con cedula nula', () {
+      final sin = {...usuarioAna}..remove('cedula');
+      expect(Usuario.fromJson(sin).cedula, isNull);
+    });
+  });
+
   group('verificar el correo', () {
     test('verificarCorreo envía correo y código recortados', () async {
       final client = RouteFakeRestClient({'POST /auth/verificar-correo': {'mensaje': 'ok', 'correo': 'ana@correo.com'}});

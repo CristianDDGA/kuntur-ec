@@ -27,6 +27,17 @@ def login():
 
 
 # =============================
+# POST - Iniciar sesión con Google
+# =============================
+
+@auth_bp.route("/google", methods=["POST"])
+@swag_from(contrato("auth", "google"))
+@publica
+def login_google():
+    return respond(_servicio().login_google(cuerpo_json()), root="sesion")
+
+
+# =============================
 # POST - Confirmar el correo con el código enviado
 # =============================
 

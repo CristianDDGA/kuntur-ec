@@ -120,6 +120,7 @@ const usuarioAna = {
   'correo': 'ana@correo.com',
   'rol': 'cliente',
   'fecha_registro': '2026-11-10T15:04:04+00:00',
+  'cedula': '1710034065', // sin cédula el router la pediría antes de dejar usar la app
 };
 
 const respuestaLogin = {

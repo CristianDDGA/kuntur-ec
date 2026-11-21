@@ -49,6 +49,23 @@ class AuthService {
     return ResultadoRegistro(usuario: Usuario.fromJson(usuario), codigoEnviado: json['codigo_enviado'] != false);
   }
 
+  /// `POST /auth/google`: inicia sesión con el `id_token` que entregó Google. El servidor lo valida; si la cuenta no
+  /// existe la crea (con el correo ya verificado y sin cédula). Guarda el JWT igual que [login].
+  Future<Sesion> loginGoogle(String idToken) async {
+    final json = asJsonMap(await _client.post('/auth/google', body: {'id_token': idToken}));
+    final sesion = Sesion.fromJson(json);
+    await _tokens.guardar(sesion.token);
+    return sesion;
+  }
+
+  /// `PUT /usuarios/cedula`: guarda la cédula de una cuenta que no la tiene. Devuelve el usuario actualizado.
+  Future<Usuario> completarCedula(String cedula) async {
+    final json = asJsonMap(await _client.put('/usuarios/cedula', body: {'cedula': cedula.trim()}));
+    final usuario = json['usuario'];
+    if (usuario is! JsonMap) throw const InvalidResponseFailure();
+    return Usuario.fromJson(usuario);
+  }
+
   /// `POST /auth/verificar-correo`: confirma el correo con el código de 6 dígitos.
   Future<void> verificarCorreo({required String correo, required String codigo}) async {
     asJsonMap(await _client.post('/auth/verificar-correo', body: {'correo': correo.trim(), 'codigo': codigo.trim()}));

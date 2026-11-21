@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     rol             VARCHAR(10)  NOT NULL DEFAULT 'cliente' CHECK (rol IN ('cliente', 'admin')),
     cedula          VARCHAR(10)  CHECK (cedula ~ '^[0-9]{10}$'),
     correo_verificado BOOLEAN    NOT NULL DEFAULT TRUE,
+    google_sub      VARCHAR(255),
     fecha_registro  TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 
@@ -32,6 +33,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_usuarios_cedula ON usuarios (cedula) WHERE 
 -- Correo confirmado con un código. Las cuentas que ya existían quedan verificadas (DEFAULT TRUE); el registro
 -- inserta FALSE explícitamente, así que una cuenta nueva no puede iniciar sesión hasta confirmar su correo.
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS correo_verificado BOOLEAN NOT NULL DEFAULT TRUE;
+
+-- Cuenta de Google vinculada (campo `sub` del id_token: estable aunque la persona cambie de correo). NULL si la
+-- cuenta se creó con correo y contraseña. Una cuenta de Google = una cuenta de Kuntur EC.
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS google_sub VARCHAR(255);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_usuarios_google_sub ON usuarios (google_sub) WHERE google_sub IS NOT NULL;
 
 -- ---------------------------------------------------------------------
 -- vuelos

@@ -34,6 +34,7 @@ class Settings:
     smtp_user: str = ""
     smtp_password: str = ""
     smtp_from: str = ""
+    google_client_id: str = ""  # ID de cliente OAuth web; vacío = el inicio con Google está desactivado
 
     @property
     def smtp_configurado(self) -> bool:
@@ -83,4 +84,5 @@ class Settings:
             smtp_user=env.get("SMTP_USER", ""),
             smtp_password=env.get("SMTP_PASSWORD", ""),
             smtp_from=env.get("SMTP_FROM") or env.get("SMTP_USER", ""),
+            google_client_id=env.get("GOOGLE_CLIENT_ID", "").strip(),
         )

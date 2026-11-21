@@ -27,7 +27,7 @@ LIMITES_DE_ENTRADA = {
 }
 # VARCHAR que NO escribe el usuario: los llena el sistema con valores controlados.
 VARCHAR_INTERNOS = {
-    ("usuarios", "password_hash"), ("usuarios", "rol"), ("reservas", "estado"), ("tokens", "estado"),
+    ("usuarios", "password_hash"), ("usuarios", "google_sub"), ("usuarios", "rol"), ("reservas", "estado"), ("tokens", "estado"),
 }
 
 

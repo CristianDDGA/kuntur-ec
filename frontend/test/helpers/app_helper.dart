@@ -13,6 +13,7 @@ import 'package:vuelos_app/services/sistema_service.dart';
 import 'package:vuelos_app/services/vuelo_service.dart';
 
 import 'fakes.dart';
+import 'google_falso.dart';
 
 /// Pantalla grande para que los formularios completos se vean sin hacer scroll.
 void usarPantallaGrande(WidgetTester tester) {
@@ -30,11 +31,14 @@ Future<void> abrirApp(
   bool esperar = true,
   // Sin sesión la app abre en la página de inicio; casi todas las pruebas parten del login.
   bool desdeLogin = true,
+  // Por defecto Google no está disponible (el botón no se muestra); las pruebas de Google pasan su propio doble.
+  ProveedorGoogleFalso? google,
 }) async {
   usarPantallaGrande(tester);
   await tester.pumpWidget(ProviderScope(
     overrides: [
       authServiceProvider.overrideWithValue(AuthService(client, tokens ?? InMemoryTokenStorage())),
+      proveedorGoogleProvider.overrideWithValue(google ?? ProveedorGoogleFalso(disponible: false)),
       avionServiceProvider.overrideWithValue(AvionService(client)),
       sistemaServiceProvider.overrideWithValue(SistemaService(client)),
       vueloServiceProvider.overrideWithValue(VueloService(client)),

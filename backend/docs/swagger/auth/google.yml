@@ -1,0 +1,41 @@
+# Contrato del servicio auth: Iniciar sesión con Google
+summary: "Iniciar sesión con una cuenta de Google"
+description: |
+  El cliente obtiene de Google un `id_token` y lo envía aquí. El servidor lo valida con las claves públicas de Google
+  (firma, vencimiento, emisor y que sea para este sistema) y exige que el correo esté verificado por Google.
+  - Si ya hay una cuenta vinculada a esa cuenta de Google, inicia sesión en ella.
+  - Si hay una cuenta con ese correo (creada con contraseña), la vincula y la deja verificada.
+  - Si no hay cuenta, la crea como cliente, con el correo verificado y **sin cédula** (la app la pide después con
+    `PUT /usuarios/cedula`).
+  La respuesta es la misma que la de `/auth/login`, más `nuevo` (true si la cuenta se acaba de crear).
+tags: [Autenticación]
+consumes: [application/json]
+produces: [application/json, application/xml]
+parameters:
+  - in: body
+    name: body
+    required: true
+    schema:
+      type: object
+      required: [id_token]
+      properties:
+        id_token: {type: string, description: "JWT emitido por Google al iniciar sesión (máximo 4096 caracteres)"}
+responses:
+  200:
+    description: Sesión iniciada.
+    schema:
+      type: object
+      properties:
+        token: {type: string}
+        tipo: {type: string, example: Bearer}
+        expira: {type: string, format: date-time}
+        usuario: {type: object}
+        nuevo: {type: boolean, example: false}
+  400:
+    description: Falta el `id_token` o es demasiado largo.
+  401:
+    description: El token de Google no es válido, venció, es de otra aplicación o su correo no está verificado.
+  409:
+    description: El correo ya está vinculado a otra cuenta de Google.
+  503:
+    description: El inicio con Google no está configurado, o no se pudo contactar a Google.

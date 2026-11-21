@@ -23,9 +23,10 @@ class Usuario(Modelo):
     fecha_registro: datetime | None
     cedula: str | None = None  # None en cuentas anteriores a pedirla (p. ej. el administrador)
     correo_verificado: bool = True  # False hasta que confirma el código enviado a su correo
+    google_sub: str | None = None  # cuenta de Google vinculada (nunca se envía al cliente)
 
     # Nunca se envía al cliente.
-    CAMPOS_PRIVADOS: ClassVar[frozenset[str]] = frozenset({"password_hash"})
+    CAMPOS_PRIVADOS: ClassVar[frozenset[str]] = frozenset({"password_hash", "google_sub"})
 
     @property
     def es_admin(self) -> bool:
