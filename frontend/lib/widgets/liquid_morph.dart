@@ -115,26 +115,33 @@ class SelectorLiquidMorph<T> extends StatelessWidget {
                           borderRadius: BorderRadius.circular(14),
                           onTap: i == indice ? null : () => onCambio(opcion.valor),
                           child: Center(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                if (opcion.icono != null) ...[
-                                  Icon(
-                                    opcion.icono,
-                                    size: 17,
-                                    color: i == indice ? Colors.white : AppColors.textoSecundario,
-                                  ),
-                                  const SizedBox(width: 6),
-                                ],
-                                Text(
-                                  opcion.etiqueta,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: i == indice ? FontWeight.w800 : FontWeight.w600,
-                                    color: i == indice ? Colors.white : AppColors.textoPrincipal,
-                                  ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (opcion.icono != null) ...[
+                                      Icon(
+                                        opcion.icono,
+                                        size: 17,
+                                        color: i == indice ? Colors.white : AppColors.textoSecundario,
+                                      ),
+                                      const SizedBox(width: 6),
+                                    ],
+                                    Text(
+                                      opcion.etiqueta,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: i == indice ? FontWeight.w800 : FontWeight.w600,
+                                        color: i == indice ? Colors.white : AppColors.textoPrincipal,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
                           ),
                         ),

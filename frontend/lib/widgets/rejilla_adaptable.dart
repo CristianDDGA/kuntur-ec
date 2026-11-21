@@ -18,6 +18,7 @@ class RejillaAdaptable extends StatelessWidget {
         final columnas = ((caja.maxWidth + espacio) / (anchoMinimoColumna + espacio)).floor().clamp(1, 4);
         if (columnas == 1) {
           return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               for (final h in hijos) Padding(padding: EdgeInsets.only(bottom: espacio), child: h),
             ],

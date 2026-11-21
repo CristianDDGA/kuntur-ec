@@ -35,9 +35,14 @@ class ControlPaginas extends StatelessWidget {
             onPressed: anterior ? () => onCambiar(pagina - 1) : null,
             icon: const Icon(Icons.chevron_left),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text('Página $pagina de $totalPaginas', style: AppTextStyles.subtitulo.copyWith(fontSize: 15)),
+          Flexible(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text('Página $pagina de $totalPaginas', style: AppTextStyles.subtitulo.copyWith(fontSize: 15)),
+              ),
+            ),
           ),
           IconButton.outlined(
             tooltip: 'Página siguiente',

@@ -49,7 +49,7 @@ class _BotonGoogleState extends ConsumerState<BotonGoogle> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 20),
+        const SizedBox(height: 10),
         const Row(
           children: [
             Expanded(child: Divider()),
@@ -60,7 +60,7 @@ class _BotonGoogleState extends ConsumerState<BotonGoogle> {
             Expanded(child: Divider()),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
         if (cargando)
           const Center(child: SizedBox(height: 28, width: 28, child: CircularProgressIndicator(strokeWidth: 3)))
         else

@@ -622,10 +622,17 @@ class _Resumen extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              // Total cinético: cada cambio de la selección reasienta el monto.
-              OdometroCinetico(
-                texto: Formatos.dinero(subtotal + (iva ?? 0)),
-                estilo: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.azul),
+              // Total cinético: cada cambio de la selección reasienta el monto sin desbordar.
+              Flexible(
+                flex: 0,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: OdometroCinetico(
+                    texto: Formatos.dinero(subtotal + (iva ?? 0)),
+                    estilo: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.azul),
+                  ),
+                ),
               ),
             ],
           ),

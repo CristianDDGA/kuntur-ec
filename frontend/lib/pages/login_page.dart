@@ -87,7 +87,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   prefixIcon: Icon(Icons.mail_outline),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               // El foco en la contraseña mueve la onda líquida del fondo.
               Focus(
                 skipTraversal: true,
@@ -103,13 +103,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
               ),
               if (error != null) ...[
-                const SizedBox(height: 16),
+                const SizedBox(height: 10),
                 AvisoInline(texto: error),
               ],
-              const SizedBox(height: 24),
+              const SizedBox(height: 14),
               BotonDegradado(texto: 'Iniciar sesión', cargando: cargando, onPressed: _enviar),
               const BotonGoogle(),
-              const SizedBox(height: 12),
+              const SizedBox(height: 4),
               // Wrap: si no cabe en una línea (pantallas angostas) el enlace baja a la siguiente.
               Wrap(
                 alignment: WrapAlignment.center,

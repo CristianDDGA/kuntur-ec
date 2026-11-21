@@ -59,7 +59,7 @@ class TarjetaVuelo extends StatelessWidget {
                   const Divider(height: 24, color: Color(0xFFF1F5F9)),
                   LayoutBuilder(
                     builder: (context, constraints) {
-                      final esEstrecho = constraints.maxWidth < 460;
+                      final esEstrecho = constraints.maxWidth < 540;
                       if (esEstrecho) {
                         return Row(
                           children: [
@@ -87,19 +87,28 @@ class TarjetaVuelo extends StatelessWidget {
                         children: [
                           const Icon(Icons.luggage_outlined, size: 16, color: Color(0xFF64748B)),
                           const SizedBox(width: 6),
-                          const Text(
-                            'Equipaje de mano incluido',
-                            style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                          const Expanded(
+                            child: Text(
+                              'Equipaje de mano incluido',
+                              style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          const Spacer(),
+                          const SizedBox(width: 8),
                           const Text('Por persona', style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
                           const SizedBox(width: 8),
-                          OdometroCinetico(
-                            texto: Formatos.dinero(vuelo.precioCentavos),
-                            estilo: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF0F172A),
+                          Flexible(
+                            flex: 0,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: OdometroCinetico(
+                                texto: Formatos.dinero(vuelo.precioCentavos),
+                                estilo: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 14),
@@ -179,14 +188,19 @@ class _Extremo extends StatelessWidget {
   final CrossAxisAlignment alinear;
 
   @override
-  Widget build(BuildContext context) => ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 120),
-        child: Column(
-          crossAxisAlignment: alinear,
-          children: [
-            Text(hora, style: AppTextStyles.subtitulo.copyWith(fontSize: 22)),
-            Text(ciudad, style: AppTextStyles.cuerpo, overflow: TextOverflow.ellipsis, maxLines: 1),
-          ],
+  Widget build(BuildContext context) => Flexible(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 132),
+          child: Column(
+            crossAxisAlignment: alinear,
+            children: [
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(hora, style: AppTextStyles.subtitulo.copyWith(fontSize: 22)),
+              ),
+              Text(ciudad, style: AppTextStyles.cuerpo, overflow: TextOverflow.ellipsis, maxLines: 1),
+            ],
+          ),
         ),
       );
 }
