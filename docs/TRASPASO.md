@@ -6,7 +6,7 @@ queda son entregables y decisiones (sección 5).
 ## 1. Estado
 
 Sistema de reservas de vuelos con **SOA**: API REST **Flask** (MVC) + cliente **Flutter web** + **Supabase** (PostgreSQL).
-Rama `develop` al día con todo lo hecho (PR #1–#17). Pruebas: **pytest 646**, **flutter test 429**, `flutter analyze` sin avisos.
+Rama `develop` al día con todo lo hecho hasta el PR #20; la rama `feature/pendientes-final` está pendiente de PR. Pruebas: **pytest 651**, **flutter test 430**, `flutter analyze` sin avisos.
 
 Hecho (detalle en `docs/PLANIFICACION.md`, sección 8):
 - Núcleo: usuarios, JWT, vuelos, reservas con asientos concretos y concurrencia, IVA con historial, comprobante XML.
@@ -21,16 +21,15 @@ Hecho (detalle en `docs/PLANIFICACION.md`, sección 8):
 - `CompletarCedulaPage` (`frontend/lib/pages/completar_cedula_page.dart`) y `backend/services/usuario_service.py`: muestra nombre precargado de Google (editable; solo se envía en `PUT /usuarios/cedula` si cambia), correo verificado y cédula; `PanelAutenticacion` ahora incluye regreso al inicio.
 - `Formatos.dinero` (`frontend/lib/models/vuelo.dart`): formato `Símbolo + Espacio + Miles con coma + Decimales con punto` (ej. `$ 10,000.00`).
 - Mejoras de tarjetas (`tarjeta_vuelo.dart`, `tarjeta_reserva.dart`), ancho web (`kuntur_scaffold.dart` a 980 px), `reserva_detalle_page.dart` y `comprobante_page.dart` (botón `Volver a reserva`, `Copiar XML` y `Descargar factura (XML)`).
-- Pruebas verificadas en esta rama: `pytest` **646** pasadas, `flutter test` **429** pasadas, `flutter analyze` sin avisos.
 
 **Diseño web adaptable (rama `feature/ajuste-ancho-web`, pendiente de PR a `develop`):** ancho de contenido 1200 px (portada 1240 px),
 barra de desplazamiento en el borde de la ventana, `RejillaAdaptable` (2 columnas en `VuelosPage`/`ReservasPage`, hasta 4 en la portada),
 carrusel a pantalla completa con foto por región, `migas.dart` corregido y descarga real del XML (`services/descarga_web.dart`).
 Las fotos de `frontend/assets/regiones/` (`sierra.jpg`, `costa.jpg`, `oriente.jpg`, `galapagos.jpg`) son el fondo del carrusel; se pueden
-reemplazar por otras con el mismo nombre. Si falta alguna, se ve el degradado. Detalle para el informe en `docs/USABILIDAD.md` y fila Z7 de `docs/PLANIFICACION.md`. Pruebas: `flutter test` **429**, `flutter analyze` limpio.
+reemplazar por otras con el mismo nombre. Si falta alguna, se ve el degradado. Detalle para el informe en `docs/USABILIDAD.md` y fila Z7 de `docs/PLANIFICACION.md`. 
 
 **Pendientes finales (rama `feature/pendientes-final`):** destinos de la portada desde la BD (`GET /api/vuelos/destinos`, público; con respaldo si la API
-no responde) y **resumen de ventas** del administrador (`GET /api/reservas/resumen` + tarjeta en `AdminPage`). Pruebas: pytest **650**, flutter test **430**.
+no responde) y **resumen de ventas** del administrador (`GET /api/reservas/resumen` + tarjeta en `AdminPage`). Pruebas finales: pytest **651**, flutter test **430**, `flutter analyze` limpio.
 
 ## 2. Cómo correrlo
 
