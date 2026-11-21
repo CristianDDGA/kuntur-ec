@@ -51,7 +51,7 @@ void main() {
       horaSalida: const Duration(hours: 8),
       horaLlegada: const Duration(hours: 8, minutes: 55),
       precio: '75.50',
-      capacidad: 80,
+      avionId: 7,
     ));
     expect(vuelo.id, 3);
     expect((api.llamada('POST', '/vuelos').cuerpo as Map)['hora_llegada'], '08:55');

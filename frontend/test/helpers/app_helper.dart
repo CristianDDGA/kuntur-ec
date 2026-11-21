@@ -6,6 +6,7 @@ import 'package:vuelos_app/config/providers.dart';
 import 'package:vuelos_app/pages/inicio_page.dart';
 import 'package:vuelos_app/main.dart';
 import 'package:vuelos_app/services/auth_service.dart';
+import 'package:vuelos_app/services/avion_service.dart';
 import 'package:vuelos_app/services/iva_service.dart';
 import 'package:vuelos_app/services/reserva_service.dart';
 import 'package:vuelos_app/services/sistema_service.dart';
@@ -34,6 +35,7 @@ Future<void> abrirApp(
   await tester.pumpWidget(ProviderScope(
     overrides: [
       authServiceProvider.overrideWithValue(AuthService(client, tokens ?? InMemoryTokenStorage())),
+      avionServiceProvider.overrideWithValue(AvionService(client)),
       sistemaServiceProvider.overrideWithValue(SistemaService(client)),
       vueloServiceProvider.overrideWithValue(VueloService(client)),
       ivaServiceProvider.overrideWithValue(IvaService(client)),

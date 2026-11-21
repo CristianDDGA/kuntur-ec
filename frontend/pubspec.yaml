@@ -33,6 +33,7 @@ dependencies:
 
   # Politica del proyecto: version exacta = ANTEPENULTIMA estable de cada paquete.
   cupertino_icons: 1.0.8
+  file_picker: 13.3.2
   flutter_riverpod: 3.4.2
   go_router: 18.1.1
   http: 1.4.0

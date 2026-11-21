@@ -1,0 +1,39 @@
+# Contrato del servicio aviones: Previsualizar un CSV de aviones (solo administrador)
+summary: "Revisar un CSV de aviones sin guardarlo (solo administrador)"
+description: |
+  Envíe el archivo CSV como cuerpo de la petición con `Content-Type: text/csv` (UTF-8, máximo 1 MB y 500 aviones).
+  Encabezado obligatorio: `matricula;modelo;filas` (también se acepta la coma). `filas` va de 1 a 50 y cada fila
+  tiene 4 asientos (A-D). No guarda nada: devuelve qué se importaría y los errores por línea.
+tags: [Aviones]
+security: [{Bearer: []}]
+consumes: [text/csv]
+produces: [application/json, application/xml]
+parameters:
+  - in: body
+    name: body
+    required: true
+    schema: {type: string, example: "matricula;modelo;filas\nHC-ABC;Airbus A320;30"}
+responses:
+  200:
+    description: Resumen del archivo.
+    schema:
+      type: object
+      properties:
+        total_filas: {type: integer}
+        nuevos: {type: integer}
+        existentes: {type: array, items: {type: string}}
+        con_errores: {type: integer}
+        errores:
+          type: array
+          items: {type: object, properties: {linea: {type: integer}, mensaje: {type: string}}}
+        vista_previa: {type: array, items: {type: object}}
+  400:
+    description: El archivo entero no sirve (vacío, encabezado incorrecto, no es UTF-8, demasiadas filas).
+  401:
+    description: Sin token o token inválido.
+  403:
+    description: El usuario no es administrador.
+  413:
+    description: El archivo supera 1 MB.
+  415:
+    description: El Content-Type no es text/csv.

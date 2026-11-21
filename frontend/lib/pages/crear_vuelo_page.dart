@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../config/app_router.dart';
 import '../config/app_theme.dart';
+import '../controllers/aviones_controller.dart';
 import '../controllers/crear_vuelo_controller.dart';
+import '../models/avion.dart';
 import '../models/validadores_vuelo.dart';
 import '../models/vuelo.dart';
 import '../services/api_exception.dart';
@@ -48,7 +50,7 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
   final _origen = TextEditingController();
   final _destino = TextEditingController();
   final _precio = TextEditingController();
-  final _capacidad = TextEditingController();
+  Avion? _avion;
   DateTime? _fecha;
   Duration? _salida;
   Duration? _llegada;
@@ -57,7 +59,7 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
   void initState() {
     super.initState();
     // PopScope necesita saber si hay datos escritos para preguntar antes de salir.
-    for (final c in [_origen, _destino, _precio, _capacidad]) {
+    for (final c in [_origen, _destino, _precio]) {
       c.addListener(_alCambiar);
     }
   }
@@ -68,7 +70,7 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
 
   @override
   void dispose() {
-    for (final c in [_origen, _destino, _precio, _capacidad]) {
+    for (final c in [_origen, _destino, _precio]) {
       c.removeListener(_alCambiar);
       c.dispose();
     }
@@ -77,7 +79,8 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
 
   /// Hay algo escrito o elegido: salir sin guardar perdería el formulario.
   bool get _sucio =>
-      [_origen, _destino, _precio, _capacidad].any((c) => c.text.trim().isNotEmpty) ||
+      [_origen, _destino, _precio].any((c) => c.text.trim().isNotEmpty) ||
+      _avion != null ||
       _fecha != null ||
       _salida != null ||
       _llegada != null;
@@ -92,7 +95,7 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
           horaSalida: _salida!,
           horaLlegada: _llegada!,
           precio: ValidadoresVuelo.normalizarPrecio(_precio.text),
-          capacidad: int.parse(_capacidad.text.trim()),
+          avionId: _avion!.id,
         ));
     if (vuelo != null && mounted) {
       mostrarAviso(context, 'Vuelo ${vuelo.codigo} creado correctamente.');
@@ -145,12 +148,11 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
     return resto == 0 ? '$horas h' : '$horas h $resto min';
   }
 
-  /// Filas de la cabina **3 + pasillo + 3** para la capacidad escrita, o `null`
-  /// mientras la capacidad no sea un entero válido.
+  /// Filas de la cabina **3 + pasillo + 3** del avión elegido (6 asientos por fila visual), o `null`
+  /// mientras no se haya elegido avión.
   int? get _filasCabina {
-    final capacidad = int.tryParse(_capacidad.text.trim());
-    if (capacidad == null || capacidad < 1 || capacidad > ValidadoresVuelo.capacidadMax) return null;
-    return (capacidad / 6).ceil();
+    final avion = _avion;
+    return avion == null ? null : (avion.capacidad / 6).ceil();
   }
 
   /// Una ciudad frecuente resalta cuando ya es el origen o el destino escrito.
@@ -246,6 +248,55 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
     }
   }
 
+  /// Selector del avión: la capacidad del vuelo es la del avión (se cargan por CSV).
+  Widget _campoAvion(AsyncValue<List<Avion>> aviones) {
+    return aviones.when(
+      loading: () => const InputDecorator(
+        decoration: InputDecoration(labelText: 'Avión', prefixIcon: Icon(Icons.airplanemode_active)),
+        child: Text('Cargando aviones…', style: AppTextStyles.cuerpo),
+      ),
+      error: (e, _) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AvisoInline(texto: mensajeDeError(e)),
+          TextButton(onPressed: () => ref.invalidate(avionesProvider), child: const Text('Reintentar')),
+        ],
+      ),
+      data: (lista) {
+        if (lista.isEmpty) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const AvisoInline(
+                tipo: TipoAviso.info,
+                texto: 'Aún no hay aviones. Importe un CSV para poder crear vuelos.',
+              ),
+              TextButton(
+                onPressed: () => context.push(AppRoutes.importarAviones),
+                child: const Text('Importar aviones'),
+              ),
+            ],
+          );
+        }
+        return DropdownButtonFormField<Avion>(
+          // Al recargar la lista se conserva el avión elegido si sigue existiendo.
+          initialValue: lista.where((a) => a.id == _avion?.id).firstOrNull,
+          isExpanded: true,
+          decoration: const InputDecoration(
+            labelText: 'Avión',
+            prefixIcon: Icon(Icons.airplanemode_active),
+            helperText: 'Define la capacidad y el mapa de asientos.',
+          ),
+          items: [
+            for (final a in lista) DropdownMenuItem(value: a, child: Text(a.etiqueta, overflow: TextOverflow.ellipsis)),
+          ],
+          onChanged: (a) => setState(() => _avion = a),
+          validator: (a) => a == null ? 'Elija el avión del vuelo.' : null,
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final estado = ref.watch(crearVueloControllerProvider);
@@ -279,19 +330,7 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
       inputFormatters: ValidadoresVuelo.entradaPrecio,
       validador: ValidadoresVuelo.precio,
     );
-    final capacidad = CampoTextoKuntur(
-      etiqueta: 'Capacidad (asientos)',
-      controlador: _capacidad,
-      icono: Icons.event_seat_outlined,
-      mostrarLimpiar: true,
-      hint: '80',
-      ayuda: 'De 1 a ${ValidadoresVuelo.capacidadMax} asientos.',
-      tipoTeclado: TextInputType.number,
-      inputFormatters: ValidadoresVuelo.entradaCapacidad,
-      textInputAction: TextInputAction.done,
-      onEnviado: (_) => _enviar(),
-      validador: ValidadoresVuelo.capacidad,
-    );
+    final avion = _campoAvion(ref.watch(avionesProvider));
     final fecha = CampoSelector<DateTime>(
       etiqueta: 'Fecha',
       icono: Icons.calendar_month_outlined,
@@ -399,7 +438,7 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
                             FilaDetalle(etiqueta: 'Duración estimada del vuelo', valor: duracion),
                           ],
                           const SizedBox(height: 14),
-                          fila(precio, capacidad),
+                          fila(precio, avion),
                           if (error != null) ...[
                             const SizedBox(height: 16),
                             AvisoInline(texto: error),

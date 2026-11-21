@@ -8,6 +8,7 @@ import '../pages/inicio_page.dart';
 import '../pages/admin_page.dart';
 import '../pages/comprobante_page.dart';
 import '../pages/crear_vuelo_page.dart';
+import '../pages/importar_aviones_page.dart';
 import '../pages/login_page.dart';
 import '../pages/no_encontrada_page.dart';
 import '../pages/registro_page.dart';
@@ -35,6 +36,7 @@ class AppRoutes {
   static String asientosDeLaReserva(int id) => '/reservas/$id/asientos';
   static const admin = '/admin';
   static const nuevoVuelo = '/admin/vuelos/nuevo';
+  static const importarAviones = '/admin/aviones/importar';
   static String vuelo(int id) => '/vuelos/$id';
 
   /// Se pueden ver sin haber iniciado sesión.
@@ -124,6 +126,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: AppRoutes.admin, builder: (_, _) => const AdminPage()),
       GoRoute(path: AppRoutes.nuevoVuelo, builder: (_, _) => const CrearVueloPage()),
+      GoRoute(path: AppRoutes.importarAviones, builder: (_, _) => const ImportarAvionesPage()),
       GoRoute(
         path: '/vuelos/:id',
         // Un id que no es un entero positivo razonable ("/vuelos/abc", "/vuelos/0", 20 dígitos) vuelve a la

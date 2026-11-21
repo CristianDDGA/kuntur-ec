@@ -45,6 +45,24 @@ CREATE TABLE IF NOT EXISTS vuelos (
 CREATE INDEX IF NOT EXISTS ix_vuelos_busqueda ON vuelos (lower(origen), lower(destino), fecha);
 
 -- ---------------------------------------------------------------------
+-- aviones: se cargan con un CSV (matrícula, modelo, filas). Cada fila del avión tiene 4 asientos
+-- (A-D), así que la capacidad = filas x 4 y los asientos "1A"... se generan a partir de ahí.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS aviones (
+    id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    matricula   VARCHAR(10) NOT NULL CHECK (matricula ~ '^[A-Z0-9-]{3,10}$'),
+    modelo      VARCHAR(60) NOT NULL CHECK (btrim(modelo) <> ''),
+    filas       INTEGER     NOT NULL CHECK (filas BETWEEN 1 AND 50),
+    fecha_alta  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_aviones_matricula ON aviones (matricula);
+
+-- El vuelo recuerda con qué avión se opera (NULL en los vuelos creados antes de existir los aviones).
+ALTER TABLE vuelos ADD COLUMN IF NOT EXISTS avion_id BIGINT REFERENCES aviones (id) ON DELETE RESTRICT;
+CREATE INDEX IF NOT EXISTS ix_vuelos_avion ON vuelos (avion_id);
+
+-- ---------------------------------------------------------------------
 -- tarifas_iva: historial del IVA (cambiarlo = insertar una tarifa nueva)
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS tarifas_iva (
@@ -136,6 +154,7 @@ ALTER TABLE vuelos ADD CONSTRAINT ck_vuelos_capacidad_maxima CHECK (capacidad BE
 -- leerlas; solo nuestro backend, que se conecta como dueño de las tablas.
 -- ---------------------------------------------------------------------
 ALTER TABLE usuarios    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE aviones     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vuelos      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tarifas_iva ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reservas    ENABLE ROW LEVEL SECURITY;

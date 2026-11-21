@@ -12,6 +12,7 @@ Future<void> _abrirFormulario(WidgetTester tester) async {
   final client = RouteFakeRestClient({
     'GET /auth/perfil': {'usuario': usuarioAdmin},
     'GET /vuelos': sinVuelos,
+    'GET /aviones': listaAviones,
   });
   await abrirApp(tester, client: client, tokens: InMemoryTokenStorage('jwt'));
   ProviderScope.containerOf(tester.element(find.byType(MaterialApp)))

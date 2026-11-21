@@ -17,6 +17,7 @@ Future<RouteFakeRestClient> _abrirFormulario(WidgetTester tester, Map<String, Ob
   final client = RouteFakeRestClient({
     'GET /auth/perfil': {'usuario': usuario},
     'GET /vuelos': sinVuelos,
+    'GET /aviones': listaAviones,
     ...rutas,
   });
   await abrirApp(tester, client: client, tokens: InMemoryTokenStorage('jwt'));
@@ -44,6 +45,15 @@ Future<void> _elegirHora(WidgetTester tester, String etiqueta) async {
   await tester.pumpAndSettle();
 }
 
+/// Elige el avión HC-ABC en el selector.
+Future<void> _elegirAvion(WidgetTester tester) async {
+  await tester.ensureVisible(find.text('Avión'));
+  await tester.tap(find.text('Avión'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.textContaining('HC-ABC').last);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('un cliente no puede abrir el formulario: vuelve a la lista', (tester) async {
     await _abrirFormulario(tester, {}, usuario: usuarioAna);
@@ -63,7 +73,7 @@ void main() {
     expect(find.text('Elija la fecha del vuelo.'), findsOneWidget);
     expect(find.text('La hora de salida es obligatoria.'), findsOneWidget);
     expect(find.text('El precio es obligatorio.'), findsOneWidget);
-    expect(find.text('La capacidad es obligatoria.'), findsOneWidget);
+    expect(find.text('Elija el avión del vuelo.'), findsOneWidget);
     expect(api.llamadas.where((l) => l.metodo == 'POST'), isEmpty);
   });
 
@@ -100,19 +110,10 @@ void main() {
     expect(find.text('No puede superar 80 caracteres.'), findsNothing);
   });
 
-  testWidgets('precio y capacidad: no pasan de sus límites y siempre se pueden borrar o limpiar', (tester) async {
+  testWidgets('el precio se puede borrar con la X y no pide capacidad (la define el avión)', (tester) async {
     await _abrirFormulario(tester, {});
     final precio = tester.widget<TextFormField>(campo('Precio por persona (USD)')).controller!;
-    final capacidad = tester.widget<TextFormField>(campo('Capacidad (asientos)')).controller!;
-
-    await tester.enterText(campo('Capacidad (asientos)'), '90');
-    await tester.enterText(campo('Capacidad (asientos)'), '201'); // pasaría de 200: se ignora
-    await tester.pump();
-    expect(capacidad.text, '90');
-    await tester.enterText(campo('Capacidad (asientos)'), '9'); // borrar un dígito
-    await tester.enterText(campo('Capacidad (asientos)'), ''); // y vaciar
-    await tester.pump();
-    expect(capacidad.text, isEmpty);
+    expect(find.text('Capacidad (asientos)'), findsNothing);
 
     await tester.enterText(campo('Precio por persona (USD)'), '75.5');
     await tester.pump();
@@ -121,6 +122,27 @@ void main() {
     await tester.pump();
     expect(precio.text, isEmpty);
     expect(find.byTooltip('Borrar'), findsNothing);
+  });
+
+  testWidgets('elegir un avión muestra su cabina en la vista previa', (tester) async {
+    await _abrirFormulario(tester, {});
+    expect(find.textContaining('Cabina 3+3'), findsNothing);
+
+    await _elegirAvion(tester);
+
+    expect(find.text('Cabina 3+3 · 14 filas'), findsOneWidget); // 80 asientos / 6 por fila = 14 filas visuales
+  });
+
+  testWidgets('sin aviones registrados avisa y lleva a importarlos', (tester) async {
+    await _abrirFormulario(tester, {'GET /aviones': {'total': 0, 'aviones': []}});
+
+    expect(find.textContaining('Aún no hay aviones'), findsOneWidget);
+    await tester.ensureVisible(find.text('Importar aviones'));
+    await tester.tap(find.text('Importar aviones'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Subir archivo'), findsNothing);
+    expect(find.textContaining('matricula;modelo;filas'), findsOneWidget);
   });
 
   testWidgets('hoy, la hora sugerida es una posterior a la actual y no da error', (tester) async {
@@ -142,7 +164,7 @@ void main() {
     await escribir(tester, 'Origen', '  Quito ');
     await escribir(tester, 'Destino', 'Guayaquil');
     await escribir(tester, 'Precio por persona (USD)', '75,5');
-    await escribir(tester, 'Capacidad (asientos)', '80');
+    await _elegirAvion(tester);
     await _elegirFecha(tester, 'Fecha');
     await _elegirHora(tester, 'Hora de salida');
     await _elegirHora(tester, 'Hora de llegada');
@@ -155,7 +177,8 @@ void main() {
     expect(cuerpo.containsKey('codigo'), isFalse); // el código lo genera el servidor
     expect(cuerpo['origen'], 'Quito');
     expect(cuerpo['precio'], '75.5');
-    expect(cuerpo['capacidad'], 80);
+    expect(cuerpo['avion_id'], 7);
+    expect(cuerpo.containsKey('capacidad'), isFalse); // la capacidad la define el avión
     expect(cuerpo['hora_salida'], matches(RegExp(r'^\d{2}:\d{2}$')));
     expect(find.byType(VueloDetallePage), findsOneWidget);
   });
@@ -172,7 +195,7 @@ void main() {
     await escribir(tester, 'Origen', 'Quito');
     await escribir(tester, 'Destino', 'Guayaquil');
     await escribir(tester, 'Precio por persona (USD)', '75.50');
-    await escribir(tester, 'Capacidad (asientos)', '80');
+    await _elegirAvion(tester);
     await _elegirFecha(tester, 'Fecha');
     await _elegirHora(tester, 'Hora de salida');
     await _elegirHora(tester, 'Hora de llegada');
@@ -193,7 +216,7 @@ void main() {
     await escribir(tester, 'Origen', 'Quito');
     await escribir(tester, 'Destino', 'Guayaquil');
     await escribir(tester, 'Precio por persona (USD)', '75.50');
-    await escribir(tester, 'Capacidad (asientos)', '80');
+    await _elegirAvion(tester);
     await _elegirFecha(tester, 'Fecha');
     await _elegirHora(tester, 'Hora de salida');
     await _elegirHora(tester, 'Hora de llegada');

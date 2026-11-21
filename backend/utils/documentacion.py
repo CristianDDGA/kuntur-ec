@@ -35,6 +35,7 @@ _TEMPLATE = {
         {"name": "Usuarios", "description": "Servicio de Usuarios: registro de clientes."},
         {"name": "Autenticación", "description": "Servicio de Autenticación: login/logout con JWT."},
         {"name": "Vuelos", "description": "Servicio de Vuelos: búsqueda, detalle y alta (admin)."},
+        {"name": "Aviones", "description": "Servicio de Aviones: listado e importación por CSV (admin)."},
         {"name": "IVA", "description": "Servicio de IVA: tarifa vigente, historial y cambio (admin)."},
         {"name": "Reservas", "description": "Servicio de Reservas: crear, consultar, modificar, cancelar y comprobante XML."},
     ],

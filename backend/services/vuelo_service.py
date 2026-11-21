@@ -19,6 +19,7 @@ from utils.limites import CODIGO_VUELO as MAX_LARGO_CODIGO
 from utils.validaciones import (
     entero,
     fecha_iso,
+    identificador,
     hora_hhmm,
     nombre_propio,
     precio,
@@ -28,7 +29,7 @@ from utils.validaciones import (
 
 _COLUMNAS = (
     "id, codigo, origen, destino, fecha, hora_salida, hora_llegada, "
-    "precio, capacidad, asientos_disponibles, version"
+    "precio, capacidad, asientos_disponibles, version, avion_id"
 )
 MAX_DIAS_ADELANTE = 730  # no se programan vuelos a más de 2 años
 _CODIGO = re.compile(rf"^[A-Z0-9-]{{2,{MAX_LARGO_CODIGO}}}$")
@@ -153,9 +154,19 @@ class VueloService:
             raise NotFoundError("El vuelo solicitado no existe.")
         return Vuelo.from_row(fila)
 
+    def _capacidad_del_avion(self, avion_id: int) -> int:
+        with self._db.transaccion() as cur:
+            cur.execute("SELECT filas FROM aviones WHERE id = %s", (avion_id,))
+            fila = cur.fetchone()
+        if fila is None:
+            raise NotFoundError("El avión indicado no existe.")
+        return fila["filas"] * len(COLUMNAS)
+
     def crear(self, datos: dict) -> Vuelo:
         """Crea un vuelo. Si `datos` trae `codigo` se respeta; si no, el sistema genera el siguiente (KT101, KT102...)."""
-        capacidad = entero(datos, "capacidad", 1, MAX_CAPACIDAD)
+        avion_id = identificador(datos, "avion_id") if datos.get("avion_id") is not None else None
+        # Con avión, la capacidad es la del avión (filas x 4); sin avión se sigue aceptando `capacidad`.
+        capacidad = self._capacidad_del_avion(avion_id) if avion_id else entero(datos, "capacidad", 1, MAX_CAPACIDAD)
         generar = datos.get("codigo") in (None, "")
         codigo = None if generar else texto_obligatorio(datos, "codigo", MAX_LARGO_CODIGO).upper().replace(" ", "")
         if codigo is not None and not _CODIGO.match(codigo):
@@ -188,12 +199,12 @@ class VueloService:
                 with self._db.transaccion() as cur:
                     cur.execute(
                         "INSERT INTO vuelos (codigo, origen, destino, fecha, hora_salida, hora_llegada, "
-                        "precio, capacidad, asientos_disponibles) "
-                        f"VALUES ({_SQL_CODIGO_NUEVO if generar else '%s'}, %s, %s, %s, %s, %s, %s, %s, %s) "
+                        "precio, capacidad, asientos_disponibles, avion_id) "
+                        f"VALUES ({_SQL_CODIGO_NUEVO if generar else '%s'}, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
                         f"RETURNING {_COLUMNAS}",
                         ((() if generar else (vuelo.codigo,)) + (
                             vuelo.origen, vuelo.destino, vuelo.fecha, vuelo.hora_salida, vuelo.hora_llegada,
-                            vuelo.precio, vuelo.capacidad, vuelo.asientos_disponibles,
+                            vuelo.precio, vuelo.capacidad, vuelo.asientos_disponibles, avion_id,
                         )),
                     )
                     return Vuelo.from_row(cur.fetchone())

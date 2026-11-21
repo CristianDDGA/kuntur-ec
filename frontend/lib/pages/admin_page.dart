@@ -49,6 +49,8 @@ class AdminPage extends ConsumerWidget {
           const SizedBox(height: 16),
           _TarjetaVuelos(onCrear: () => context.push(AppRoutes.nuevoVuelo)),
           const SizedBox(height: 16),
+          _TarjetaAviones(onImportar: () => context.push(AppRoutes.importarAviones)),
+          const SizedBox(height: 16),
           if (iva.isLoading && !iva.hasValue)
             const CargandoDetalleVista()
           else if (iva.hasError && !iva.hasValue)
@@ -89,6 +91,38 @@ class _TarjetaVuelos extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             FilledButton.icon(onPressed: onCrear, icon: const Icon(Icons.add), label: const Text('Crear')),
+          ],
+        ),
+      );
+}
+
+class _TarjetaAviones extends StatelessWidget {
+  const _TarjetaAviones({required this.onImportar});
+
+  final VoidCallback onImportar;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: AppDecorations.tarjeta,
+        child: Row(
+          children: [
+            const Icon(Icons.airplanemode_active, color: AppColors.azul, size: 30),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Aviones', style: AppTextStyles.subtitulo),
+                  SizedBox(height: 2),
+                  Text('Cargue la flota desde un archivo CSV. Los asientos se generan solos.',
+                      style: AppTextStyles.cuerpo),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            FilledButton.icon(
+                onPressed: onImportar, icon: const Icon(Icons.upload_file), label: const Text('Importar')),
           ],
         ),
       );
