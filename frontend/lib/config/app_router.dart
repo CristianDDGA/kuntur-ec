@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../controllers/sesion_controller.dart';
+import '../controllers/verificacion_controller.dart';
 import '../pages/estado_api_page.dart';
 import '../pages/inicio_page.dart';
 import '../pages/admin_page.dart';
@@ -16,6 +17,7 @@ import '../pages/reserva_detalle_page.dart';
 import '../pages/reservas_page.dart';
 import '../pages/seleccion_asientos_page.dart';
 import '../pages/splash_page.dart';
+import '../pages/verificar_correo_page.dart';
 import '../pages/vuelo_detalle_page.dart';
 import '../pages/vuelos_page.dart';
 
@@ -26,6 +28,7 @@ class AppRoutes {
   static const cargando = '/cargando';
   static const login = '/login';
   static const registro = '/registro';
+  static const verificarCorreo = '/verificar-correo';
   static const inicio = '/';
   static const vuelos = '/vuelos';
   static const estado = '/estado';
@@ -40,7 +43,7 @@ class AppRoutes {
   static String vuelo(int id) => '/vuelos/$id';
 
   /// Se pueden ver sin haber iniciado sesión.
-  static const publicas = {inicio, login, registro, estado};
+  static const publicas = {inicio, login, registro, verificarCorreo, estado};
 }
 
 /// A dónde volver después de la carga o del login ("/reservas/58"), o `null` si no es un destino seguro.
@@ -51,7 +54,7 @@ String? destinoSeguro(String? valor) {
   if (valor == null || valor.isEmpty || valor.length > 200) return null;
   if (!valor.startsWith('/') || valor.startsWith('//') || valor.contains(r'\') || valor.contains('://')) return null;
   final ruta = Uri.tryParse(valor)?.path ?? '';
-  const entrada = {AppRoutes.cargando, AppRoutes.login, AppRoutes.registro};
+  const entrada = {AppRoutes.cargando, AppRoutes.login, AppRoutes.registro, AppRoutes.verificarCorreo};
   return ruta.isEmpty || entrada.contains(ruta) ? null : valor;
 }
 
@@ -87,12 +90,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (!autenticado) {
         // La carga terminó sin sesión: a la página de inicio, o al login si iba a una pantalla protegida.
         if (ruta == AppRoutes.cargando) return volver == null || volver == AppRoutes.inicio ? AppRoutes.inicio : _con(AppRoutes.login, volver);
+        // Confirmar el correo solo tiene sentido si hay una cuenta esperándolo (se pierde al recargar la página).
+        if (ruta == AppRoutes.verificarCorreo && ref.read(verificacionPendienteProvider) == null) return AppRoutes.login;
         if (AppRoutes.publicas.contains(ruta)) return null;
         // Solo se recuerda el destino si la sesión se perdió sin querer (venció); al cerrarla a propósito, no.
         final seVencio = ref.read(avisoLoginProvider) != null;
         return _con(AppRoutes.login, seVencio ? destinoSeguro(state.uri.toString()) : null);
       }
-      if (ruta == AppRoutes.cargando || ruta == AppRoutes.login || ruta == AppRoutes.registro) {
+      if (ruta == AppRoutes.cargando || ruta == AppRoutes.login || ruta == AppRoutes.registro || ruta == AppRoutes.verificarCorreo) {
         return volver ?? AppRoutes.vuelos;
       }
       if (ruta == AppRoutes.inicio) return AppRoutes.vuelos; // con sesión, la página de inicio es la lista de vuelos
@@ -106,6 +111,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: AppRoutes.cargando, builder: (_, _) => const SplashPage()),
       GoRoute(path: AppRoutes.login, builder: (_, _) => const LoginPage()),
       GoRoute(path: AppRoutes.registro, builder: (_, _) => const RegistroPage()),
+      GoRoute(path: AppRoutes.verificarCorreo, builder: (_, _) => const VerificarCorreoPage()),
       GoRoute(path: AppRoutes.inicio, builder: (_, _) => const InicioPage()),
       GoRoute(path: AppRoutes.vuelos, builder: (_, _) => const VuelosPage()),
       GoRoute(path: AppRoutes.reservas, builder: (_, _) => const ReservasPage()),

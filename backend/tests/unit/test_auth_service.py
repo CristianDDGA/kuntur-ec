@@ -3,7 +3,7 @@ import pytest
 from services.auth_service import AuthService, Sesion
 from tests.factories import un_usuario
 from tests.fakes import BaseDatosFalsa
-from utils.excepciones import UnauthorizedError, ValidationError
+from utils.excepciones import CorreoNoVerificadoError, UnauthorizedError, ValidationError
 from utils.seguridad import CifradorContrasenas, EmisorTokens, huella_token
 
 cifrador = CifradorContrasenas(costo=4)
@@ -33,6 +33,18 @@ def test_login_correcto_emite_token_y_guarda_solo_su_huella():
     sql, params = db.cursor.consultas[0]
     assert "INSERT INTO tokens" in sql
     assert params[1] == huella_token(resultado["token"]) != resultado["token"]
+
+
+def test_login_con_correo_sin_verificar_avisa_solo_si_la_clave_es_correcta():
+    sin_verificar = un_usuario(password_hash=cifrador.cifrar("Clave2026"), correo_verificado=False)
+    db = BaseDatosFalsa()
+    with pytest.raises(CorreoNoVerificadoError) as e:
+        _servicio(db, sin_verificar).login({"correo": "juan@correo.com", "password": "Clave2026"})
+    assert e.value.code == "correo_no_verificado" and e.value.detalles == {"correo": "juan@correo.com"}
+    assert db.cursor.consultas == []  # no se emite ningún token
+    # con clave incorrecta no se revela que la cuenta existe ni que está sin verificar
+    with pytest.raises(UnauthorizedError, match="Correo o contraseña incorrectos"):
+        _servicio(db, sin_verificar).login({"correo": "juan@correo.com", "password": "Otra2026"})
 
 
 @pytest.mark.parametrize("usuario", [USUARIO, None], ids=["clave-incorrecta", "correo-inexistente"])

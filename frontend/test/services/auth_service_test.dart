@@ -43,6 +43,38 @@ void main() {
     });
   });
 
+  group('verificar el correo', () {
+    test('verificarCorreo envía correo y código recortados', () async {
+      final client = RouteFakeRestClient({'POST /auth/verificar-correo': {'mensaje': 'ok', 'correo': 'ana@correo.com'}});
+      await _servicio(client).verificarCorreo(correo: ' ana@correo.com ', codigo: ' 123456 ');
+      expect(client.llamada('POST', '/auth/verificar-correo').cuerpo, {'correo': 'ana@correo.com', 'codigo': '123456'});
+    });
+
+    test('un código malo llega como ServerFailure 400 con el mensaje de la API', () {
+      final client = RouteFakeRestClient({
+        'POST /auth/verificar-correo': const ServerFailure('El código no es correcto. Le quedan 4 intentos.', statusCode: 400),
+      });
+      expect(
+        _servicio(client).verificarCorreo(correo: 'ana@correo.com', codigo: '000000'),
+        throwsA(isA<ServerFailure>().having((e) => e.mensaje, 'mensaje', contains('Le quedan 4'))),
+      );
+    });
+
+    test('reenviarCodigo manda solo el correo', () async {
+      final client = RouteFakeRestClient({'POST /auth/reenviar-codigo': {'mensaje': 'ok'}});
+      await _servicio(client).reenviarCodigo(correo: ' ana@correo.com ');
+      expect(client.llamada('POST', '/auth/reenviar-codigo').cuerpo, {'correo': 'ana@correo.com'});
+    });
+
+    test('si el correo del registro no salió, codigoEnviado es false', () async {
+      final client = RouteFakeRestClient({
+        'POST /usuarios/registro': {'mensaje': 'ok', 'usuario': usuarioAna, 'verificacion_pendiente': true, 'codigo_enviado': false},
+      });
+      final r = await _servicio(client).registrar(nombre: 'Ana', cedula: '1710034065', correo: 'ana@correo.com', password: 'Clave2026');
+      expect(r.codigoEnviado, isFalse);
+    });
+  });
+
   group('registrar', () {
     test('devuelve el usuario creado y envía los datos tal cual', () async {
       final client = RouteFakeRestClient({'POST /usuarios/registro': {'mensaje': 'ok', 'usuario': usuarioAna}});
@@ -54,7 +86,8 @@ void main() {
         password: 'Clave2026',
       );
 
-      expect(usuario.rol, Rol.cliente);
+      expect(usuario.usuario.rol, Rol.cliente);
+      expect(usuario.codigoEnviado, isTrue);
       expect(client.llamada('POST', '/usuarios/registro').cuerpo,
           {'nombre': 'Ana Torres', 'cedula': '1710034065', 'correo': 'ana@correo.com', 'password': 'Clave2026'});
     });

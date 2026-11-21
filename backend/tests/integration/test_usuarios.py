@@ -18,10 +18,20 @@ class ServicioUsuariosFalso:
         return un_usuario(id=7, nombre=datos["nombre"], correo=datos["correo"])
 
 
+class VerificacionFalsa:
+    def __init__(self):
+        self.usuarios = []
+
+    def enviar_tras_registro(self, usuario):
+        self.usuarios.append(usuario)
+        return True
+
+
 @pytest.fixture
 def servicio(app):
     falso = ServicioUsuariosFalso()
     app.extensions["usuario_service"] = falso
+    app.extensions["verificacion_service"] = VerificacionFalsa()
     return falso
 
 
@@ -29,7 +39,8 @@ def test_registro_exitoso_devuelve_201_sin_contrasena(client, servicio):
     resp = client.post(URL, json={"nombre": "Ana", "cedula": "1710034065", "correo": "ana@correo.com", "password": "Clave2026"})
     assert resp.status_code == 201
     cuerpo = resp.get_json()
-    assert cuerpo["mensaje"] == "Usuario registrado correctamente."
+    assert cuerpo["mensaje"].startswith("Usuario registrado correctamente.")
+    assert cuerpo["verificacion_pendiente"] is True and cuerpo["codigo_enviado"] is True
     assert cuerpo["usuario"]["id"] == 7
     assert "password_hash" not in cuerpo["usuario"]
 

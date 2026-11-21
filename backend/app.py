@@ -22,12 +22,14 @@ from routes.usuarios_routes import usuarios_bp
 from routes.vuelos_routes import vuelos_bp
 from services.auth_service import AuthService
 from services.avion_service import AvionService
+from services.verificacion_service import VerificacionService
 from services.iva_service import IvaService
 from services.reserva_service import ReservaService
 from services.usuario_service import UsuarioService
 from services.vuelo_service import VueloService
 from utils.autenticacion import exigir_acceso_declarado
 from utils.convertidores import IdConverter
+from utils.correo import EnviadorLocal, EnviadorSmtp
 from utils.documentacion import init_docs
 from utils.formatos import JsonFormato, XmlFormato
 from utils.manejador_errores import register_error_handlers
@@ -52,13 +54,20 @@ def _agregar_cabeceras_seguras(app: Flask) -> None:
 def _registrar_servicios(app: Flask, settings: Settings, db: Database | None) -> None:
     """Servicios inyectados: las rutas los leen de app.extensions y las pruebas los reemplazan por fakes."""
     if db is None:
-        app.extensions.update(usuario_service=None, auth_service=None, vuelo_service=None, reserva_service=None, iva_service=None, avion_service=None)
+        app.extensions.update(usuario_service=None, auth_service=None, vuelo_service=None, reserva_service=None, iva_service=None, avion_service=None, verificacion_service=None)
         return
     usuarios = UsuarioService(db)
     app.extensions["vuelo_service"] = VueloService(db)
     app.extensions["reserva_service"] = ReservaService(db)
     app.extensions["iva_service"] = IvaService(db)
     app.extensions["avion_service"] = AvionService(db)
+    enviador = (
+        EnviadorSmtp(settings.smtp_host, settings.smtp_port, settings.smtp_user, settings.smtp_password, settings.smtp_from)
+        if settings.smtp_configurado
+        else EnviadorLocal()  # sin SMTP (solo permitido en desarrollo/pruebas): el código queda en el log
+    )
+    app.extensions["enviador_correo"] = enviador
+    app.extensions["verificacion_service"] = VerificacionService(db, enviador, settings.jwt_secret_key)
     app.extensions["usuario_service"] = usuarios
     app.extensions["auth_service"] = AuthService(
         db, usuarios, EmisorTokens(settings.jwt_secret_key, settings.jwt_expires_minutes)

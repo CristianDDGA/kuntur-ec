@@ -87,6 +87,20 @@ void main() {
     });
   });
 
+  group('código de verificación', () {
+    test('acepta exactamente 6 dígitos (con espacios en los extremos)', () {
+      expect(Validadores.codigoVerificacion('123456'), isNull);
+      expect(Validadores.codigoVerificacion(' 123456 '), isNull);
+    });
+
+    test('rechaza vacío, corto, largo y con letras', () {
+      expect(Validadores.codigoVerificacion(''), 'Ingrese el código que le enviamos.');
+      expect(Validadores.codigoVerificacion('12345'), 'El código tiene 6 dígitos.');
+      expect(Validadores.codigoVerificacion('1234567'), 'El código tiene 6 dígitos.');
+      expect(Validadores.codigoVerificacion('12345a'), 'El código tiene 6 dígitos.');
+    });
+  });
+
   group('correo', () {
     for (final valido in ['ana@correo.com', 'a.b+c@sub.dominio.ec', 'A_B-1@x.co', '  ana@correo.com  ']) {
       test('acepta "$valido"', () => expect(Validadores.correo(valido), isNull));

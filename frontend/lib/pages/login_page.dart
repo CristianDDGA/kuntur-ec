@@ -44,10 +44,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Future<void> _enviar() async {
     if (!_formulario.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
-    await ref.read(loginControllerProvider.notifier).ingresar(
+    final faltaVerificar = await ref.read(loginControllerProvider.notifier).ingresar(
           correo: _correo.text,
           password: _password.text,
         );
+    if (faltaVerificar && mounted) context.go(AppRoutes.verificarCorreo);
   }
 
   @override

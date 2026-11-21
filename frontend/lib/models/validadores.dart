@@ -14,6 +14,7 @@ class Validadores {
   static const int nombreMax = 100;
   static const int correoMax = 150;
   static const int cedulaLargo = 10;
+  static const int codigoLargo = 6;
   static const int passwordMin = 8;
   static const int passwordMax = 128;
   static const int passwordBytesMax = 72; // bcrypt solo considera los primeros 72 bytes
@@ -80,6 +81,19 @@ class Validadores {
   static List<TextInputFormatter> get entradaCedula => [
         FilteringTextInputFormatter.digitsOnly,
         LengthLimitingTextInputFormatter(cedulaLargo),
+      ];
+
+  /// Código de verificación del correo: 6 dígitos.
+  static String? codigoVerificacion(String? valor) {
+    final texto = (valor ?? '').trim();
+    if (texto.isEmpty) return 'Ingrese el código que le enviamos.';
+    if (!RegExp('^[0-9]{$codigoLargo}\$').hasMatch(texto)) return 'El código tiene $codigoLargo dígitos.';
+    return null;
+  }
+
+  static List<TextInputFormatter> get entradaCodigo => [
+        FilteringTextInputFormatter.digitsOnly,
+        LengthLimitingTextInputFormatter(codigoLargo),
       ];
 
   static String? correo(String? valor) {

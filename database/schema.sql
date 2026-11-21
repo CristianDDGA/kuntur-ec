@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     password_hash   VARCHAR(255) NOT NULL,
     rol             VARCHAR(10)  NOT NULL DEFAULT 'cliente' CHECK (rol IN ('cliente', 'admin')),
     cedula          VARCHAR(10)  CHECK (cedula ~ '^[0-9]{10}$'),
+    correo_verificado BOOLEAN    NOT NULL DEFAULT TRUE,
     fecha_registro  TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 
@@ -27,6 +28,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_usuarios_correo ON usuarios (lower(correo))
 -- agrega la columna en bases creadas antes.)
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS cedula VARCHAR(10) CHECK (cedula ~ '^[0-9]{10}$');
 CREATE UNIQUE INDEX IF NOT EXISTS ux_usuarios_cedula ON usuarios (cedula) WHERE cedula IS NOT NULL;
+
+-- Correo confirmado con un código. Las cuentas que ya existían quedan verificadas (DEFAULT TRUE); el registro
+-- inserta FALSE explícitamente, así que una cuenta nueva no puede iniciar sesión hasta confirmar su correo.
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS correo_verificado BOOLEAN NOT NULL DEFAULT TRUE;
 
 -- ---------------------------------------------------------------------
 -- vuelos
@@ -140,6 +145,18 @@ CREATE TABLE IF NOT EXISTS tokens (
 CREATE INDEX IF NOT EXISTS ix_tokens_usuario ON tokens (usuario_id);
 
 -- ---------------------------------------------------------------------
+-- codigos_verificacion: código de 6 dígitos enviado al correo al registrarse. Hay uno vigente por cuenta
+-- (uno nuevo reemplaza al anterior). Se guarda su huella HMAC, nunca el código.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS codigos_verificacion (
+    usuario_id   BIGINT      PRIMARY KEY REFERENCES usuarios (id) ON DELETE CASCADE,
+    codigo_hash  TEXT        NOT NULL,
+    expira       TIMESTAMPTZ NOT NULL,
+    intentos     INTEGER     NOT NULL DEFAULT 0 CHECK (intentos >= 0),
+    enviado_en   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ---------------------------------------------------------------------
 -- Control de concurrencia optimista (columna version)
 -- Cada UPDATE hace `version = version + 1`. Quien modifica envía la versión
 -- que leyó; si otro la cambió antes, el UPDATE ... WHERE version = ? no
@@ -167,3 +184,4 @@ ALTER TABLE tarifas_iva ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reservas    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reserva_asientos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tokens      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE codigos_verificacion ENABLE ROW LEVEL SECURITY;

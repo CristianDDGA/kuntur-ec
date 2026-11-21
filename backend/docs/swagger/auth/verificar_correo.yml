@@ -1,0 +1,28 @@
+# Contrato del servicio auth: Verificar el correo con el código
+summary: "Confirmar el correo con el código de 6 dígitos"
+description: |
+  Después de registrarse, la cuenta no puede iniciar sesión hasta confirmar el correo. El código llega por correo,
+  vence a los 10 minutos y admite 5 intentos; después hay que pedir otro con `/auth/reenviar-codigo`.
+tags: [Autenticación]
+consumes: [application/json]
+produces: [application/json, application/xml]
+parameters:
+  - in: body
+    name: body
+    required: true
+    schema:
+      type: object
+      required: [correo, codigo]
+      properties:
+        correo: {type: string, example: "ana@correo.com"}
+        codigo: {type: string, example: "483920", description: "6 dígitos"}
+responses:
+  200:
+    description: Correo verificado. Ya puede iniciar sesión.
+    schema:
+      type: object
+      properties:
+        mensaje: {type: string}
+        correo: {type: string}
+  400:
+    description: Código con formato inválido, incorrecto, vencido o con los intentos agotados (el mensaje lo explica).

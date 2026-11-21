@@ -29,3 +29,5 @@ responses:
     description: Demasiados intentos fallidos (5 en 15 minutos por IP y correo). Ver cabecera Retry-After.
   401:
     description: Correo o contraseña incorrectos.
+  403:
+    description: Credenciales correctas pero falta verificar el correo (error `correo_no_verificado`, con el campo `correo`).

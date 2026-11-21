@@ -18,7 +18,7 @@ from utils.validaciones import nombre_propio, texto_obligatorio
 
 MIN_LARGO_CONTRASENA = 8
 
-_COLUMNAS = "id, nombre, correo, password_hash, rol, fecha_registro, cedula"
+_COLUMNAS = "id, nombre, correo, password_hash, rol, fecha_registro, cedula, correo_verificado"
 
 
 class Cifrador(Protocol):
@@ -50,8 +50,8 @@ class UsuarioService:
         try:
             with self._db.transaccion() as cur:
                 cur.execute(
-                    f"INSERT INTO usuarios (nombre, correo, password_hash, rol, cedula) "
-                    f"VALUES (%s, %s, %s, %s, %s) RETURNING {_COLUMNAS}",
+                    f"INSERT INTO usuarios (nombre, correo, password_hash, rol, cedula, correo_verificado) "
+                    f"VALUES (%s, %s, %s, %s, %s, FALSE) RETURNING {_COLUMNAS}",  # nace sin verificar
                     (nombre, correo, self._cifrador.cifrar(contrasena), Rol.CLIENTE.value, cedula),
                 )
                 return Usuario.from_row(cur.fetchone())

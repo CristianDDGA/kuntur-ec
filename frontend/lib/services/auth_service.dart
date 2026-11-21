@@ -4,6 +4,14 @@ import 'api_exception.dart';
 import 'rest_client.dart';
 import 'token_storage.dart';
 
+/// Cuenta recién creada y si el correo con el código salió.
+class ResultadoRegistro {
+  const ResultadoRegistro({required this.usuario, required this.codigoEnviado});
+
+  final Usuario usuario;
+  final bool codigoEnviado;
+}
+
 /// Consume los servicios de Usuarios y Autenticación de la API
 /// (`/usuarios/registro`, `/auth/login`, `/auth/perfil`, `/auth/logout`).
 class AuthService {
@@ -23,8 +31,9 @@ class AuthService {
     return sesion;
   }
 
-  /// Crea una cuenta de cliente. No inicia sesión: eso lo decide el controlador.
-  Future<Usuario> registrar({
+  /// Crea una cuenta de cliente (sin verificar). No inicia sesión: antes hay que confirmar el correo con el código
+  /// que llega por correo ([verificarCorreo]).
+  Future<ResultadoRegistro> registrar({
     required String nombre,
     required String cedula,
     required String correo,
@@ -36,7 +45,18 @@ class AuthService {
     ));
     final usuario = json['usuario'];
     if (usuario is! JsonMap) throw const InvalidResponseFailure();
-    return Usuario.fromJson(usuario);
+    // `codigo_enviado` es false si el correo no salió: la persona puede pedir otro código en la pantalla de verificación.
+    return ResultadoRegistro(usuario: Usuario.fromJson(usuario), codigoEnviado: json['codigo_enviado'] != false);
+  }
+
+  /// `POST /auth/verificar-correo`: confirma el correo con el código de 6 dígitos.
+  Future<void> verificarCorreo({required String correo, required String codigo}) async {
+    asJsonMap(await _client.post('/auth/verificar-correo', body: {'correo': correo.trim(), 'codigo': codigo.trim()}));
+  }
+
+  /// `POST /auth/reenviar-codigo`: pide un código nuevo. Responde igual exista o no la cuenta.
+  Future<void> reenviarCodigo({required String correo}) async {
+    asJsonMap(await _client.post('/auth/reenviar-codigo', body: {'correo': correo.trim()}));
   }
 
   /// Usuario dueño del token guardado. Lanza [UnauthorizedFailure] si el token venció o fue revocado.

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vuelos_app/pages/vuelos_page.dart';
+import 'package:vuelos_app/pages/verificar_correo_page.dart';
 import 'package:vuelos_app/pages/registro_page.dart';
 import 'package:vuelos_app/services/api_exception.dart';
 
@@ -139,7 +139,7 @@ void main() {
     expect(find.byIcon(Icons.check_circle), findsNWidgets(3));
   });
 
-  testWidgets('registro correcto: crea la cuenta, inicia sesión y entra', (tester) async {
+  testWidgets('registro correcto: crea la cuenta (sin verificar) y pide el código, sin iniciar sesión', (tester) async {
     final tokens = InMemoryTokenStorage();
     final client = _api();
     usarPantallaGrande(tester);
@@ -151,11 +151,12 @@ void main() {
     await tocarBoton(tester, 'Crear cuenta');
     await tester.pumpAndSettle();
 
-    expect(client.rutasSolicitadas, ['POST /usuarios/registro', 'POST /auth/login', 'GET /vuelos']);
+    expect(client.rutasSolicitadas, ['POST /usuarios/registro']); // todavía no hay login
     expect(client.llamada('POST', '/usuarios/registro').cuerpo,
         {'nombre': 'Ana Torres', 'cedula': '1710034065', 'correo': 'ana@correo.com', 'password': 'Clave2026'}); // nombre normalizado
-    expect(find.byType(VuelosPage), findsOneWidget);
-    expect(await tokens.leer(), 'jwt-de-prueba');
+    expect(find.byType(VerificarCorreoPage), findsOneWidget);
+    expect(find.textContaining('ana@correo.com'), findsWidgets);
+    expect(await tokens.leer(), isNull); // sin sesión hasta confirmar el correo
   });
 
   testWidgets('correo repetido (409): muestra el mensaje y no inicia sesión', (tester) async {
@@ -171,18 +172,6 @@ void main() {
 
     expect(find.text('Ya existe una cuenta registrada con ese correo.'), findsOneWidget);
     expect(client.rutasSolicitadas, ['POST /usuarios/registro']);
-    expect(find.byType(RegistroPage), findsOneWidget);
-  });
-
-  testWidgets('cuenta creada pero el login automático falla: lo explica', (tester) async {
-    final client = _api(login: const NetworkFailure());
-    await _abrirRegistro(tester, client);
-
-    await _llenar(tester);
-    await tocarBoton(tester, 'Crear cuenta');
-    await tester.pumpAndSettle();
-
-    expect(find.textContaining('Su cuenta fue creada'), findsOneWidget);
     expect(find.byType(RegistroPage), findsOneWidget);
   });
 

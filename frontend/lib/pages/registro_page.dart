@@ -50,12 +50,13 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
   Future<void> _enviar() async {
     if (!_formulario.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
-    await ref.read(registroControllerProvider.notifier).registrar(
+    final creada = await ref.read(registroControllerProvider.notifier).registrar(
           nombre: _nombre.text,
           cedula: _cedula.text,
           correo: _correo.text,
           password: _password.text,
         );
+    if (creada && mounted) context.go(AppRoutes.verificarCorreo); // falta confirmar el correo
   }
 
   @override

@@ -24,8 +24,16 @@ def _servicio() -> UsuarioService:
 @publica
 def registrar():
     usuario = _servicio().registrar(cuerpo_json())
+    # La cuenta nace sin verificar: se envía el código al correo. Si el correo falla, la cuenta ya existe y la
+    # persona puede pedir otro código desde la pantalla de verificación.
+    codigo_enviado = current_app.extensions["verificacion_service"].enviar_tras_registro(usuario)
     return respond(
-        {"mensaje": "Usuario registrado correctamente.", "usuario": usuario.to_dict()},
+        {
+            "mensaje": "Usuario registrado correctamente. Revise su correo para confirmar la cuenta.",
+            "usuario": usuario.to_dict(),
+            "verificacion_pendiente": True,
+            "codigo_enviado": codigo_enviado,
+        },
         status=201,
         root="registro",
     )

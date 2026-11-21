@@ -7,7 +7,7 @@ from typing import Any
 from database import Database
 from models import EstadoToken, Rol, Usuario
 from services.usuario_service import UsuarioService
-from utils.excepciones import UnauthorizedError, ValidationError
+from utils.excepciones import CorreoNoVerificadoError, UnauthorizedError, ValidationError
 from utils.limitador import LimitadorIntentos
 from utils.limites import CONTRASENA as MAX_LARGO_CONTRASENA_LOGIN
 from utils.seguridad import CifradorContrasenas, EmisorTokens, huella_token
@@ -71,6 +71,10 @@ class AuthService:
             self._limitador.registrar_fallo(clave)
             raise UnauthorizedError(_CREDENCIALES_INVALIDAS)
         self._limitador.limpiar(clave)
+        if not usuario.correo_verificado:  # la contraseña es correcta, pero falta confirmar el correo
+            raise CorreoNoVerificadoError(
+                "Falta verificar su correo. Ingrese el código que le enviamos.", correo=usuario.correo
+            )
 
         emitido = self._emisor.emitir(usuario.id, usuario.rol.value)  # type: ignore[arg-type]
         with self._db.transaccion() as cur:
@@ -90,7 +94,7 @@ class AuthService:
         datos = self._emisor.leer(token)
         with self._db.transaccion() as cur:
             cur.execute(
-                "SELECT u.id, u.nombre, u.correo, u.password_hash, u.rol, u.fecha_registro, u.cedula "
+                "SELECT u.id, u.nombre, u.correo, u.password_hash, u.rol, u.fecha_registro, u.cedula, u.correo_verificado "
                 "FROM tokens t JOIN usuarios u ON u.id = t.usuario_id "
                 "WHERE t.token = %s AND t.usuario_id = %s AND t.estado = %s AND t.expiracion > now()",
                 (huella_token(token), datos.usuario_id, EstadoToken.ACTIVO.value),

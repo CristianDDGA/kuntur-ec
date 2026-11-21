@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 _ENTORNOS_LOCALES = frozenset({"development", "testing"})
 _CLAVE_JWT_LOCAL = "clave-local-solo-para-desarrollo"
-_OBLIGATORIAS_FUERA_DE_LOCAL = ("DATABASE_URL", "JWT_SECRET_KEY")
+_OBLIGATORIAS_FUERA_DE_LOCAL = ("DATABASE_URL", "JWT_SECRET_KEY", "SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD")
 _MIN_CARACTERES_CLAVE_JWT = 32
 
 
@@ -29,6 +29,15 @@ class Settings:
     jwt_secret_key: str
     jwt_expires_minutes: int
     cors_origins: tuple[str, ...]
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+
+    @property
+    def smtp_configurado(self) -> bool:
+        return bool(self.smtp_host and self.smtp_user and self.smtp_password)
 
     @property
     def is_testing(self) -> bool:
@@ -69,4 +78,9 @@ class Settings:
             jwt_secret_key=env.get("JWT_SECRET_KEY") or _CLAVE_JWT_LOCAL,
             jwt_expires_minutes=int(env.get("JWT_EXPIRES_MINUTES", "60")),
             cors_origins=tuple(o.strip() for o in env.get("CORS_ORIGINS", "*").split(",")),
+            smtp_host=env.get("SMTP_HOST", ""),
+            smtp_port=int(env.get("SMTP_PORT", "587")),
+            smtp_user=env.get("SMTP_USER", ""),
+            smtp_password=env.get("SMTP_PASSWORD", ""),
+            smtp_from=env.get("SMTP_FROM") or env.get("SMTP_USER", ""),
         )

@@ -22,6 +22,7 @@ class Usuario(Modelo):
     rol: Rol
     fecha_registro: datetime | None
     cedula: str | None = None  # None en cuentas anteriores a pedirla (p. ej. el administrador)
+    correo_verificado: bool = True  # False hasta que confirma el código enviado a su correo
 
     # Nunca se envía al cliente.
     CAMPOS_PRIVADOS: ClassVar[frozenset[str]] = frozenset({"password_hash"})

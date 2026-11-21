@@ -21,7 +21,9 @@ responses:
     schema:
       type: object
       properties:
-        mensaje: {type: string, example: "Usuario registrado correctamente."}
+        mensaje: {type: string, example: "Usuario registrado correctamente. Revise su correo para confirmar la cuenta."}
+        verificacion_pendiente: {type: boolean, example: true, description: "La cuenta no inicia sesión hasta confirmar el correo (POST /auth/verificar-correo)"}
+        codigo_enviado: {type: boolean, example: true, description: "false si el correo falló: se puede pedir otro código con /auth/reenviar-codigo"}
         usuario:
           type: object
           properties:
