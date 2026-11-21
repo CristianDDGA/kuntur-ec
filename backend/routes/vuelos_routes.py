@@ -35,6 +35,17 @@ def buscar():
 
 
 # =============================
+# GET - Destinos con vuelos próximos (portada pública)
+# =============================
+
+@vuelos_bp.route("/destinos", methods=["GET"])
+@swag_from(contrato("vuelos", "destinos"))
+@publica
+def destinos():
+    return respond(_servicio().destinos(), root="destinos")
+
+
+# =============================
 # GET - Obtener vuelo por ID
 # =============================
 

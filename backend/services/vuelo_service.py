@@ -126,6 +126,23 @@ class VueloService:
             )
             return PaginaVuelos([Vuelo.from_row(f) for f in cur.fetchall()], total, numero, tamano)
 
+    def destinos(self, limite: int = 8) -> dict:
+        """Destinos con vuelos próximos y la tarifa más baja de cada uno (para la portada pública)."""
+        with self._db.transaccion() as cur:
+            cur.execute(
+                "SELECT min(destino) AS destino, min(precio) AS precio_minimo, count(*) AS vuelos "
+                "FROM vuelos WHERE fecha > %s OR (fecha = %s AND hora_salida > %s) "
+                "GROUP BY lower(destino) ORDER BY min(precio), min(destino) LIMIT %s",
+                (self._hoy(), self._hoy(), self._hora_actual(), limite),
+            )
+            filas = cur.fetchall()
+        return {
+            "destinos": [
+                {"destino": f["destino"], "precio_minimo": f"{f['precio_minimo']:.2f}", "vuelos": f["vuelos"]}
+                for f in filas
+            ]
+        }
+
     def asientos(self, vuelo_id: int) -> dict:
         """Mapa de asientos: los que existen (por la capacidad) y cuáles ya están ocupados."""
         with self._db.transaccion() as cur:

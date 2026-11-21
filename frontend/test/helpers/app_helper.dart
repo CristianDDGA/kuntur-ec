@@ -44,6 +44,8 @@ Future<void> abrirApp(
       vueloServiceProvider.overrideWithValue(VueloService(client)),
       ivaServiceProvider.overrideWithValue(IvaService(client)),
       reservaServiceProvider.overrideWithValue(ReservaService(client)),
+      // Las pruebas que parten del login no deben registrar la llamada pública de la portada.
+      if (desdeLogin) destinosPopularesProvider.overrideWith((ref) async => []),
     ],
     child: const KunturApp(),
   ));

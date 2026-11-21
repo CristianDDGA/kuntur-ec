@@ -1,4 +1,5 @@
 import '../models/asientos.dart';
+import '../models/destino.dart';
 import '../models/vuelo.dart';
 import 'api_exception.dart';
 import 'rest_client.dart';
@@ -12,6 +13,13 @@ class VueloService {
   /// `GET /vuelos?origen=&destino=&fecha=&pagina=&por_pagina=`: una página de vuelos que aún no parten.
   Future<PaginaVuelos> buscar(FiltroVuelos filtro) async =>
       PaginaVuelos.fromJson(asJsonMap(await _client.get('/vuelos', query: filtro.consulta)));
+
+  /// `GET /vuelos/destinos`: ciudades con vuelos próximos y su tarifa mínima. Es público (portada).
+  Future<List<DestinoPopular>> destinos() async {
+    final lista = asJsonMap(await _client.get('/vuelos/destinos'))['destinos'];
+    if (lista is! List) throw const InvalidResponseFailure();
+    return [for (final d in lista) DestinoPopular.fromJson(asJsonMap(d))];
+  }
 
   /// `GET /vuelos/{id}`. Lanza [ServerFailure] con 404 si el vuelo no existe.
   Future<Vuelo> obtener(int id) async =>

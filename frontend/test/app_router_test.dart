@@ -23,12 +23,20 @@ void main() {
   }
 
   group('al arrancar', () {
-    testWidgets('sin token no llama a la API y muestra la página de inicio', (tester) async {
-      final client = api({});
+    testWidgets('sin token solo pide los destinos públicos y muestra la página de inicio', (tester) async {
+      final client = api({
+        'GET /vuelos/destinos': {
+          'destinos': [
+            {'destino': 'Loja', 'precio_minimo': '64.00', 'vuelos': 2},
+          ],
+        },
+      });
       await abrirApp(tester, client: client, desdeLogin: false);
 
       expect(find.byType(InicioPage), findsOneWidget);
-      expect(client.llamadas, isEmpty);
+      expect(client.rutasSolicitadas, ['GET /vuelos/destinos']); // nada de sesión ni de rutas protegidas
+      expect(find.text('Loja'), findsOneWidget);
+      expect(find.text('Desde \$64'), findsOneWidget);
     });
 
     testWidgets('con un token válido recupera la sesión y entra al inicio', (tester) async {

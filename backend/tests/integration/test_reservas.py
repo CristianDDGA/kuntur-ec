@@ -25,6 +25,10 @@ class ReservasFalso:
         self.llamadas.append(("listar", pagina, por_pagina))
         return PaginaReservas([_detalle(), _detalle()], total=2, pagina=1, por_pagina=10)
 
+    def resumen_ventas(self):
+        return {"reservas_confirmadas": 2, "reservas_canceladas": 1, "asientos_vendidos": 5, "subtotal": "100.00",
+                "iva": "12.00", "total": "112.00", "vuelos_top": []}
+
     def obtener(self, sesion, reserva_id):
         if reserva_id != 58:
             raise NotFoundError("La reserva solicitada no existe.")
@@ -153,3 +157,11 @@ def test_el_admin_recibe_403_en_todas_las_rutas_de_reservas(client, con_admin, m
 def test_el_cliente_sigue_reservando(client, con_admin):
     resp = client.post("/api/reservas", json={"vuelo_id": 1, "cantidad": 1}, headers=H)
     assert resp.status_code == 201
+
+
+def test_resumen_de_ventas_solo_para_el_admin(client, con_admin):
+    ok = client.get("/api/reservas/resumen", headers={"Authorization": "Bearer tok-admin"})
+    assert ok.status_code == 200
+    assert (ok.get_json()["total"], ok.get_json()["reservas_confirmadas"]) == ("112.00", 2)
+    assert client.get("/api/reservas/resumen", headers=H).status_code == 403  # un cliente no ve las ventas
+    assert client.get("/api/reservas/resumen").status_code == 401

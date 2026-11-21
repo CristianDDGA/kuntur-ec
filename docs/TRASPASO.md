@@ -25,9 +25,12 @@ Hecho (detalle en `docs/PLANIFICACION.md`, sección 8):
 
 **Diseño web adaptable (rama `feature/ajuste-ancho-web`, pendiente de PR a `develop`):** ancho de contenido 1200 px (portada 1240 px),
 barra de desplazamiento en el borde de la ventana, `RejillaAdaptable` (2 columnas en `VuelosPage`/`ReservasPage`, hasta 4 en la portada),
-carrusel a pantalla completa con GIF por región, `migas.dart` corregido y descarga real del XML (`services/descarga_web.dart`).
-Los GIFs van en `frontend/assets/regiones/` (`sierra.gif`, `costa.gif`, `amazonia.gif`, `galapagos.gif`; ≤ 2 MB y ≤ 1280 px); si faltan, se ve el
-degradado. Detalle para el informe en `docs/USABILIDAD.md` y fila Z7 de `docs/PLANIFICACION.md`. Pruebas: `flutter test` **429**, `flutter analyze` limpio.
+carrusel a pantalla completa con foto por región, `migas.dart` corregido y descarga real del XML (`services/descarga_web.dart`).
+Las fotos de `frontend/assets/regiones/` (`sierra.jpg`, `costa.jpg`, `oriente.jpg`, `galapagos.jpg`) son el fondo del carrusel; se pueden
+reemplazar por otras con el mismo nombre. Si falta alguna, se ve el degradado. Detalle para el informe en `docs/USABILIDAD.md` y fila Z7 de `docs/PLANIFICACION.md`. Pruebas: `flutter test` **429**, `flutter analyze` limpio.
+
+**Pendientes finales (rama `feature/pendientes-final`):** destinos de la portada desde la BD (`GET /api/vuelos/destinos`, público; con respaldo si la API
+no responde) y **resumen de ventas** del administrador (`GET /api/reservas/resumen` + tarjeta en `AdminPage`). Pruebas: pytest **650**, flutter test **430**.
 
 ## 2. Cómo correrlo
 
@@ -72,12 +75,10 @@ Ejemplo para probar la importación de aviones: `docs/ejemplos/aviones.csv` (for
    de prueba (hasta 100) o una página propia (p. ej. GitHub Pages). La app solo pide permisos básicos (sin verificación de Google).
 2. **Informe PDF con diagrama SOA** (entregable principal de la guía APE 4) y **capturas** de las pantallas nuevas
    (`docs/PRUEBAS.md`, recorrido 20–27). Datos de los integrantes del grupo para la portada.
-3. **Despliegue del backend en Render** (solo el backend; el Flutter se queda en local): variables `DATABASE_URL`,
-   `JWT_SECRET_KEY`, `CORS_ORIGINS=http://localhost:8080`, `SMTP_*`, `GOOGLE_CLIENT_ID`; añadir `gunicorn` a `requirements.txt`;
-   Dockerfile opcional; el frontend con `--dart-define=API_BASE_URL=https://<servicio>.onrender.com/api`. El plan gratuito duerme el servicio.
-   Antes de publicar, cambiar la contraseña del administrador de `seed.sql`.
-4. **Ajustes de diseño web pendientes:** desglose de factura/compra más detallado en `SeleccionAsientosPage`; guardar los 4 GIFs de las regiones;
-   evaluar cargar los destinos populares de `InicioPage` desde un endpoint público (`app_router_test.dart` exige no llamar a la API al arrancar sin token).
+3. **Despliegue del backend en Render:** el repositorio ya está preparado (`render.yaml`, `backend/wsgi.py`, gunicorn, `PORT`,
+   `backend/cambiar_clave_admin.py`). Solo falta que el dueño de las cuentas siga `docs/DESPLIEGUE_RENDER.md`: cambiar la clave del
+   administrador, crear el Blueprint en Render, completar `DATABASE_URL`, `SMTP_*` y `GOOGLE_CLIENT_ID`, y probar `/api/health`.
+4. **Ajustes de diseño web pendientes:** desglose de factura/compra más detallado en `SeleccionAsientosPage`.
 5. Opcionales: editar/cancelar vuelos, historial de cambios de reservas, total esperado antes de reservar, resumen de ventas,
    pruebas de concurrencia automáticas, login con Google en Android.
 6. **Antes de la demostración:** ensayo con 2 o 3 cuentas de Google distintas, cada una con una cédula válida diferente; el Flutter

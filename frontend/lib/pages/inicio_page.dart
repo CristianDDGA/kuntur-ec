@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../config/app_router.dart';
 import '../config/app_theme.dart';
 import '../controllers/vuelos_controller.dart';
+import '../config/providers.dart';
+import '../models/destino.dart';
 import '../models/vuelo.dart';
 import '../widgets/franja_tricolor.dart';
 import '../widgets/logo_kuntur.dart';
@@ -14,49 +16,21 @@ import '../widgets/rejilla_adaptable.dart';
 /// Ancho máximo del contenido en pantallas grandes (los fondos y el carrusel llegan al borde).
 const double _anchoContenido = 1240;
 
-final destinosPopularesProvider = FutureProvider<List<_DestinoResumen>>((ref) async {
-  return _destinosRealesBase;
+/// Destinos de la portada: vienen de la API (público, sin token). Si la API no responde se muestran los de respaldo.
+final destinosPopularesProvider = FutureProvider<List<DestinoPopular>>((ref) async {
+  try {
+    final destinos = await ref.read(vueloServiceProvider).destinos();
+    return destinos.isEmpty ? _destinosDeRespaldo : destinos.take(4).toList();
+  } catch (_) {
+    return _destinosDeRespaldo;
+  }
 });
 
-class _DestinoResumen {
-  const _DestinoResumen({
-    required this.ciudad,
-    required this.precioMinimo,
-    required this.lema,
-    required this.codigoIata,
-  });
-
-  final String ciudad;
-  final double precioMinimo;
-  final String lema;
-  final String codigoIata;
-}
-
-const _destinosRealesBase = [
-  _DestinoResumen(
-    ciudad: 'Guayaquil',
-    precioMinimo: 72.0,
-    lema: 'Perla del Pacífico · Puerto y calor',
-    codigoIata: 'GYE',
-  ),
-  _DestinoResumen(
-    ciudad: 'Manta',
-    precioMinimo: 79.9,
-    lema: 'Costa manabita · Playas y gastronomía',
-    codigoIata: 'MEC',
-  ),
-  _DestinoResumen(
-    ciudad: 'Coca',
-    precioMinimo: 85.0,
-    lema: 'Puerta a la Amazonía ecuatoriana',
-    codigoIata: 'OCC',
-  ),
-  _DestinoResumen(
-    ciudad: 'Quito',
-    precioMinimo: 89.0,
-    lema: 'Mitad del Mundo · Centro Histórico',
-    codigoIata: 'UIO',
-  ),
+const _destinosDeRespaldo = [
+  DestinoPopular(ciudad: 'Guayaquil', precioMinimo: 72, vuelos: 0),
+  DestinoPopular(ciudad: 'Manta', precioMinimo: 80, vuelos: 0),
+  DestinoPopular(ciudad: 'Coca', precioMinimo: 85, vuelos: 0),
+  DestinoPopular(ciudad: 'Quito', precioMinimo: 89, vuelos: 0),
 ];
 
 /// Página de inicio pública inspirada en aerolíneas ecuatorianas modernas:
@@ -233,13 +207,13 @@ class _CarruselRegionesEcuadorState extends State<_CarruselRegionesEcuador> {
     super.dispose();
   }
 
-  /// GIF (o imagen) de cada región, en el mismo orden que [_regiones]. Si el archivo no existe
+  /// Foto de cada región, en el mismo orden que [_regiones]. Si el archivo no existe
   /// se muestra el degradado con el ícono, así la portada nunca queda rota.
   static const _fondos = [
-    'assets/regiones/sierra.gif',
-    'assets/regiones/costa.gif',
-    'assets/regiones/amazonia.gif',
-    'assets/regiones/galapagos.gif',
+    'assets/regiones/sierra.jpg',
+    'assets/regiones/costa.jpg',
+    'assets/regiones/oriente.jpg',
+    'assets/regiones/galapagos.jpg',
   ];
 
   @override
@@ -546,7 +520,7 @@ class _SeccionDestinosDinamicos extends StatelessWidget {
             const SizedBox(height: 18),
             Consumer(
               builder: (context, ref, _) {
-                final destinos = ref.watch(destinosPopularesProvider).value ?? _destinosRealesBase;
+                final destinos = ref.watch(destinosPopularesProvider).value ?? _destinosDeRespaldo;
                 return RejillaAdaptable(
                   espacio: 14,
                   anchoMinimoColumna: 230,
@@ -582,7 +556,7 @@ class _SeccionDestinosDinamicos extends StatelessWidget {
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
-                                      d.codigoIata,
+                                      d.codigo,
                                       style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11, color: AppColors.azul),
                                     ),
                                   ),

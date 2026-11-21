@@ -1,0 +1,19 @@
+# Contrato del servicio vuelos: Destinos con vuelos próximos
+summary: "Destinos con vuelos próximos"
+description: "Público. Una fila por ciudad de destino con la tarifa más baja entre los vuelos que aún no parten; alimenta la portada."
+tags: [Vuelos]
+produces: [application/json, application/xml]
+responses:
+  200:
+    description: Destinos ordenados por tarifa mínima (máximo 8).
+    schema:
+      type: object
+      properties:
+        destinos:
+          type: array
+          items:
+            type: object
+            properties:
+              destino: {type: string, example: Guayaquil}
+              precio_minimo: {type: string, example: "72.00"}
+              vuelos: {type: integer, example: 3}

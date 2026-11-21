@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../config/app_router.dart';
 import '../config/app_theme.dart';
 import '../controllers/iva_controller.dart';
+import '../controllers/resumen_ventas_controller.dart';
+import '../models/resumen_ventas.dart';
 import '../models/tarifa_iva.dart';
 import '../models/validadores_vuelo.dart';
 import '../models/vuelo.dart';
@@ -36,6 +38,7 @@ class AdminPage extends ConsumerWidget {
       maxAncho: 900,
       onRefrescar: () async {
         ref.invalidate(ivaControllerProvider);
+        ref.invalidate(resumenVentasProvider);
         // Espera la respuesta: así el indicador de refresco no termina antes de llegar los datos.
         await ref.read(ivaControllerProvider.future);
       },
@@ -46,6 +49,8 @@ class AdminPage extends ConsumerWidget {
           const Text('Administración', style: AppTextStyles.titulo),
           const SizedBox(height: 4),
           const Text('Gestione los vuelos y el impuesto que se cobra en las reservas.', style: AppTextStyles.cuerpo),
+          const SizedBox(height: 16),
+          const _TarjetaResumenVentas(),
           const SizedBox(height: 16),
           _TarjetaVuelos(onCrear: () => context.push(AppRoutes.nuevoVuelo)),
           const SizedBox(height: 16),
@@ -62,6 +67,96 @@ class AdminPage extends ConsumerWidget {
             _SeccionIva(resumen: iva.value!),
         ],
       ),
+    );
+  }
+}
+
+/// Resumen de ventas: si falla la carga no bloquea el resto del panel (solo muestra un aviso discreto).
+class _TarjetaResumenVentas extends ConsumerWidget {
+  const _TarjetaResumenVentas();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final resumen = ref.watch(resumenVentasProvider);
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: AppDecorations.tarjeta,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.insights, color: AppColors.azul, size: 26),
+              SizedBox(width: 12),
+              Text('Resumen de ventas', style: AppTextStyles.subtitulo),
+            ],
+          ),
+          const SizedBox(height: 14),
+          if (resumen.hasValue)
+            _CifrasVentas(resumen: resumen.value!)
+          else if (resumen.hasError)
+            Row(
+              children: [
+                const Expanded(child: Text('No se pudo cargar el resumen de ventas.', style: AppTextStyles.nota)),
+                TextButton(onPressed: () => ref.invalidate(resumenVentasProvider), child: const Text('Reintentar')),
+              ],
+            )
+          else
+            const LinearProgressIndicator(),
+        ],
+      ),
+    );
+  }
+}
+
+class _CifrasVentas extends StatelessWidget {
+  const _CifrasVentas({required this.resumen});
+
+  final ResumenVentas resumen;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget cifra(String etiqueta, String valor) => SizedBox(
+          width: 170,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(valor, style: AppTextStyles.subtitulo.copyWith(color: AppColors.azul)),
+              Text(etiqueta, style: AppTextStyles.nota),
+            ],
+          ),
+        );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 16,
+          runSpacing: 12,
+          children: [
+            cifra('Ingresos totales', Formatos.dinero(resumen.totalCentavos)),
+            cifra('IVA recaudado', Formatos.dinero(resumen.ivaCentavos)),
+            cifra('Reservas confirmadas', '${resumen.confirmadas}'),
+            cifra('Reservas canceladas', '${resumen.canceladas}'),
+            cifra('Asientos vendidos', '${resumen.asientosVendidos}'),
+          ],
+        ),
+        if (resumen.top.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          const Text('Vuelos con más ingresos', style: AppTextStyles.etiqueta),
+          const SizedBox(height: 6),
+          for (final v in resumen.top)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(
+                children: [
+                  SizedBox(width: 64, child: Text(v.codigo, style: const TextStyle(fontWeight: FontWeight.w800))),
+                  Expanded(child: Text('${v.ruta} · ${v.asientos} asientos', style: AppTextStyles.nota)),
+                  Text(Formatos.dinero(v.totalCentavos), style: const TextStyle(fontWeight: FontWeight.w700)),
+                ],
+              ),
+            ),
+        ],
+      ],
     );
   }
 }
