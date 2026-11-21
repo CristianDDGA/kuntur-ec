@@ -74,7 +74,8 @@ class Settings:
 
         return cls(
             app_env=app_env,
-            app_port=int(env.get("APP_PORT", "5000")),
+            # Render asigna el puerto en PORT; en local se usa APP_PORT (5000 por defecto).
+            app_port=int(env.get("PORT") or env.get("APP_PORT") or "5000"),
             database_url=env.get("DATABASE_URL", ""),
             jwt_secret_key=env.get("JWT_SECRET_KEY") or _CLAVE_JWT_LOCAL,
             jwt_expires_minutes=int(env.get("JWT_EXPIRES_MINUTES", "60")),

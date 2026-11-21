@@ -166,6 +166,38 @@ class ReservaService:
 
     # ------------------------------------------------------------ consultar
 
+    def resumen_ventas(self) -> dict[str, Any]:
+        """Totales de ventas para el administrador: reservas confirmadas y canceladas, asientos e ingresos."""
+        with self._db.transaccion() as cur:
+            cur.execute(
+                "SELECT count(*) FILTER (WHERE estado = 'confirmada') AS confirmadas, "
+                "count(*) FILTER (WHERE estado = 'cancelada') AS canceladas, "
+                "coalesce(sum(cantidad_asientos) FILTER (WHERE estado = 'confirmada'), 0) AS asientos, "
+                "coalesce(sum(subtotal) FILTER (WHERE estado = 'confirmada'), 0) AS subtotal, "
+                "coalesce(sum(iva_valor) FILTER (WHERE estado = 'confirmada'), 0) AS iva, "
+                "coalesce(sum(total) FILTER (WHERE estado = 'confirmada'), 0) AS total FROM reservas"
+            )
+            f = cur.fetchone()
+            cur.execute(
+                "SELECT v.codigo, v.origen, v.destino, sum(r.cantidad_asientos) AS asientos, sum(r.total) AS total "
+                "FROM reservas r JOIN vuelos v ON v.id = r.vuelo_id WHERE r.estado = 'confirmada' "
+                "GROUP BY v.id, v.codigo, v.origen, v.destino ORDER BY sum(r.total) DESC, v.codigo LIMIT 5"
+            )
+            top = cur.fetchall()
+        return {
+            "reservas_confirmadas": f["confirmadas"],
+            "reservas_canceladas": f["canceladas"],
+            "asientos_vendidos": int(f["asientos"]),
+            "subtotal": f"{f['subtotal']:.2f}",
+            "iva": f"{f['iva']:.2f}",
+            "total": f"{f['total']:.2f}",
+            "vuelos_top": [
+                {"codigo": t["codigo"], "origen": t["origen"], "destino": t["destino"],
+                 "asientos": int(t["asientos"]), "total": f"{t['total']:.2f}"}
+                for t in top
+            ],
+        }
+
     def listar(self, sesion: Sesion, pagina: str | None = None, por_pagina: str | None = None) -> PaginaReservas:
         """Reservas del usuario, la más reciente primero, paginadas."""
         numero, tamano = leer_pagina(pagina, por_pagina)

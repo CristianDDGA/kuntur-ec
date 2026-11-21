@@ -10,8 +10,20 @@ import 'package:vuelos_app/services/api_exception.dart';
 import '../helpers/app_helper.dart';
 import '../helpers/fakes.dart';
 
+const _resumen = {
+  'reservas_confirmadas': 4,
+  'reservas_canceladas': 1,
+  'asientos_vendidos': 9,
+  'subtotal': '800.00',
+  'iva': '96.00',
+  'total': '896.00',
+  'vuelos_top': [
+    {'codigo': 'KT101', 'origen': 'Quito', 'destino': 'Guayaquil', 'asientos': 5, 'total': '448.00'},
+  ],
+};
+
 Future<RouteFakeRestClient> _abrir(WidgetTester tester, Map<String, Object?> rutas, {Object usuario = usuarioAna}) async {
-  final client = RouteFakeRestClient({'GET /auth/perfil': {'usuario': usuario}, ...rutas});
+  final client = RouteFakeRestClient({'GET /auth/perfil': {'usuario': usuario}, 'GET /reservas/resumen': _resumen, ...rutas});
   await abrirApp(tester, client: client, tokens: InMemoryTokenStorage('jwt'));
   return client;
 }
@@ -306,6 +318,16 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(api.llamadas.where((l) => l.metodo == 'POST'), isEmpty);
+    });
+
+    testWidgets('muestra el resumen de ventas con ingresos y vuelos principales', (tester) async {
+      await _abrir(tester, {'GET /vuelos': sinVuelos, 'GET /iva': respuestaIva}, usuario: usuarioAdmin);
+      _irA(tester, AppRoutes.admin);
+      await tester.pumpAndSettle();
+      expect(find.text('Resumen de ventas'), findsOneWidget);
+      expect(find.text('\$ 896.00'), findsOneWidget);
+      expect(find.text('KT101'), findsOneWidget);
+      expect(find.textContaining('Quito → Guayaquil'), findsOneWidget);
     });
 
     testWidgets('si falla la carga del IVA ofrece reintentar', (tester) async {

@@ -20,6 +20,9 @@ class VuelosFalso:
         self.filtros = filtros
         return PaginaVuelos([un_vuelo(), un_vuelo(id=11, codigo="KEC-102")], total=2, pagina=1, por_pagina=10)
 
+    def destinos(self):
+        return {"destinos": [{"destino": "Guayaquil", "precio_minimo": "72.00", "vuelos": 3}]}
+
     def asientos(self, vuelo_id):
         if vuelo_id != 10:
             raise NotFoundError("El vuelo solicitado no existe.")
@@ -89,6 +92,13 @@ def test_mapa_de_un_vuelo_inexistente_o_con_id_absurdo(client, vuelos):
     assert client.get("/api/vuelos/999/asientos").status_code == 404
     assert client.get("/api/vuelos/abc/asientos").status_code == 404
     assert client.get("/api/vuelos/99999999999999999999/asientos").status_code == 404
+
+
+def test_destinos_es_publico_y_no_choca_con_el_detalle(client, vuelos):
+    resp = client.get("/api/vuelos/destinos")
+    assert resp.status_code == 200
+    assert resp.get_json()["destinos"] == [{"destino": "Guayaquil", "precio_minimo": "72.00", "vuelos": 3}]
+    assert client.get("/api/vuelos/destinos", headers={"Accept": "application/xml"}).status_code == 200
 
 
 def test_detalle(client, vuelos):

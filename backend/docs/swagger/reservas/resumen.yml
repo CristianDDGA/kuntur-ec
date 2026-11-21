@@ -1,0 +1,32 @@
+# Contrato del servicio reservas: Resumen de ventas (administrador)
+summary: "Resumen de ventas"
+description: "Solo administrador. Totales de las reservas confirmadas (asientos, subtotal, IVA y total), cantidad de canceladas y los 5 vuelos con más ingresos."
+tags: [Reservas]
+produces: [application/json, application/xml]
+security: [{Bearer: []}]
+responses:
+  200:
+    description: Totales de ventas.
+    schema:
+      type: object
+      properties:
+        reservas_confirmadas: {type: integer, example: 12}
+        reservas_canceladas: {type: integer, example: 3}
+        asientos_vendidos: {type: integer, example: 30}
+        subtotal: {type: string, example: "2400.00"}
+        iva: {type: string, example: "288.00"}
+        total: {type: string, example: "2688.00"}
+        vuelos_top:
+          type: array
+          items:
+            type: object
+            properties:
+              codigo: {type: string, example: KT101}
+              origen: {type: string, example: Quito}
+              destino: {type: string, example: Guayaquil}
+              asientos: {type: integer, example: 8}
+              total: {type: string, example: "716.80"}
+  401:
+    description: Sin sesión.
+  403:
+    description: Solo el administrador.

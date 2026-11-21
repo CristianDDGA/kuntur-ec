@@ -78,7 +78,7 @@ cd frontend && flutter analyze && flutter test
 Colección de Postman en [`docs/postman/`](docs/postman/) (incluye aviones por CSV, cédula, verificación del correo y Google). Casos de prueba y capturas en
 [`docs/PRUEBAS.md`](docs/PRUEBAS.md); evaluación de usabilidad (heurísticas de Nielsen) en
 [`docs/USABILIDAD.md`](docs/USABILIDAD.md). Qué datos usa el sistema y cómo se protegen (también la usa Google para
-el inicio de sesión): [`docs/PRIVACIDAD.md`](docs/PRIVACIDAD.md).
+el inicio de sesión): [`docs/PRIVACIDAD.md`](docs/PRIVACIDAD.md). Cómo publicar el backend en Render: [`docs/DESPLIEGUE_RENDER.md`](docs/DESPLIEGUE_RENDER.md).
 
 ## Funcionalidades
 

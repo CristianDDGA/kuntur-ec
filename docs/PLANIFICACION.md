@@ -62,6 +62,7 @@
 | Vuelos | GET | `/api/vuelos?origen=&destino=&fecha=&pagina=&por_pagina=` | – | Lista/filtra vuelos que aún no parten (hoy solo los de salida posterior a la hora actual), paginada (10 por defecto, máx. 50) → `{total, pagina, por_pagina, total_paginas, vuelos}` · 400 fecha o paginación inválida |
 | IVA | GET | `/api/iva` | JWT | Tarifa vigente e historial (`vigente`, `programada`, `anterior`) |
 | IVA | POST | `/api/iva` | JWT admin | Programa una tarifa `{porcentaje 0–100, vigente_desde ≥ hoy}`; cierra la abierta el día anterior; no altera reservas hechas → 201 · 400 · 403 · 409 (ya hay una tarifa igual o posterior) |
+| Vuelos | GET | `/api/vuelos/destinos` | – | Destinos con vuelos próximos y su tarifa mínima (máx. 8, por tarifa) → `{destinos: [{destino, precio_minimo, vuelos}]}`. Alimenta la portada |
 | Vuelos | GET | `/api/vuelos/{id}` | – | Detalle de vuelo → 200 · 404 |
 | Vuelos | GET | `/api/vuelos/{id}/asientos` | – | Mapa de asientos: `{vuelo_id, capacidad, columnas: [A,B,C,D], ocupados: ["2B"]}`. Los asientos existentes se deducen de la capacidad (1A, 1B, 1C, 1D, 2A…) → 200 · 404 |
 | Vuelos | POST | `/api/vuelos` | JWT admin | Crea vuelo con `avion_id` (su capacidad = filas × 4 manda) o, por compatibilidad, `capacidad` → 201 · 400 · 401 · 403 · 404 avión inexistente · 409 código repetido |
@@ -69,6 +70,7 @@
 | Aviones | POST | `/api/aviones/importacion/validar` | JWT admin | Revisa un CSV (`Content-Type: text/csv`, `matricula;modelo;filas`) **sin guardar**: vista previa, existentes y errores por línea → 200 · 400 · 413 · 415 |
 | Aviones | POST | `/api/aviones/importacion` | JWT admin | Importa el CSV, todo o nada (400 con la lista de errores si alguna fila falla; las matrículas existentes se omiten) → 201 |
 | Reservas | POST | `/api/reservas` | JWT cliente | Crea reserva `{vuelo_id, asientos: ["1A","2B"]}` (1–10 asientos concretos; o solo `cantidad` → el sistema asigna los primeros libres) → 201 · 400 (incluye vuelo que ya partió: se compara fecha **y hora** de salida, o un asiento que no existe en ese vuelo) · 403 admin · 404 · 409 sin asientos o asiento ya tomado (trae `asientos_ocupados`) |
+| Reservas | GET | `/api/reservas/resumen` | JWT admin | Resumen de ventas: confirmadas, canceladas, asientos vendidos, subtotal, IVA, total y los 5 vuelos con más ingresos → 200 · 403 cliente |
 | Reservas | GET | `/api/reservas?pagina=&por_pagina=` | JWT cliente | Historial del usuario, paginado → `{total, pagina, por_pagina, total_paginas, reservas}` |
 | Reservas | GET | `/api/reservas/{id}` | JWT cliente | Detalle |
 | Reservas | PUT | `/api/reservas/{id}` | JWT cliente | Modifica los asientos `{asientos, version}` (cambiar de lugar, ampliar o reducir; mismo precio e IVA; también acepta `{cantidad, version}`) → 200 · 409 "Ya actualizaron este registro" + `version_actual` |
@@ -182,6 +184,8 @@ Excepciones documentadas: `flasgger==0.9.7.1` (la 0.9.4 no funciona con Flask 3)
 | Z5 | Inicio de sesión con Google + completar la cédula | ✅ Hecho |
 | Z6 | Rediseño de la portada (carrusel de las 4 regiones, banner, destinos) y formato monetario `$ 10,000.00` | ✅ Hecho |
 | Z7 | Diseño web adaptable a todo el ancho: contenido hasta 1200–1240 px, barra de desplazamiento en el borde de la ventana, listas de vuelos y reservas en 2 columnas, portada a pantalla completa con GIF por región, migas corregidas y descarga real de la factura XML | ✅ Hecho |
+| Z8 | Destinos de la portada desde la BD (`GET /api/vuelos/destinos`, público) y resumen de ventas para el administrador (`GET /api/reservas/resumen`) | ✅ Hecho |
+| Z9 | Preparación para Render: gunicorn, `wsgi.py`, `PORT`, `render.yaml`, script para cambiar la clave del administrador y guía `docs/DESPLIEGUE_RENDER.md` | ✅ Hecho (falta ejecutar el despliegue) |
 | P | Pruebas funcionales y capturas | Parcial: pruebas automáticas y recorrido manual hechos; faltan capturas de las pantallas nuevas |
 | D | Diagrama SOA + informe PDF | Pendiente |
 

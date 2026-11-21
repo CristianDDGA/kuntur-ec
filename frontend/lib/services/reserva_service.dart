@@ -1,3 +1,4 @@
+import '../models/resumen_ventas.dart';
 import '../models/reserva.dart';
 import 'api_exception.dart';
 import 'rest_client.dart';
@@ -11,6 +12,9 @@ class ReservaService {
   static const int porPagina = 10;
 
   final RestClient _client;
+
+  /// `GET /reservas/resumen` (solo administrador): totales de ventas y vuelos con más ingresos.
+  Future<ResumenVentas> resumenVentas() async => ResumenVentas.fromJson(asJsonMap(await _client.get('/reservas/resumen')));
 
   /// `POST /reservas` con los asientos elegidos. El usuario sale del token, nunca del cuerpo.
   /// Si alguno ya lo tomó otra persona responde 409 con `asientosOcupados`.

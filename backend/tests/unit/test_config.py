@@ -56,3 +56,9 @@ def test_en_desarrollo_sin_smtp_se_permite_y_el_remitente_cae_al_usuario():
 def test_cors_admite_varios_origenes():
     settings = Settings.from_env({"CORS_ORIGINS": "http://a.com, http://b.com"})
     assert settings.cors_origins == ("http://a.com", "http://b.com")
+
+
+def test_render_asigna_el_puerto_en_port_y_tiene_prioridad():
+    assert Settings.from_env({"APP_ENV": "development", "PORT": "10000", "APP_PORT": "5000"}).app_port == 10000
+    assert Settings.from_env({"APP_ENV": "development", "APP_PORT": "5050"}).app_port == 5050
+    assert Settings.from_env({"APP_ENV": "development"}).app_port == 5000

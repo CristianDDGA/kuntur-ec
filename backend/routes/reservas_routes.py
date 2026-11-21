@@ -33,6 +33,17 @@ def crear():
 
 
 # =============================
+# GET - Resumen de ventas (admin)
+# =============================
+
+@reservas_bp.route("/resumen", methods=["GET"])
+@swag_from(contrato("reservas", "resumen"))
+@rol_requerido(Rol.ADMIN)
+def resumen():
+    return respond(_servicio().resumen_ventas(), root="resumen")
+
+
+# =============================
 # GET - Mis reservas
 # =============================
 

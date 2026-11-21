@@ -1,0 +1,38 @@
+# Despliegue del BACKEND en Render (el cliente Flutter se queda en local).
+# Los valores con `sync: false` se escriben en el panel de Render: no van al repositorio.
+services:
+  - type: web
+    name: kuntur-ec-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    # 1 proceso con 4 hilos: el pool de la base usa como máximo 5 conexiones (Supabase gratis permite 15).
+    startCommand: gunicorn wsgi:app --workers 1 --threads 4 --timeout 60 --bind 0.0.0.0:$PORT
+    healthCheckPath: /api/health
+    autoDeployTrigger: "off"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.5
+      - key: APP_ENV
+        value: production
+      - key: JWT_EXPIRES_MINUTES
+        value: "60"
+      - key: CORS_ORIGINS
+        value: http://localhost:8080
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false

@@ -12,4 +12,6 @@ flasgger==0.9.7.1
 # Inicio de sesión con Google: google-auth valida el id_token con las claves públicas de Google.
 google-auth==2.62.1
 requests==2.34.0
+# Servidor de producción (Render). Antepenúltima estable; solo se usa al desplegar (en Windows se corre con `python app.py`).
+gunicorn==26.2.0
 pytest==9.1.0
