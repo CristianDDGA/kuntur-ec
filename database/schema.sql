@@ -15,11 +15,18 @@ CREATE TABLE IF NOT EXISTS usuarios (
     correo          VARCHAR(150) NOT NULL,
     password_hash   VARCHAR(255) NOT NULL,
     rol             VARCHAR(10)  NOT NULL DEFAULT 'cliente' CHECK (rol IN ('cliente', 'admin')),
+    cedula          VARCHAR(10)  CHECK (cedula ~ '^[0-9]{10}$'),
     fecha_registro  TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 
 -- El correo es único sin distinguir mayúsculas (Ana@x.com = ana@x.com).
 CREATE UNIQUE INDEX IF NOT EXISTS ux_usuarios_correo ON usuarios (lower(correo));
+
+-- Cédula ecuatoriana (10 dígitos). NULL en cuentas anteriores a pedirla (p. ej. el administrador); el
+-- registro la exige y valida el dígito verificador. Una cédula = una cuenta. (ADD COLUMN IF NOT EXISTS:
+-- agrega la columna en bases creadas antes.)
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS cedula VARCHAR(10) CHECK (cedula ~ '^[0-9]{10}$');
+CREATE UNIQUE INDEX IF NOT EXISTS ux_usuarios_cedula ON usuarios (cedula) WHERE cedula IS NOT NULL;
 
 -- ---------------------------------------------------------------------
 -- vuelos

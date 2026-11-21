@@ -15,6 +15,7 @@ class RegistroController extends AsyncNotifier<void> {
 
   Future<void> registrar({
     required String nombre,
+    required String cedula,
     required String correo,
     required String password,
   }) async {
@@ -23,6 +24,7 @@ class RegistroController extends AsyncNotifier<void> {
       final auth = ref.read(authServiceProvider);
       await auth.registrar(
         nombre: Validadores.normalizarNombre(nombre),
+        cedula: cedula,
         correo: correo,
         password: password,
       );

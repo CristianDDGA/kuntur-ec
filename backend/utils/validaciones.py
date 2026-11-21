@@ -18,6 +18,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from utils.excepciones import ValidationError
+from utils.limites import CEDULA as LARGO_CEDULA
 from utils.limites import CORREO as MAX_LARGO_CORREO
 from utils.limites import MAX_ID, MAX_VERSION, PRECIO_MAXIMO  # noqa: F401 - se reexportan para los servicios
 
@@ -105,6 +106,36 @@ def correo(datos: dict, campo: str = "correo") -> str:
     valor = texto_obligatorio(datos, campo, MAX_LARGO_CORREO).lower()
     if not es_correo(valor):
         raise ValidationError("El correo no es válido.")
+    return valor
+
+
+# ---------------------------------------------------------------- cédula
+
+_COEFICIENTES_CEDULA = (2, 1, 2, 1, 2, 1, 2, 1, 2)
+_PROVINCIAS = frozenset(range(1, 25)) | {30}  # 01-24 provincias; 30 = ecuatorianos nacidos en el exterior
+
+
+def es_cedula(valor: str) -> bool:
+    """Cédula ecuatoriana válida: 10 dígitos, provincia 01-24 (o 30), tercer dígito menor que 6 y dígito
+    verificador correcto (módulo 10). Detecta los números que no pueden ser una cédula real; no consulta
+    al Registro Civil, así que no prueba que la persona exista."""
+    if not re.fullmatch(rf"[0-9]{{{LARGO_CEDULA}}}", valor):
+        return False
+    digitos = [int(c) for c in valor]
+    if int(valor[:2]) not in _PROVINCIAS or digitos[2] >= 6:
+        return False
+    suma = 0
+    for digito, coeficiente in zip(digitos[:9], _COEFICIENTES_CEDULA):
+        producto = digito * coeficiente
+        suma += producto - 9 if producto > 9 else producto
+    return (10 - suma % 10) % 10 == digitos[9]
+
+
+def cedula(datos: dict, campo: str = "cedula") -> str:
+    """Cédula obligatoria y válida, tal como se guarda (solo los 10 dígitos)."""
+    valor = texto_obligatorio(datos, campo, LARGO_CEDULA)  # recorta los extremos; un espacio dentro la invalida
+    if not es_cedula(valor):
+        raise ValidationError("La cédula no es válida: revise los 10 dígitos.")
     return valor
 
 

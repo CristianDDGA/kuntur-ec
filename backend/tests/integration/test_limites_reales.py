@@ -40,7 +40,7 @@ def test_el_correo_de_prueba_mide_exactamente_el_limite():
 
 def test_la_base_acepta_nombre_correo_codigo_y_ciudades_en_su_largo_maximo(db):
     usuario = UsuarioService(db, CifradorContrasenas(costo=4)).registrar(
-        {"nombre": "A" * limites.NOMBRE_PERSONA, "correo": CORREO_MAXIMO, "password": "Clave2026"}
+        {"nombre": "A" * limites.NOMBRE_PERSONA, "cedula": "1710034065", "correo": CORREO_MAXIMO, "password": "Clave2026"}
     )
     assert len(usuario.nombre) == 100 and len(usuario.correo) == 150
 
@@ -58,7 +58,7 @@ def test_la_base_acepta_nombre_correo_codigo_y_ciudades_en_su_largo_maximo(db):
     [({"nombre": "A" * 101}, "nombre"), ({"correo": "a" * 64 + "@" + "b" * 63 + "." + "d" * 18 + ".com"}, "correo")],
 )
 def test_un_caracter_mas_que_el_limite_se_rechaza_antes_de_llegar_a_la_base(db, datos, campo):
-    base = {"nombre": "Ana Torres", "correo": "limite@kuntur.test", "password": "Clave2026"}
+    base = {"nombre": "Ana Torres", "cedula": "1710034065", "correo": "limite@kuntur.test", "password": "Clave2026"}
     with pytest.raises(ValidationError, match=campo):
         UsuarioService(db, CifradorContrasenas(costo=4)).registrar(base | datos)
 

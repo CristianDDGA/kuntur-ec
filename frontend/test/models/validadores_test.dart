@@ -38,6 +38,55 @@ void main() {
     });
   });
 
+  group('cédula', () {
+    // Los dígitos verificadores se calculan aquí con el mismo módulo 10, no se memorizan.
+    String completar(String nueve) {
+      var suma = 0;
+      for (var i = 0; i < 9; i++) {
+        final p = int.parse(nueve[i]) * (i.isEven ? 2 : 1);
+        suma += p > 9 ? p - 9 : p;
+      }
+      return '$nueve${(10 - suma % 10) % 10}';
+    }
+
+    test('acepta una cédula con verificador correcto', () {
+      expect(Validadores.cedula('1710034065'), isNull);
+      expect(Validadores.cedula(' 1710034065 '), isNull); // los extremos se recortan
+    });
+
+    test('cambiar un solo dígito la invalida', () {
+      const valida = '1710034065';
+      for (var i = 0; i < 10; i++) {
+        for (final d in '0123456789'.split('')) {
+          if (d == valida[i]) continue;
+          final otra = valida.substring(0, i) + d + valida.substring(i + 1);
+          expect(Validadores.esCedula(otra), isFalse, reason: otra);
+        }
+      }
+    });
+
+    test('acepta las provincias 01-24 y 30, rechaza las demás', () {
+      for (final p in [...List.generate(24, (i) => i + 1), 30]) {
+        expect(Validadores.esCedula(completar('${p.toString().padLeft(2, '0')}1003406')), isTrue, reason: '$p');
+      }
+      for (final p in [0, 25, 31, 99]) {
+        expect(Validadores.esCedula(completar('${p.toString().padLeft(2, '0')}1003406')), isFalse, reason: '$p');
+      }
+    });
+
+    test('el tercer dígito debe ser menor que 6', () {
+      expect(Validadores.esCedula(completar('171003406')), isTrue);
+      expect(Validadores.esCedula(completar('176003406')), isFalse);
+    });
+
+    test('mensajes: vacía, con letras, corta y con verificador mal', () {
+      expect(Validadores.cedula(''), 'Ingrese su número de cédula.');
+      expect(Validadores.cedula('17100a4065'), 'La cédula solo lleva números.');
+      expect(Validadores.cedula('171003'), 'La cédula tiene 10 dígitos.');
+      expect(Validadores.cedula('1710034066'), contains('no es válida'));
+    });
+  });
+
   group('correo', () {
     for (final valido in ['ana@correo.com', 'a.b+c@sub.dominio.ec', 'A_B-1@x.co', '  ana@correo.com  ']) {
       test('acepta "$valido"', () => expect(Validadores.correo(valido), isNull));

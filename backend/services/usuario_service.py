@@ -12,12 +12,13 @@ from utils.excepciones import ConflictError, ValidationError
 from utils.limites import CONTRASENA as MAX_LARGO_CONTRASENA  # bcrypt además solo admite 72 bytes
 from utils.limites import NOMBRE_PERSONA as MAX_LARGO_NOMBRE
 from utils.seguridad import LIMITE_BYTES_BCRYPT, CifradorContrasenas
+from utils.validaciones import cedula as validar_cedula
 from utils.validaciones import correo as validar_correo
 from utils.validaciones import nombre_propio, texto_obligatorio
 
 MIN_LARGO_CONTRASENA = 8
 
-_COLUMNAS = "id, nombre, correo, password_hash, rol, fecha_registro"
+_COLUMNAS = "id, nombre, correo, password_hash, rol, fecha_registro, cedula"
 
 
 class Cifrador(Protocol):
@@ -42,18 +43,21 @@ class UsuarioService:
         """Crea un usuario con rol cliente. El rol nunca se toma de la petición."""
         nombre = nombre_propio(datos, "nombre", MAX_LARGO_NOMBRE)
         correo = validar_correo(datos)
+        cedula = validar_cedula(datos)
         contrasena = texto_obligatorio(datos, "password", MAX_LARGO_CONTRASENA, normalizar=False)
         validar_contrasena(contrasena)
 
         try:
             with self._db.transaccion() as cur:
                 cur.execute(
-                    f"INSERT INTO usuarios (nombre, correo, password_hash, rol) "
-                    f"VALUES (%s, %s, %s, %s) RETURNING {_COLUMNAS}",
-                    (nombre, correo, self._cifrador.cifrar(contrasena), Rol.CLIENTE.value),
+                    f"INSERT INTO usuarios (nombre, correo, password_hash, rol, cedula) "
+                    f"VALUES (%s, %s, %s, %s, %s) RETURNING {_COLUMNAS}",
+                    (nombre, correo, self._cifrador.cifrar(contrasena), Rol.CLIENTE.value, cedula),
                 )
                 return Usuario.from_row(cur.fetchone())
-        except UniqueViolation:
+        except UniqueViolation as error:
+            if getattr(error.diag, "constraint_name", None) == "ux_usuarios_cedula":
+                raise ConflictError("Ya existe una cuenta registrada con esa cédula.") from None
             raise ConflictError("Ya existe una cuenta registrada con ese correo.") from None
 
     def buscar_por_correo(self, correo: str) -> Usuario | None:

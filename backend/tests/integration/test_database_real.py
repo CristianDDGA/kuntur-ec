@@ -50,12 +50,32 @@ def test_registro_real_cifra_con_bcrypt_y_rechaza_correo_repetido(db):
     servicio = UsuarioService(db, CifradorContrasenas(costo=4))
     correo = "prueba.automatica@kuntur.test"
     try:
-        usuario = servicio.registrar({"nombre": "Prueba", "correo": correo, "password": "Clave2026"})
+        usuario = servicio.registrar({"nombre": "Prueba", "cedula": "1710034065", "correo": correo, "password": "Clave2026"})
         guardado = servicio.buscar_por_correo(correo.upper())
         assert guardado.id == usuario.id
         assert CifradorContrasenas().verificar("Clave2026", guardado.password_hash)
         with pytest.raises(ConflictError):
-            servicio.registrar({"nombre": "Otra", "correo": correo.upper(), "password": "Clave2026"})
+            servicio.registrar({"nombre": "Otra", "cedula": "1710034065", "correo": correo.upper(), "password": "Clave2026"})
     finally:
         with db.transaccion() as cur:
             cur.execute("DELETE FROM usuarios WHERE correo = %s", (correo,))
+
+
+def test_una_cedula_solo_puede_tener_una_cuenta_en_la_base_real(db):
+    from services.usuario_service import UsuarioService
+    from utils.excepciones import ConflictError
+    from utils.seguridad import CifradorContrasenas
+
+    servicio = UsuarioService(db, CifradorContrasenas(costo=4))
+    correos = ("cedula.uno@kuntur.test", "cedula.dos@kuntur.test")
+    datos = {"nombre": "Prueba", "cedula": "1710034065", "password": "Clave2026"}
+    try:
+        servicio.registrar(datos | {"correo": correos[0]})
+        with pytest.raises(ConflictError, match="esa cédula"):
+            servicio.registrar(datos | {"correo": correos[1]})  # otro correo, misma cédula
+        with pytest.raises(ConflictError, match="ese correo"):
+            servicio.registrar(datos | {"correo": correos[0], "cedula": "0102030400"})  # misma cuenta, otra cédula
+        assert servicio.buscar_por_correo(correos[0]).cedula == "1710034065"
+    finally:
+        with db.transaccion() as cur:
+            cur.execute("DELETE FROM usuarios WHERE correo = ANY(%s)", (list(correos),))

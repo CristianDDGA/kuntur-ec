@@ -26,7 +26,7 @@ def servicio(app):
 
 
 def test_registro_exitoso_devuelve_201_sin_contrasena(client, servicio):
-    resp = client.post(URL, json={"nombre": "Ana", "correo": "ana@correo.com", "password": "Clave2026"})
+    resp = client.post(URL, json={"nombre": "Ana", "cedula": "1710034065", "correo": "ana@correo.com", "password": "Clave2026"})
     assert resp.status_code == 201
     cuerpo = resp.get_json()
     assert cuerpo["mensaje"] == "Usuario registrado correctamente."
@@ -36,7 +36,7 @@ def test_registro_exitoso_devuelve_201_sin_contrasena(client, servicio):
 
 def test_registro_responde_en_xml_si_se_solicita(client, servicio):
     resp = client.post(
-        URL, json={"nombre": "Ana", "correo": "ana@correo.com", "password": "Clave2026"},
+        URL, json={"nombre": "Ana", "cedula": "1710034065", "correo": "ana@correo.com", "password": "Clave2026"},
         headers={"Accept": "application/xml"},
     )
     assert resp.status_code == 201
@@ -56,6 +56,6 @@ def test_registro_sin_objeto_json_es_400(client, servicio, cuerpo):
 )
 def test_registro_traduce_errores_del_servicio(client, app, error, status, codigo):
     app.extensions["usuario_service"] = ServicioUsuariosFalso(error)
-    resp = client.post(URL, json={"nombre": "Ana", "correo": "a@b.com", "password": "Clave2026"})
+    resp = client.post(URL, json={"nombre": "Ana", "cedula": "1710034065", "correo": "a@b.com", "password": "Clave2026"})
     assert resp.status_code == status
     assert resp.get_json()["error"] == codigo

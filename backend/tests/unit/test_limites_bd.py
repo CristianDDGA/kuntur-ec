@@ -21,6 +21,7 @@ LIMITES_DE_ENTRADA = {
     ("vuelos", "origen"): limites.CIUDAD,
     ("vuelos", "destino"): limites.CIUDAD,
     ("reserva_asientos", "asiento"): limites.ASIENTO,
+    ("usuarios", "cedula"): limites.CEDULA,
     ("aviones", "matricula"): limites.MATRICULA,
     ("aviones", "modelo"): limites.MODELO_AVION,
 }

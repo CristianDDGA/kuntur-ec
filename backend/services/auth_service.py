@@ -90,7 +90,7 @@ class AuthService:
         datos = self._emisor.leer(token)
         with self._db.transaccion() as cur:
             cur.execute(
-                "SELECT u.id, u.nombre, u.correo, u.password_hash, u.rol, u.fecha_registro "
+                "SELECT u.id, u.nombre, u.correo, u.password_hash, u.rol, u.fecha_registro, u.cedula "
                 "FROM tokens t JOIN usuarios u ON u.id = t.usuario_id "
                 "WHERE t.token = %s AND t.usuario_id = %s AND t.estado = %s AND t.expiracion > now()",
                 (huella_token(token), datos.usuario_id, EstadoToken.ACTIVO.value),

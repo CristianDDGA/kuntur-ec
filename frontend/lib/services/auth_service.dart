@@ -26,12 +26,13 @@ class AuthService {
   /// Crea una cuenta de cliente. No inicia sesión: eso lo decide el controlador.
   Future<Usuario> registrar({
     required String nombre,
+    required String cedula,
     required String correo,
     required String password,
   }) async {
     final json = asJsonMap(await _client.post(
       '/usuarios/registro',
-      body: {'nombre': nombre, 'correo': correo.trim(), 'password': password},
+      body: {'nombre': nombre, 'cedula': cedula.trim(), 'correo': correo.trim(), 'password': password},
     ));
     final usuario = json['usuario'];
     if (usuario is! JsonMap) throw const InvalidResponseFailure();

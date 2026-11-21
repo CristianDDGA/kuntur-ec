@@ -8,6 +8,7 @@ Cada valor es exactamente el tamaño de su columna en `database/schema.sql`:
     vuelos.origen     VARCHAR(80)    -> CIUDAD
     vuelos.destino    VARCHAR(80)    -> CIUDAD
     reserva_asientos.asiento VARCHAR(4) -> ASIENTO
+    usuarios.cedula   VARCHAR(10)  -> CEDULA
     aviones.matricula VARCHAR(10)  -> MATRICULA
     aviones.modelo    VARCHAR(60)  -> MODELO_AVION
 
@@ -22,6 +23,7 @@ CORREO = 150
 CODIGO_VUELO = 10
 CIUDAD = 80
 ASIENTO = 4  # "1A" ... "50D"
+CEDULA = 10  # cédula ecuatoriana: 10 dígitos
 MATRICULA = 10
 MODELO_AVION = 60
 

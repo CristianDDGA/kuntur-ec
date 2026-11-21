@@ -24,6 +24,7 @@ class RegistroPage extends ConsumerStatefulWidget {
 class _RegistroPageState extends ConsumerState<RegistroPage> {
   final _formulario = GlobalKey<FormState>();
   final _nombre = TextEditingController();
+  final _cedula = TextEditingController();
   final _correo = TextEditingController();
   final _password = TextEditingController();
   final _confirmacion = TextEditingController();
@@ -39,6 +40,7 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
   @override
   void dispose() {
     _nombre.dispose();
+    _cedula.dispose();
     _correo.dispose();
     _password.dispose();
     _confirmacion.dispose();
@@ -50,6 +52,7 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
     FocusScope.of(context).unfocus();
     await ref.read(registroControllerProvider.notifier).registrar(
           nombre: _nombre.text,
+          cedula: _cedula.text,
           correo: _correo.text,
           password: _password.text,
         );
@@ -83,6 +86,21 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
                 decoration: const InputDecoration(
                   labelText: 'Nombre completo',
                   prefixIcon: Icon(Icons.person_outline),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                controller: _cedula,
+                enabled: !cargando,
+                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.next,
+                validator: Validadores.cedula,
+                inputFormatters: Validadores.entradaCedula,
+                decoration: const InputDecoration(
+                  labelText: 'Cédula de identidad',
+                  helperText: '10 dígitos. Se valida el número, no se consulta ningún registro.',
+                  prefixIcon: Icon(Icons.badge_outlined),
                 ),
               ),
               const SizedBox(height: 16),

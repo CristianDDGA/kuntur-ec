@@ -19,9 +19,10 @@ Future<void> _abrirRegistro(WidgetTester tester, RouteFakeRestClient client) asy
   expect(find.byType(RegistroPage), findsOneWidget);
 }
 
-Future<void> _llenar(WidgetTester tester, {String nombre = 'Ana Torres', String correo = 'ana@correo.com',
+Future<void> _llenar(WidgetTester tester, {String nombre = 'Ana Torres', String cedula = '1710034065', String correo = 'ana@correo.com',
     String password = 'Clave2026', String? confirmacion}) async {
   await escribir(tester, 'Nombre completo', nombre);
+  await escribir(tester, 'Cédula de identidad', cedula);
   await escribir(tester, 'Correo electrónico', correo);
   await escribir(tester, 'Contraseña', password);
   await escribir(tester, 'Repita la contraseña', confirmacion ?? password);
@@ -35,6 +36,7 @@ void main() {
     await tocarBoton(tester, 'Crear cuenta');
 
     expect(find.text('Ingrese su nombre completo.'), findsOneWidget);
+    expect(find.text('Ingrese su número de cédula.'), findsOneWidget);
     expect(find.text('Ingrese su correo.'), findsOneWidget);
     expect(find.text('Ingrese una contraseña.'), findsOneWidget);
     expect(find.text('Repita la contraseña.'), findsOneWidget);
@@ -70,6 +72,50 @@ void main() {
       expect(client.llamadas, isEmpty);
     });
   }
+
+  testWidgets('la cédula solo admite números y hasta 10 dígitos al escribir', (tester) async {
+    await _abrirRegistro(tester, _api());
+
+    await escribir(tester, 'Cédula de identidad', '17a1-00 340 6599');
+
+    expect(tester.widget<TextFormField>(campo('Cédula de identidad')).controller!.text, '1710034065');
+  });
+
+  testWidgets('una cédula con el dígito verificador mal se rechaza antes de enviar', (tester) async {
+    final client = _api();
+    await _abrirRegistro(tester, client);
+
+    await _llenar(tester, cedula: '1710034066'); // cambia solo el último dígito
+    await tocarBoton(tester, 'Crear cuenta');
+
+    expect(find.textContaining('Esta cédula no es válida'), findsOneWidget);
+    expect(client.llamadas, isEmpty);
+  });
+
+  testWidgets('cédula completa y válida: se envía con el registro', (tester) async {
+    final client = _api();
+    await _abrirRegistro(tester, client);
+
+    await _llenar(tester);
+    await tocarBoton(tester, 'Crear cuenta');
+    await tester.pumpAndSettle();
+
+    expect((client.llamada('POST', '/usuarios/registro').cuerpo as Map)['cedula'], '1710034065');
+  });
+
+  testWidgets('una cédula ya registrada (409) muestra el mensaje del servidor', (tester) async {
+    final client = _api(
+      registro: const ServerFailure('Ya existe una cuenta registrada con esa cédula.', statusCode: 409),
+    );
+    await _abrirRegistro(tester, client);
+
+    await _llenar(tester);
+    await tocarBoton(tester, 'Crear cuenta');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ya existe una cuenta registrada con esa cédula.'), findsOneWidget);
+    expect(find.byType(RegistroPage), findsOneWidget);
+  });
 
   testWidgets('contraseña débil y confirmación distinta', (tester) async {
     final client = _api();
@@ -107,7 +153,7 @@ void main() {
 
     expect(client.rutasSolicitadas, ['POST /usuarios/registro', 'POST /auth/login', 'GET /vuelos']);
     expect(client.llamada('POST', '/usuarios/registro').cuerpo,
-        {'nombre': 'Ana Torres', 'correo': 'ana@correo.com', 'password': 'Clave2026'}); // nombre normalizado
+        {'nombre': 'Ana Torres', 'cedula': '1710034065', 'correo': 'ana@correo.com', 'password': 'Clave2026'}); // nombre normalizado
     expect(find.byType(VuelosPage), findsOneWidget);
     expect(await tokens.leer(), 'jwt-de-prueba');
   });

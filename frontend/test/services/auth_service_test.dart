@@ -49,13 +49,14 @@ void main() {
 
       final usuario = await _servicio(client).registrar(
         nombre: 'Ana Torres',
+        cedula: ' 1710034065 ',
         correo: ' ana@correo.com ',
         password: 'Clave2026',
       );
 
       expect(usuario.rol, Rol.cliente);
       expect(client.llamada('POST', '/usuarios/registro').cuerpo,
-          {'nombre': 'Ana Torres', 'correo': 'ana@correo.com', 'password': 'Clave2026'});
+          {'nombre': 'Ana Torres', 'cedula': '1710034065', 'correo': 'ana@correo.com', 'password': 'Clave2026'});
     });
 
     test('un correo repetido llega como ServerFailure 409 con el mensaje de la API', () async {
@@ -64,7 +65,7 @@ void main() {
             statusCode: 409, codigo: 'conflicto'),
       });
       await expectLater(
-        _servicio(client).registrar(nombre: 'Ana', correo: 'ana@correo.com', password: 'Clave2026'),
+        _servicio(client).registrar(nombre: 'Ana', cedula: '1710034065', correo: 'ana@correo.com', password: 'Clave2026'),
         throwsA(isA<ServerFailure>().having((e) => e.statusCode, 'statusCode', 409)),
       );
     });

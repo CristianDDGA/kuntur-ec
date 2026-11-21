@@ -8,7 +8,7 @@ from tests.factories import un_usuario, un_vuelo
 from utils.excepciones import ServiceUnavailableError, TooManyRequestsError
 
 REGISTRO = "/api/usuarios/registro"
-DATOS = {"nombre": "Ana Torres", "correo": "ana@correo.com", "password": "Clave2026"}
+DATOS = {"nombre": "Ana Torres", "cedula": "1710034065", "correo": "ana@correo.com", "password": "Clave2026"}
 SECRETO = "tabla usuarios SELECT password_hash psycopg Traceback"
 
 

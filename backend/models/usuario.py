@@ -5,7 +5,7 @@ from enum import StrEnum
 from typing import ClassVar
 
 from models.base import Modelo, requerir, texto_presente
-from utils.validaciones import es_correo
+from utils.validaciones import es_cedula, es_correo
 
 
 class Rol(StrEnum):
@@ -21,6 +21,7 @@ class Usuario(Modelo):
     password_hash: str
     rol: Rol
     fecha_registro: datetime | None
+    cedula: str | None = None  # None en cuentas anteriores a pedirla (p. ej. el administrador)
 
     # Nunca se envía al cliente.
     CAMPOS_PRIVADOS: ClassVar[frozenset[str]] = frozenset({"password_hash"})
@@ -34,3 +35,4 @@ class Usuario(Modelo):
         requerir(es_correo(self.correo or ""), "El correo no es válido.")
         requerir(texto_presente(self.password_hash), "La contraseña cifrada es obligatoria.")
         requerir(isinstance(self.rol, Rol), "El rol no es válido.")
+        requerir(self.cedula is None or es_cedula(self.cedula), "La cédula no es válida.")

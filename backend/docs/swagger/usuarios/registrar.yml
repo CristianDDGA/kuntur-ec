@@ -9,9 +9,10 @@ parameters:
     required: true
     schema:
       type: object
-      required: [nombre, correo, password]
+      required: [nombre, cedula, correo, password]
       properties:
         nombre: {type: string, example: "Ana Torres"}
+        cedula: {type: string, example: "1710034065", description: "Cédula ecuatoriana de 10 dígitos (se valida provincia y dígito verificador)"}
         correo: {type: string, example: "ana@correo.com"}
         password: {type: string, example: "Clave2026", description: "Mínimo 8 caracteres, letras y números"}
 responses:
@@ -27,9 +28,10 @@ responses:
             id: {type: integer, example: 2}
             nombre: {type: string}
             correo: {type: string}
+            cedula: {type: string, example: "1710034065"}
             rol: {type: string, example: cliente}
             fecha_registro: {type: string, format: date-time}
   400:
-    description: Datos inválidos (campo faltante, correo o contraseña no válidos).
+    description: Datos inválidos (campo faltante, cédula, correo o contraseña no válidos).
   409:
-    description: Ya existe una cuenta con ese correo.
+    description: Ya existe una cuenta con ese correo o con esa cédula.
