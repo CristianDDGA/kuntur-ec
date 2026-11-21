@@ -3,7 +3,7 @@ from flasgger import swag_from
 from flask import Blueprint, current_app, request
 
 from services.auth_service import AuthService
-from utils.autenticacion import sesion_actual, token_requerido
+from utils.autenticacion import sesion_actual, token_requerido, publica
 from utils.documentacion import contrato
 from utils.peticiones import cuerpo_json
 from utils.respuestas import respond
@@ -21,6 +21,7 @@ def _servicio() -> AuthService:
 
 @auth_bp.route("/login", methods=["POST"])
 @swag_from(contrato("auth", "login"))
+@publica
 def login():
     return respond(_servicio().login(cuerpo_json(), origen=request.remote_addr or ""), root="sesion")
 

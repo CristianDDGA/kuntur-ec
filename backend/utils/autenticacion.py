@@ -28,12 +28,30 @@ def _token_de_la_cabecera() -> str:
     return valor.strip()
 
 
+def publica(vista: F) -> F:
+    """Declara que la ruta no necesita sesión. Toda ruta de la API debe ser `publica` o protegida:
+    si no declara nada, la API la rechaza (cerrado por defecto)."""
+    vista._acceso = "publica"  # type: ignore[attr-defined]
+    return vista
+
+
+def exigir_acceso_declarado() -> None:
+    """before_request: una ruta de la API sin @publica ni @token_requerido/@rol_requerido responde 500
+    en vez de quedar abierta por olvido."""
+    if request.blueprint is None:
+        return  # Swagger, 404 y otras rutas que no son de nuestros servicios
+    vista = current_app.view_functions.get(request.endpoint)
+    if getattr(vista, "_acceso", None) is None:
+        raise RuntimeError(f"La ruta {request.endpoint} no declara su acceso (@publica o @token_requerido).")
+
+
 def token_requerido(vista: F) -> F:
     @wraps(vista)
     def envoltura(*args: Any, **kwargs: Any) -> Any:
         g.sesion = current_app.extensions["auth_service"].validar(_token_de_la_cabecera())
         return vista(*args, **kwargs)
 
+    envoltura._acceso = "protegida"  # type: ignore[attr-defined]
     return envoltura  # type: ignore[return-value]
 
 
@@ -46,6 +64,7 @@ def rol_requerido(*roles: Rol) -> Callable[[F], F]:
                 raise ForbiddenError("No tiene permiso para realizar esta acción.")
             return vista(*args, **kwargs)
 
+        envoltura._acceso = "protegida"  # type: ignore[attr-defined]
         return envoltura  # type: ignore[return-value]
 
     return decorador

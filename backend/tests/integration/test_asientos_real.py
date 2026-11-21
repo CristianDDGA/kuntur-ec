@@ -14,6 +14,7 @@ from database import Database
 from models import EstadoReserva, Usuario
 from services.auth_service import Sesion
 from services.reserva_service import ReservaService
+from tests.iva_vigente import porcentaje_vigente, total_con_iva
 from services.vuelo_service import VueloService
 from utils.excepciones import ConflictError, ValidationError
 
@@ -136,9 +137,9 @@ def test_modificar_cambiando_lugares_ampliando_y_reduciendo(db, escenario):
 
     ampliada = servicio.modificar(ana, r.id, {"asientos": ["1A", "1B"], "version": 2})
     assert ampliada.asientos == ("1A", "1B") and ampliada.reserva.cantidad_asientos == 2
-    assert ampliada.reserva.total == Decimal("230.00") and _libres(db, vuelo_id) == 0
+    assert ampliada.reserva.total == total_con_iva("200.00", porcentaje_vigente(db)) and _libres(db, vuelo_id) == 0
     reducida = servicio.modificar(ana, r.id, {"asientos": ["1A"], "version": 3})
-    assert reducida.asientos == ("1A",) and reducida.reserva.total == Decimal("115.00")
+    assert reducida.asientos == ("1A",) and reducida.reserva.total == total_con_iva("100.00", porcentaje_vigente(db))
     assert _ocupados(db, vuelo_id) == ["1A", "1C"] and _libres(db, vuelo_id) == 1
 
 
@@ -184,3 +185,19 @@ def test_la_base_no_admite_vuelos_de_mas_de_200_asientos(db):
                 "INSERT INTO vuelos (codigo, origen, destino, fecha, hora_salida, hora_llegada, precio, capacidad, "
                 "asientos_disponibles) VALUES ('TST03', 'Quito', 'Loja', current_date + 5, '08:00', '09:00', 50, 201, 201)"
             )
+
+
+def test_modificar_no_borra_los_asientos_retirados(db, escenario):
+    servicio, vuelo_id, (ana, _) = escenario
+    r = servicio.crear(ana, {"vuelo_id": vuelo_id, "asientos": ["1A", "1B"]}).reserva
+
+    reducida = servicio.modificar(ana, r.id, {"asientos": ["1A"], "version": 1})
+    assert reducida.asientos == ("1A",) and servicio.obtener(ana, r.id).asientos == ("1A",)
+    with db.transaccion() as cur:  # la fila del asiento retirado sigue en la BD, marcada y liberada
+        cur.execute(
+            "SELECT activo, quitado FROM reserva_asientos WHERE reserva_id = %s AND asiento = '1B'", (r.id,)
+        )
+        assert cur.fetchone() == {"activo": False, "quitado": True}
+
+    servicio.cancelar(ana, r.id)
+    assert servicio.obtener(ana, r.id).asientos == ("1A",)  # el retirado no reaparece al cancelar

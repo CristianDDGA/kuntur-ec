@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 _ENTORNOS_LOCALES = frozenset({"development", "testing"})
 _CLAVE_JWT_LOCAL = "clave-local-solo-para-desarrollo"
 _OBLIGATORIAS_FUERA_DE_LOCAL = ("DATABASE_URL", "JWT_SECRET_KEY")
+_MIN_CARACTERES_CLAVE_JWT = 32
 
 
 class ConfigurationError(RuntimeError):
@@ -49,6 +50,16 @@ class Settings:
             if faltantes:
                 raise ConfigurationError(
                     f"Faltan variables obligatorias para APP_ENV={app_env}: {', '.join(faltantes)}"
+                )
+
+            clave = env.get("JWT_SECRET_KEY", "")
+            if len(clave) < _MIN_CARACTERES_CLAVE_JWT:
+                raise ConfigurationError(
+                    f"JWT_SECRET_KEY debe tener al menos {_MIN_CARACTERES_CLAVE_JWT} caracteres fuera de desarrollo."
+                )
+            if "*" in (o.strip() for o in env.get("CORS_ORIGINS", "*").split(",")):
+                raise ConfigurationError(
+                    "CORS_ORIGINS no puede ser '*' fuera de desarrollo: liste los orígenes del frontend."
                 )
 
         return cls(

@@ -95,6 +95,9 @@ CREATE TABLE IF NOT EXISTS reserva_asientos (
     PRIMARY KEY (reserva_id, asiento)
 );
 
+-- `quitado`: la persona retiró el asiento al modificar la reserva (no se borra: queda en el historial).
+ALTER TABLE reserva_asientos ADD COLUMN IF NOT EXISTS quitado BOOLEAN NOT NULL DEFAULT FALSE;
+
 CREATE UNIQUE INDEX IF NOT EXISTS ux_asiento_activo_por_vuelo ON reserva_asientos (vuelo_id, asiento) WHERE activo;
 
 -- ---------------------------------------------------------------------

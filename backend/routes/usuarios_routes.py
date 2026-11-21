@@ -5,6 +5,7 @@ from flask import Blueprint, current_app
 from services.usuario_service import UsuarioService
 from utils.documentacion import contrato
 from utils.peticiones import cuerpo_json
+from utils.autenticacion import publica
 from utils.respuestas import respond
 
 usuarios_bp = Blueprint("usuarios", __name__)
@@ -20,6 +21,7 @@ def _servicio() -> UsuarioService:
 
 @usuarios_bp.route("/registro", methods=["POST"])
 @swag_from(contrato("usuarios", "registrar"))
+@publica
 def registrar():
     usuario = _servicio().registrar(cuerpo_json())
     return respond(

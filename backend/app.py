@@ -24,6 +24,7 @@ from services.iva_service import IvaService
 from services.reserva_service import ReservaService
 from services.usuario_service import UsuarioService
 from services.vuelo_service import VueloService
+from utils.autenticacion import exigir_acceso_declarado
 from utils.convertidores import IdConverter
 from utils.documentacion import init_docs
 from utils.formatos import JsonFormato, XmlFormato
@@ -81,6 +82,7 @@ def create_app(settings: Settings | None = None, db: Database | None = None) -> 
     init_docs(app, API_PREFIX)
     register_error_handlers(app)
     _agregar_cabeceras_seguras(app)
+    app.before_request(exigir_acceso_declarado)  # cerrado por defecto: toda ruta declara su acceso
 
     app.register_blueprint(health_bp, url_prefix=API_PREFIX)
     app.register_blueprint(usuarios_bp, url_prefix=f"{API_PREFIX}/usuarios")
