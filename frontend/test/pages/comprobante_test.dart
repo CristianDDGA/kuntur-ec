@@ -65,11 +65,11 @@ void main() {
       expect(find.textContaining('Pasaje KT101'), findsOneWidget);
       expect(find.text('Asiento 1A'), findsOneWidget);
       expect(find.text('Asiento 1B'), findsOneWidget);
-      expect(find.text(r'2 × $89.00'), findsOneWidget);
-      expect(find.text(r'$178.00'), findsWidgets);
+      expect(find.text(r'2 × $ 89.00'), findsOneWidget);
+      expect(find.text(r'$ 178.00'), findsWidgets);
       expect(find.text('IVA (15 %)'), findsOneWidget);
-      expect(find.text(r'$26.70'), findsOneWidget);
-      expect(find.text(r'$204.70'), findsOneWidget);
+      expect(find.text(r'$ 26.70'), findsOneWidget);
+      expect(find.text(r'$ 204.70'), findsOneWidget);
       expect(find.text('Confirmada'), findsOneWidget);
     });
 

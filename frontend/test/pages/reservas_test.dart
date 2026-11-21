@@ -90,7 +90,7 @@ void main() {
       expect(find.byType(ReservasPage), findsOneWidget);
       expect(find.text('2 reservas'), findsOneWidget);
       expect(find.text('Quito → Guayaquil'), findsNWidgets(2));
-      expect(find.text(r'$204.70'), findsOneWidget);
+      expect(find.text(r'$ 204.70'), findsOneWidget);
       expect(find.text('Confirmada'), findsOneWidget);
       expect(find.text('Cancelada'), findsOneWidget);
       expect(find.text('1 asiento'), findsOneWidget);
@@ -159,9 +159,9 @@ void main() {
       expect(find.text('Quito → Guayaquil'), findsOneWidget);
       expect(find.text('1A'), findsOneWidget);
       expect(find.text('1B'), findsOneWidget);
-      expect(find.text(r'$178.00'), findsOneWidget);
+      expect(find.text(r'$ 178.00'), findsOneWidget);
       expect(find.text('IVA (15 %)'), findsOneWidget);
-      expect(find.text(r'$204.70'), findsOneWidget);
+      expect(find.text(r'$ 204.70'), findsOneWidget);
       expect(find.text('Cambiar asientos'), findsOneWidget);
       expect(find.text('Cancelar reserva'), findsOneWidget);
     });

@@ -77,8 +77,10 @@ void main() {
       expect(Formatos.hora(const Duration(hours: 8, minutes: 5)), '08:05');
       expect(Formatos.duracion(const Duration(minutes: 45)), '45 min');
       expect(Formatos.duracion(const Duration(hours: 1, minutes: 5)), '1 h 05 min');
-      expect(Formatos.dinero(7550), r'$75.50');
-      expect(Formatos.dinero(5), r'$0.05');
+      expect(Formatos.dinero(7550), r'$ 75.50');
+      expect(Formatos.dinero(5), r'$ 0.05');
+      expect(Formatos.dinero(1000000), r'$ 10,000.00');
+      expect(Formatos.dinero(2240000), r'$ 22,400.00');
     });
   });
 

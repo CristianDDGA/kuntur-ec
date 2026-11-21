@@ -12,11 +12,11 @@ class CompletarCedulaController extends AsyncNotifier<void> {
   FutureOr<void> build() {}
 
   /// `true` si el servidor la aceptó; entonces la sesión ya tiene la cédula y el router deja pasar.
-  Future<bool> guardar(String cedula) async {
+  Future<bool> guardar(String cedula, {String? nombre}) async {
     if (state.isLoading) return false;
     state = const AsyncLoading();
     final resultado = await AsyncValue.guard(() async {
-      final usuario = await conSesion(ref, () => ref.read(authServiceProvider).completarCedula(cedula));
+      final usuario = await conSesion(ref, () => ref.read(authServiceProvider).completarCedula(cedula, nombre: nombre));
       ref.read(sesionControllerProvider.notifier).actualizarUsuario(usuario);
     });
     if (ref.mounted) state = resultado;
