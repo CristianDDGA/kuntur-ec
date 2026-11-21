@@ -9,14 +9,11 @@ import 'kinetic_type.dart';
 import 'liquid_morph.dart';
 import 'logo_kuntur.dart';
 
-/// Plantilla de las pantallas de acceso (login y registro): marca arriba y el
-/// formulario en una tarjeta centrada sobre un fondo suave, como en APE8,
-/// pero con la paleta de Ecuador y la franja tricolor como único adorno.
+/// Plantilla de las pantallas de acceso (login y registro): logo centrado y el
+/// formulario en una tarjeta simétrica sobre un fondo suave con onda líquida
+/// reactiva ([FondoLiquidMorph]) y bisel 2.5D ([MarcoIsometrico25D]).
 ///
-/// El fondo incorpora una onda líquida reactiva ([FondoLiquidMorph]) y sobre la
-/// tarjeta se posa el hero isométrico de los Andes; la tarjeta usa el bisel 2.5D
-/// de [MarcoIsometrico25D]. Todas las animaciones son finitas y respetan
-/// «Reducir movimiento» vía [AppMotion].
+/// Todas las animaciones son finitas y respetan «Reducir movimiento» vía [AppMotion].
 class PanelAutenticacion extends StatelessWidget {
   const PanelAutenticacion({
     super.key,
@@ -34,6 +31,33 @@ class PanelAutenticacion extends StatelessWidget {
   /// contraseña. La onda se desplaza suavemente sin distraer de la lectura.
   final double faseLiquida;
 
+  Widget _botonVolver(BuildContext context, {bool compacta = false}) => TextButton.icon(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.textoSecundario,
+          padding: EdgeInsets.symmetric(horizontal: 10, vertical: compacta ? 2 : 6),
+          minimumSize: Size(0, compacta ? 34 : 40),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        icon: const Icon(Icons.arrow_back, size: 18),
+        label: const Text('Volver al inicio'),
+        onPressed: () => Navigator.of(context).canPop()
+            ? Navigator.of(context).pop()
+            : GoRouter.of(context).go('/'),
+      );
+
+  Widget _logo(BuildContext context, {required double tamano}) => Semantics(
+        button: true,
+        label: 'Ir al inicio',
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => GoRouter.of(context).go('/'),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            child: MarcaKuntur(tamanoLogo: tamano, vertical: false),
+          ),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) => Scaffold(
         body: Stack(
@@ -47,46 +71,35 @@ class PanelAutenticacion extends StatelessWidget {
               ),
             ),
             SafeArea(
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
-                  child: ConstrainedBox(
+              child: LayoutBuilder(
+                builder: (context, caja) {
+                  final compacta = caja.maxWidth < 440 || caja.maxHeight < 680;
+                  // En pantallas amplias el botón de regreso va en la esquina superior izquierda
+                  // para que el logo y el formulario queden completamente centrados y simétricos.
+                  final volverFlotante = caja.maxWidth >= 720 && caja.maxHeight >= 540;
+                  final rellenoVertical = compacta ? 8.0 : 16.0;
+                  final rellenoHorizontal = caja.maxWidth < 440 ? 14.0 : 20.0;
+                  final rellenoTarjeta = compacta
+                      ? const EdgeInsets.fromLTRB(18, 14, 18, 14)
+                      : const EdgeInsets.fromLTRB(26, 18, 26, 18);
+
+                  final columnaCentral = ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 440),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // Enlace para volver a la página de inicio
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: TextButton.icon(
-                            style: TextButton.styleFrom(
-                              foregroundColor: AppColors.textoSecundario,
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            ),
-                            icon: const Icon(Icons.arrow_back, size: 18),
-                            label: const Text('Volver al inicio'),
-                            onPressed: () => Navigator.of(context).canPop()
-                                ? Navigator.of(context).pop()
-                                : GoRouter.of(context).go('/'),
+                        if (!volverFlotante) ...[
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: _botonVolver(context, compacta: compacta),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Semantics(
-                          button: true,
-                          label: 'Ir al inicio',
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(16),
-                            onTap: () => GoRouter.of(context).go('/'),
-                            child: const Padding(
-                              padding: EdgeInsets.all(4),
-                              child: MarcaKuntur(),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        // Ilustración 2.5D de los Andes sobre la tarjeta de acceso.
-                        const HeroIsometricoAndes(alto: 130),
-                        const SizedBox(height: 24),
+                          SizedBox(height: compacta ? 2 : 6),
+                        ],
+                        // Solo el logo centrado en el lugar de la antigua ilustración para
+                        // mantener el acceso simétrico y sin scroll en pantalla completa.
+                        _logo(context, tamano: compacta ? 32 : 40),
+                        SizedBox(height: compacta ? 10 : 14),
                         // Entrada suave del formulario (una sola vez, respetando Reduce Motion).
                         TweenAnimationBuilder<double>(
                           tween: Tween(begin: 0, end: 1),
@@ -109,17 +122,20 @@ class PanelAutenticacion extends StatelessWidget {
                                 children: [
                                   const FranjaTricolor(),
                                   Padding(
-                                    padding: const EdgeInsets.fromLTRB(28, 26, 28, 28),
+                                    padding: rellenoTarjeta,
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.stretch,
                                       children: [
                                         Semantics(
                                           header: true,
-                                          child: TituloCinetico(titulo, estilo: AppTextStyles.titulo),
+                                          child: TituloCinetico(
+                                            titulo,
+                                            estilo: AppTextStyles.titulo.copyWith(fontSize: compacta ? 23 : 26),
+                                          ),
                                         ),
-                                        const SizedBox(height: 6),
+                                        const SizedBox(height: 4),
                                         Text(subtitulo, style: AppTextStyles.cuerpo),
-                                        const SizedBox(height: 24),
+                                        SizedBox(height: compacta ? 12 : 16),
                                         child,
                                       ],
                                     ),
@@ -129,12 +145,40 @@ class PanelAutenticacion extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 18),
-                        const Text('Vuelos nacionales por todo el Ecuador', style: AppTextStyles.nota),
+                        SizedBox(height: compacta ? 8 : 12),
+                        const Text(
+                          'Vuelos nacionales por todo el Ecuador',
+                          style: AppTextStyles.nota,
+                          textAlign: TextAlign.center,
+                        ),
                       ],
                     ),
-                  ),
-                ),
+                  );
+
+                  final contenidoDesplazable = SingleChildScrollView(
+                    padding: EdgeInsets.symmetric(horizontal: rellenoHorizontal, vertical: rellenoVertical),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: (caja.maxHeight - rellenoVertical * 2).clamp(0.0, double.infinity),
+                        minWidth: double.infinity,
+                      ),
+                      child: Center(child: columnaCentral),
+                    ),
+                  );
+
+                  if (!volverFlotante) return contenidoDesplazable;
+
+                  return Stack(
+                    children: [
+                      Positioned.fill(child: contenidoDesplazable),
+                      Positioned(
+                        top: 12,
+                        left: 16,
+                        child: _botonVolver(context),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ],

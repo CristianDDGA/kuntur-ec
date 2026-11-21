@@ -64,10 +64,12 @@ class _Requisito extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            AnimatedDefaultTextStyle(
-              duration: AppMotion.rapidaDe(context),
-              style: TextStyle(fontSize: 12.5, color: color, fontWeight: FontWeight.w500),
-              child: Text(texto),
+            Expanded(
+              child: AnimatedDefaultTextStyle(
+                duration: AppMotion.rapidaDe(context),
+                style: TextStyle(fontSize: 12.5, color: color, fontWeight: FontWeight.w500),
+                child: Text(texto),
+              ),
             ),
           ],
         ),
