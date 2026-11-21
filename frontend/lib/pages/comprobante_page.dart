@@ -142,8 +142,16 @@ class _VistaFactura extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const MarcaKuntur(tamanoLogo: 36, vertical: false),
-                    const Spacer(),
+                    const Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: MarcaKuntur(tamanoLogo: 36, vertical: false),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
                     InsigniaEstado(
                       texto: f.anulada ? 'Anulada' : f.estado,
                       tipo: f.anulada ? TipoInsignia.error : TipoInsignia.exito,
@@ -318,8 +326,9 @@ class _VistaXmlState extends State<_VistaXml> {
             runSpacing: 8,
             children: [
               const Text('Documento digital XML estructurado con firma y autorización.', style: AppTextStyles.nota),
-              Row(
-                mainAxisSize: MainAxisSize.min,
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
@@ -332,7 +341,6 @@ class _VistaXmlState extends State<_VistaXml> {
                     icon: const Icon(Icons.copy, size: 16),
                     label: const Text('Copiar XML', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                   ),
-                  const SizedBox(width: 8),
                   FilledButton.icon(
                     style: FilledButton.styleFrom(
                       backgroundColor: AppColors.azul,

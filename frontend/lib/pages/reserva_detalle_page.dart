@@ -135,24 +135,42 @@ class _ContenidoState extends ConsumerState<_Contenido> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  CodigoVuelo(v.codigo),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(r.numero, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF1E293B))),
-                      if (r.fechaReserva != null)
-                        Text(
-                          'Emitida el ${Formatos.fecha(r.fechaReserva!.toLocal())}',
-                          style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+              SizedBox(
+                width: double.infinity,
+                child: Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CodigoVuelo(v.codigo),
+                        const SizedBox(width: 12),
+                        Flexible(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                r.numero,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF1E293B)),
+                              ),
+                              if (r.fechaReserva != null)
+                                Text(
+                                  'Emitida el ${Formatos.fecha(r.fechaReserva!.toLocal())}',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                ),
+                            ],
+                          ),
                         ),
-                    ],
-                  ),
-                  const Spacer(),
-                  EtiquetaEstadoReserva(reserva: r),
-                ],
+                      ],
+                    ),
+                    EtiquetaEstadoReserva(reserva: r),
+                  ],
+                ),
               ),
               const SizedBox(height: 20),
               Text('${v.origen} → ${v.destino}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
@@ -184,7 +202,12 @@ class _ContenidoState extends ConsumerState<_Contenido> {
                       children: [
                         Icon(Icons.receipt_outlined, size: 18, color: AppColors.azul),
                         SizedBox(width: 8),
-                        Text('Detalle del comprobante de venta', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: AppColors.azul)),
+                        Expanded(
+                          child: Text(
+                            'Detalle del comprobante de venta',
+                            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: AppColors.azul),
+                          ),
+                        ),
                       ],
                     ),
                     const Divider(height: 20, color: Color(0xFFE2E8F0)),
@@ -202,36 +225,53 @@ class _ContenidoState extends ConsumerState<_Contenido> {
           ),
         ),
         const SizedBox(height: 18),
-        Row(
-          children: [
-            Expanded(
-              child: FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.azulNoche,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: () => context.push(AppRoutes.comprobante(r.id)),
-                icon: const Icon(Icons.receipt_long, size: 18),
-                label: const Text('Ver comprobante (factura XML)', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+        LayoutBuilder(
+          builder: (context, caja) {
+            final verComprobante = FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.azulNoche,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-            ),
-            if (editable && !r.cancelada) ...[
-              const SizedBox(width: 12),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.azul,
-                  side: const BorderSide(color: AppColors.azul, width: 1.5),
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: _enviando ? null : () => context.push(AppRoutes.asientosDeLaReserva(r.id)),
-                icon: const Icon(Icons.event_seat_outlined, size: 18),
-                label: const Text('Cambiar asientos', style: TextStyle(fontWeight: FontWeight.w800)),
+              onPressed: () => context.push(AppRoutes.comprobante(r.id)),
+              icon: const Icon(Icons.receipt_long, size: 18),
+              label: const Text('Ver comprobante (factura XML)', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+            );
+            final cambiarAsientos = OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.azul,
+                side: const BorderSide(color: AppColors.azul, width: 1.5),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-            ],
-          ],
+              onPressed: _enviando ? null : () => context.push(AppRoutes.asientosDeLaReserva(r.id)),
+              icon: const Icon(Icons.event_seat_outlined, size: 18),
+              label: const Text('Cambiar asientos', style: TextStyle(fontWeight: FontWeight.w800)),
+            );
+            final conEditar = editable && !r.cancelada;
+            if (caja.maxWidth < 520) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  verComprobante,
+                  if (conEditar) ...[
+                    const SizedBox(height: 10),
+                    cambiarAsientos,
+                  ],
+                ],
+              );
+            }
+            return Row(
+              children: [
+                Expanded(child: verComprobante),
+                if (conEditar) ...[
+                  const SizedBox(width: 12),
+                  cambiarAsientos,
+                ],
+              ],
+            );
+          },
         ),
         if (r.cancelada) ...[
           const SizedBox(height: 12),

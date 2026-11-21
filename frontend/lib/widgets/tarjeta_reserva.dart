@@ -46,11 +46,14 @@ class TarjetaReserva extends StatelessWidget {
                     children: [
                       CodigoVuelo(v.codigo),
                       const SizedBox(width: 10),
-                      Text(
-                        reserva.numero,
-                        style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF64748B), fontSize: 13),
+                      Expanded(
+                        child: Text(
+                          reserva.numero,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF64748B), fontSize: 13),
+                        ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 8),
                       EtiquetaEstadoReserva(reserva: reserva),
                     ],
                   ),
@@ -71,20 +74,26 @@ class TarjetaReserva extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          const Text('Total reserva', style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
-                          Text(
-                            Formatos.dinero(reserva.totalCentavos),
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                              color: reserva.cancelada ? AppColors.textoSuave : const Color(0xFF0F172A),
-                              decoration: reserva.cancelada ? TextDecoration.lineThrough : null,
+                      Flexible(
+                        flex: 0,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            const Text('Total reserva', style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                Formatos.dinero(reserva.totalCentavos),
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  color: reserva.cancelada ? AppColors.textoSuave : const Color(0xFF0F172A),
+                                  decoration: reserva.cancelada ? TextDecoration.lineThrough : null,
+                                ),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -93,11 +102,14 @@ class TarjetaReserva extends StatelessWidget {
                     children: [
                       const Icon(Icons.event_seat_outlined, size: 16, color: Color(0xFF64748B)),
                       const SizedBox(width: 6),
-                      Text(
-                        reserva.cantidad == 1 ? '1 asiento' : '${reserva.cantidad} asientos',
-                        style: const TextStyle(fontSize: 13, color: Color(0xFF475569), fontWeight: FontWeight.w600),
+                      Expanded(
+                        child: Text(
+                          reserva.cantidad == 1 ? '1 asiento' : '${reserva.cantidad} asientos',
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 13, color: Color(0xFF475569), fontWeight: FontWeight.w600),
+                        ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 8),
                       OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.azul,

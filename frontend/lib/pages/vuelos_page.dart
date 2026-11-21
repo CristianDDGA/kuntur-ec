@@ -42,37 +42,49 @@ class VuelosPage extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          LayoutBuilder(
+            builder: (context, caja) {
+              final saludo = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TituloCinetico(
+                    'Hola, ${usuario.nombre.split(' ').first}',
+                    estilo: AppTextStyles.titulo,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    usuario.esAdmin
+                        ? 'Catálogo operativo de vuelos del sistema.'
+                        : '¿A dónde viajamos? Busque su vuelo y reserve.',
+                    style: AppTextStyles.cuerpo,
+                  ),
+                ],
+              );
+              if (!usuario.esAdmin) return saludo;
+              final boton = FilledButton.icon(
+                onPressed: () => context.push(AppRoutes.nuevoVuelo),
+                icon: const Icon(Icons.add),
+                label: const Text('Nuevo vuelo'),
+              );
+              if (caja.maxWidth < 460) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    TituloCinetico(
-                      'Hola, ${usuario.nombre.split(' ').first}',
-                      estilo: AppTextStyles.titulo,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      usuario.esAdmin
-                          ? 'Catálogo operativo de vuelos del sistema.'
-                          : '¿A dónde viajamos? Busque su vuelo y reserve.',
-                      style: AppTextStyles.cuerpo,
-                    ),
+                    saludo,
+                    const SizedBox(height: 12),
+                    Align(alignment: Alignment.centerLeft, child: boton),
                   ],
-                ),
-              ),
-              // Acceso integrado en la cabecera (antes un FAB que tapaba las tarjetas).
-              if (usuario.esAdmin) ...[
-                const SizedBox(width: 12),
-                FilledButton.icon(
-                  onPressed: () => context.push(AppRoutes.nuevoVuelo),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Nuevo vuelo'),
-                ),
-              ],
-            ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: saludo),
+                  const SizedBox(width: 12),
+                  boton,
+                ],
+              );
+            },
           ),
           const SizedBox(height: 16),
           // La clave por filtro rehace los campos si el filtro cambia desde fuera.
@@ -331,17 +343,41 @@ class _FormularioBusquedaState extends ConsumerState<_FormularioBusqueda> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: origen),
-            IconButton(
-              tooltip: 'Intercambiar origen y destino',
-              onPressed: _intercambiar,
-              icon: const Icon(Icons.swap_vert),
-            ),
-            Expanded(child: destino),
-          ],
+        LayoutBuilder(
+          builder: (context, caja) {
+            final apilar = caja.maxWidth < 540;
+            if (apilar) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  origen,
+                  const SizedBox(height: 6),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: IconButton(
+                      tooltip: 'Intercambiar origen y destino',
+                      onPressed: _intercambiar,
+                      icon: const Icon(Icons.swap_vert),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  destino,
+                ],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: origen),
+                IconButton(
+                  tooltip: 'Intercambiar origen y destino',
+                  onPressed: _intercambiar,
+                  icon: const Icon(Icons.swap_horiz),
+                ),
+                Expanded(child: destino),
+              ],
+            );
+          },
         ),
         // La ruta escrita se compone en tipografía cinética solo cuando hay ambos
         // datos. Ocupa una altura fija para no desplazar los botones mientras se

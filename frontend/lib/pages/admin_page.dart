@@ -88,7 +88,7 @@ class _TarjetaResumenVentas extends ConsumerWidget {
             children: [
               Icon(Icons.insights, color: AppColors.azul, size: 26),
               SizedBox(width: 12),
-              Text('Resumen de ventas', style: AppTextStyles.subtitulo),
+              Expanded(child: Text('Resumen de ventas', style: AppTextStyles.subtitulo)),
             ],
           ),
           const SizedBox(height: 14),
@@ -129,16 +129,29 @@ class _CifrasVentas extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Wrap(
-          spacing: 16,
-          runSpacing: 12,
-          children: [
-            cifra('Ingresos totales', Formatos.dinero(resumen.totalCentavos)),
-            cifra('IVA recaudado', Formatos.dinero(resumen.ivaCentavos)),
-            cifra('Reservas confirmadas', '${resumen.confirmadas}'),
-            cifra('Reservas canceladas', '${resumen.canceladas}'),
-            cifra('Asientos vendidos', '${resumen.asientosVendidos}'),
-          ],
+        LayoutBuilder(
+          builder: (context, caja) {
+            final columnas = caja.maxWidth < 340
+                ? 1
+                : caja.maxWidth < 560
+                    ? 2
+                    : 3;
+            final ancho = (caja.maxWidth - 16 * (columnas - 1)) / columnas;
+            final cifras = [
+              ('Ingresos totales', Formatos.dinero(resumen.totalCentavos)),
+              ('IVA recaudado', Formatos.dinero(resumen.ivaCentavos)),
+              ('Reservas confirmadas', '${resumen.confirmadas}'),
+              ('Reservas canceladas', '${resumen.canceladas}'),
+              ('Asientos vendidos', '${resumen.asientosVendidos}'),
+            ];
+            return Wrap(
+              spacing: 16,
+              runSpacing: 12,
+              children: [
+                for (final c in cifras) SizedBox(width: ancho, child: cifra(c.$1, c.$2)),
+              ],
+            );
+          },
         ),
         if (resumen.top.isNotEmpty) ...[
           const SizedBox(height: 14),
@@ -161,33 +174,74 @@ class _CifrasVentas extends StatelessWidget {
   }
 }
 
+class _TarjetaAccionAdmin extends StatelessWidget {
+  const _TarjetaAccionAdmin({
+    required this.icono,
+    required this.titulo,
+    required this.descripcion,
+    required this.accion,
+  });
+
+  final IconData icono;
+  final String titulo;
+  final String descripcion;
+  final Widget accion;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: AppDecorations.tarjeta,
+        child: LayoutBuilder(
+          builder: (context, caja) {
+            final info = Row(
+              children: [
+                Icon(icono, color: AppColors.azul, size: 30),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(titulo, style: AppTextStyles.subtitulo),
+                      const SizedBox(height: 2),
+                      Text(descripcion, style: AppTextStyles.cuerpo),
+                    ],
+                  ),
+                ),
+              ],
+            );
+            if (caja.maxWidth < 400) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  info,
+                  const SizedBox(height: 12),
+                  Align(alignment: Alignment.centerRight, child: accion),
+                ],
+              );
+            }
+            return Row(
+              children: [
+                Expanded(child: info),
+                const SizedBox(width: 12),
+                accion,
+              ],
+            );
+          },
+        ),
+      );
+}
+
 class _TarjetaVuelos extends StatelessWidget {
   const _TarjetaVuelos({required this.onCrear});
 
   final VoidCallback onCrear;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(20),
-        decoration: AppDecorations.tarjeta,
-        child: Row(
-          children: [
-            const Icon(Icons.flight_takeoff, color: AppColors.azul, size: 30),
-            const SizedBox(width: 14),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Vuelos', style: AppTextStyles.subtitulo),
-                  SizedBox(height: 2),
-                  Text('Programe un vuelo nuevo. El código se asigna solo.', style: AppTextStyles.cuerpo),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            FilledButton.icon(onPressed: onCrear, icon: const Icon(Icons.add), label: const Text('Crear')),
-          ],
-        ),
+  Widget build(BuildContext context) => _TarjetaAccionAdmin(
+        icono: Icons.flight_takeoff,
+        titulo: 'Vuelos',
+        descripcion: 'Programe un vuelo nuevo. El código se asigna solo.',
+        accion: FilledButton.icon(onPressed: onCrear, icon: const Icon(Icons.add), label: const Text('Crear')),
       );
 }
 
@@ -197,28 +251,14 @@ class _TarjetaAviones extends StatelessWidget {
   final VoidCallback onImportar;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(20),
-        decoration: AppDecorations.tarjeta,
-        child: Row(
-          children: [
-            const Icon(Icons.airplanemode_active, color: AppColors.azul, size: 30),
-            const SizedBox(width: 14),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Aviones', style: AppTextStyles.subtitulo),
-                  SizedBox(height: 2),
-                  Text('Cargue la flota desde un archivo CSV. Los asientos se generan solos.',
-                      style: AppTextStyles.cuerpo),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            FilledButton.icon(
-                onPressed: onImportar, icon: const Icon(Icons.upload_file), label: const Text('Importar')),
-          ],
+  Widget build(BuildContext context) => _TarjetaAccionAdmin(
+        icono: Icons.airplanemode_active,
+        titulo: 'Aviones',
+        descripcion: 'Cargue la flota desde un archivo CSV. Los asientos se generan solos.',
+        accion: FilledButton.icon(
+          onPressed: onImportar,
+          icon: const Icon(Icons.upload_file),
+          label: const Text('Importar'),
         ),
       );
 }
@@ -350,7 +390,7 @@ class _SeccionIvaState extends ConsumerState<_SeccionIva> {
               children: [
                 Icon(Icons.timeline, size: 16, color: AppColors.textoSuave),
                 SizedBox(width: 8),
-                Text('Anterior · Ahora · Próxima', style: AppTextStyles.etiqueta),
+                Expanded(child: Text('Anterior · Ahora · Próxima', style: AppTextStyles.etiqueta)),
               ],
             ),
           ],
@@ -457,9 +497,10 @@ class _FilaTarifa extends StatelessWidget {  const _FilaTarifa({required this.ta
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(
-            width: 70,
+            width: 58,
             child: Text(tarifa.porcentajeCorto, style: AppTextStyles.subtitulo.copyWith(fontSize: 16)),
           ),
           Expanded(
@@ -470,6 +511,7 @@ class _FilaTarifa extends StatelessWidget {  const _FilaTarifa({required this.ta
               style: AppTextStyles.cuerpo,
             ),
           ),
+          const SizedBox(width: 8),
           InsigniaEstado(texto: texto, tipo: tipo),
         ],
       ),
