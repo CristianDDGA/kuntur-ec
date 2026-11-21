@@ -18,7 +18,7 @@ class KunturScaffold extends StatelessWidget {
     required this.body,
     this.conAtras = false,
     this.seccion,
-    this.maxAncho = 760,
+    this.maxAncho = 980,
     this.onRefrescar,
     this.floatingActionButton,
     this.sinSafeArea = false,

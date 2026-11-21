@@ -253,6 +253,24 @@ class Formatos {
     return decimales.isEmpty ? '${partes[0]} %' : '${partes[0]}.$decimales %';
   }
 
-  /// 7550 -> "\$75.50".
-  static String dinero(int centavos) => '\$${centavos ~/ 100}.${_dos(centavos % 100)}';
+  /// Formato monetario internacional estándar:
+  /// Símbolo + Espacio + Miles con coma + Decimales con punto:
+  /// 7550 -> "$ 75.50"  /  1000000 -> "$ 10,000.00"  /  2240000 -> "$ 22,400.00".
+  static String dinero(int centavos) {
+    final signo = centavos < 0 ? '-' : '';
+    final absCentavos = centavos.abs();
+    final enteros = (absCentavos ~/ 100).toString();
+    final decimales = _dos(absCentavos % 100);
+
+    // Formatear miles con coma
+    final buffer = StringBuffer();
+    final longitud = enteros.length;
+    for (var i = 0; i < longitud; i++) {
+      if (i > 0 && (longitud - i) % 3 == 0) {
+        buffer.write(',');
+      }
+      buffer.write(enteros[i]);
+    }
+    return '\$ $signo${buffer.toString()}.$decimales';
+  }
 }

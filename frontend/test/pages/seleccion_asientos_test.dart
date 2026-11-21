@@ -66,21 +66,21 @@ void main() {
       await _abrir(tester, {});
       await _ir(tester, AppRoutes.asientosDelVuelo(3));
       expect(find.text('Asientos (0 de 10): Ninguno'), findsOneWidget);
-      expect(find.text(r'$0.00'), findsOneWidget);
+      expect(find.text(r'$ 0.00'), findsOneWidget);
 
       await _tocar(tester, '1A');
       // 1 asiento: 75.50 + IVA 15 % (11.325 -> 11.33) = 86.83
       expect(find.text('Asientos (1 de 10): 1A'), findsOneWidget);
-      expect(find.text(r'$86.83'), findsOneWidget);
+      expect(find.text(r'$ 86.83'), findsOneWidget);
 
       await _tocar(tester, '1C');
       // 2 asientos: 151.00 + 22.65 = 173.65
       expect(find.text('Asientos (2 de 10): 1A, 1C'), findsOneWidget);
-      expect(find.text(r'$173.65'), findsOneWidget);
+      expect(find.text(r'$ 173.65'), findsOneWidget);
 
       await _tocar(tester, '1A'); // desmarcar
       expect(find.text('Asientos (1 de 10): 1C'), findsOneWidget);
-      expect(find.text(r'$86.83'), findsOneWidget);
+      expect(find.text(r'$ 86.83'), findsOneWidget);
     });
 
     testWidgets('no deja elegir más de 10: avisa y el undécimo no se marca', (tester) async {
@@ -118,7 +118,7 @@ void main() {
       await tester.tap(find.text('Reiniciar selección'));
       await tester.pump();
       expect(find.text('Asientos (0 de 10): Ninguno'), findsOneWidget);
-      expect(find.text(r'$0.00'), findsOneWidget);
+      expect(find.text(r'$ 0.00'), findsOneWidget);
       expect(tester.widget<TextButton>(find.widgetWithText(TextButton, 'Reiniciar selección')).onPressed, isNull);
     });
 
@@ -266,7 +266,7 @@ void main() {
     testWidgets('empieza con los asientos actuales elegidos y "Guardar cambios" desactivado', (tester) async {
       await abrirEdicion(tester, {});
       expect(find.text('Asientos (2 de 10): 1A, 1B'), findsOneWidget);
-      expect(find.text(r'$204.70'), findsOneWidget); // 2 × 89.00 + IVA 15 % con el precio original
+      expect(find.text(r'$ 204.70'), findsOneWidget); // 2 × 89.00 + IVA 15 % con el precio original
       final boton = find.ancestor(of: find.text('Guardar cambios'), matching: find.byType(InkWell));
       expect(tester.widget<InkWell>(boton.first).onTap, isNull);
       expect(find.text('Restablecer'), findsOneWidget);
@@ -298,7 +298,7 @@ void main() {
       await abrirEdicion(tester, {});
       await _tocar(tester, '2A');
       // 3 × 89.00 = 267.00 + 15 % (40.05) = 307.05
-      expect(find.text(r'$307.05'), findsOneWidget);
+      expect(find.text(r'$ 307.05'), findsOneWidget);
       expect(find.text('Asientos (3 de 10): 1A, 1B, 2A'), findsOneWidget);
     });
 

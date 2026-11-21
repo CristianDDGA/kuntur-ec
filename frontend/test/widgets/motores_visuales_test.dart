@@ -65,14 +65,14 @@ void main() {
     });
 
     testWidgets('OdometroCinetico conserva el texto exacto al cambiar el valor', (tester) async {
-      await tester.pumpWidget(_marco(const OdometroCinetico(texto: r'$0.00')));
+      await tester.pumpWidget(_marco(const OdometroCinetico(texto: r'$ 0.00')));
       await tester.pumpAndSettle();
-      expect(find.text(r'$0.00'), findsOneWidget);
+      expect(find.text(r'$ 0.00'), findsOneWidget);
 
-      await tester.pumpWidget(_marco(const OdometroCinetico(texto: r'$86.83')));
+      await tester.pumpWidget(_marco(const OdometroCinetico(texto: r'$ 86.83')));
       await tester.pumpAndSettle();
-      expect(find.text(r'$86.83'), findsOneWidget);
-      expect(find.text(r'$0.00'), findsNothing);
+      expect(find.text(r'$ 86.83'), findsOneWidget);
+      expect(find.text(r'$ 0.00'), findsNothing);
     });
 
     testWidgets('TextoRutaCinetica compone origen y destino', (tester) async {

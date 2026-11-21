@@ -28,7 +28,7 @@ void main() {
       expect(find.text('2 vuelos disponibles'), findsOneWidget);
       expect(find.text('KT101'), findsOneWidget);
       expect(find.text('KT202'), findsOneWidget);
-      expect(find.text(r'$75.50'), findsOneWidget);
+      expect(find.text(r'$ 75.50'), findsOneWidget);
       expect(find.text('42 asientos'), findsOneWidget);
       expect(find.text('Quedan 3'), findsOneWidget); // pocos asientos
       expect(find.text('23:30'), findsOneWidget);

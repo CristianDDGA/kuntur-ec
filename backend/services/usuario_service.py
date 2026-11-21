@@ -108,14 +108,24 @@ class UsuarioService:
     # ------------------------------------------------------------ cédula
 
     def completar_cedula(self, usuario_id: int, datos: dict) -> Usuario:
-        """Guarda la cédula de una cuenta que no la tiene (p. ej. creada con Google). Una vez puesta no se cambia."""
+        """Guarda la cédula de una cuenta que no la tiene (p. ej. creada con Google). Una vez puesta no se cambia.
+        Permite además actualizar el nombre propio de la persona si lo envía para completar su perfil."""
         cedula = validar_cedula(datos)
+        nombre = None
+        if "nombre" in datos and datos["nombre"]:
+            nombre = nombre_propio(datos, "nombre", MAX_LARGO_NOMBRE)
         try:
             with self._db.transaccion() as cur:
-                cur.execute(
-                    f"UPDATE usuarios SET cedula = %s WHERE id = %s AND cedula IS NULL RETURNING {_COLUMNAS}",
-                    (cedula, usuario_id),
-                )
+                if nombre:
+                    cur.execute(
+                        f"UPDATE usuarios SET cedula = %s, nombre = %s WHERE id = %s AND cedula IS NULL RETURNING {_COLUMNAS}",
+                        (cedula, nombre, usuario_id),
+                    )
+                else:
+                    cur.execute(
+                        f"UPDATE usuarios SET cedula = %s WHERE id = %s AND cedula IS NULL RETURNING {_COLUMNAS}",
+                        (cedula, usuario_id),
+                    )
                 fila = cur.fetchone()
         except UniqueViolation:
             raise ConflictError("Ya existe una cuenta registrada con esa cédula.") from None

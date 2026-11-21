@@ -58,9 +58,13 @@ class AuthService {
     return sesion;
   }
 
-  /// `PUT /usuarios/cedula`: guarda la cédula de una cuenta que no la tiene. Devuelve el usuario actualizado.
-  Future<Usuario> completarCedula(String cedula) async {
-    final json = asJsonMap(await _client.put('/usuarios/cedula', body: {'cedula': cedula.trim()}));
+  /// `PUT /usuarios/cedula`: guarda la cédula de una cuenta que no la tiene (y opcionalmente su nombre editado).
+  Future<Usuario> completarCedula(String cedula, {String? nombre}) async {
+    final body = <String, dynamic>{'cedula': cedula.trim()};
+    if (nombre != null && nombre.trim().isNotEmpty) {
+      body['nombre'] = nombre.trim();
+    }
+    final json = asJsonMap(await _client.put('/usuarios/cedula', body: body));
     final usuario = json['usuario'];
     if (usuario is! JsonMap) throw const InvalidResponseFailure();
     return Usuario.fromJson(usuario);

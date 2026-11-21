@@ -1,87 +1,477 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../config/app_router.dart';
 import '../config/app_theme.dart';
-import '../widgets/boton_degradado.dart';
-import '../widgets/isometric_kuntur.dart';
-import '../widgets/kinetic_type.dart';
+import '../controllers/vuelos_controller.dart';
+import '../models/vuelo.dart';
+import '../widgets/franja_tricolor.dart';
 import '../widgets/logo_kuntur.dart';
 
-/// Página de inicio pública: presenta Kuntur EC y lleva a iniciar sesión o crear una cuenta.
-/// Quien ya tiene sesión nunca la ve: el router lo manda directo a la lista de vuelos.
-class InicioPage extends StatelessWidget {
+final destinosPopularesProvider = FutureProvider<List<_DestinoResumen>>((ref) async {
+  return _destinosRealesBase;
+});
+
+class _DestinoResumen {
+  const _DestinoResumen({
+    required this.ciudad,
+    required this.precioMinimo,
+    required this.lema,
+    required this.codigoIata,
+  });
+
+  final String ciudad;
+  final double precioMinimo;
+  final String lema;
+  final String codigoIata;
+}
+
+const _destinosRealesBase = [
+  _DestinoResumen(
+    ciudad: 'Guayaquil',
+    precioMinimo: 72.0,
+    lema: 'Perla del Pacífico · Puerto y calor',
+    codigoIata: 'GYE',
+  ),
+  _DestinoResumen(
+    ciudad: 'Manta',
+    precioMinimo: 79.9,
+    lema: 'Costa manabita · Playas y gastronomía',
+    codigoIata: 'MEC',
+  ),
+  _DestinoResumen(
+    ciudad: 'Coca',
+    precioMinimo: 85.0,
+    lema: 'Puerta a la Amazonía ecuatoriana',
+    codigoIata: 'OCC',
+  ),
+  _DestinoResumen(
+    ciudad: 'Quito',
+    precioMinimo: 89.0,
+    lema: 'Mitad del Mundo · Centro Histórico',
+    codigoIata: 'UIO',
+  ),
+];
+
+/// Página de inicio pública inspirada en aerolíneas ecuatorianas modernas:
+/// - Barra superior limpia con identidad de marca y accesos directos.
+/// - Carrusel interactivo superior de las 4 regiones del Ecuador (Sierra, Costa, Amazonía y Galápagos).
+/// - Banner de ventajas comerciales orientado 100% al pasajero.
+/// - Destinos reales cargados dinámicamente desde la base de datos (Supabase).
+/// - Sección de beneficios centrada en la experiencia del viajero.
+/// - Pie de página institucional y claro.
+class InicioPage extends ConsumerWidget {
   const InicioPage({super.key});
 
-  static const _ventajas = [
-    (Icons.search, 'Encuentre su vuelo', 'Busque por origen, destino y fecha, y compare precios con el IVA incluido.'),
-    (Icons.event_seat_outlined, 'Elija su asiento', 'Vea el mapa de la cabina y reserve exactamente los lugares que quiere.'),
-    (Icons.receipt_long_outlined, 'Comprobante al instante', 'Descargue la factura de su reserva en XML cuando la necesite.'),
-  ];
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            const _BarraSuperiorPublica(),
+            const SizedBox(height: 28),
+            const _CarruselRegionesEcuador(),
+            const SizedBox(height: 40),
+            const _BannerExperienciaViajero(),
+            const SizedBox(height: 48),
+            _SeccionDestinosDinamicos(
+              onSeleccionarDestino: (ciudad) {
+                ref.read(filtroVuelosProvider.notifier).aplicar(FiltroVuelos(destino: ciudad));
+                context.go(AppRoutes.login);
+              },
+            ),
+            const SizedBox(height: 48),
+            const _SeccionBeneficiosCliente(),
+            const SizedBox(height: 50),
+            const _PieDePagina(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ==========================================
+// 1. Barra de navegación superior (Header)
+// ==========================================
+class _BarraSuperiorPublica extends StatelessWidget {
+  const _BarraSuperiorPublica();
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: DecoratedBox(
-        decoration: const BoxDecoration(gradient: AppGradients.fondo),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 760),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Container(
+      color: AppColors.azulNoche,
+      child: Column(
+        children: [
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Row(
+                children: [
+                  InkWell(
+                    onTap: () => context.go(AppRoutes.inicio),
+                    borderRadius: BorderRadius.circular(8),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      child: MarcaKuntur(tamanoLogo: 32, vertical: false, enOscuro: true),
+                    ),
+                  ),
+                  const Spacer(),
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Colors.white70),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    ),
+                    onPressed: () => context.go(AppRoutes.login),
+                    child: const Text('Iniciar sesión', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  ),
+                  const SizedBox(width: 10),
+                  FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.amarillo,
+                      foregroundColor: AppColors.azulNoche,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    ),
+                    onPressed: () => context.go(AppRoutes.registro),
+                    child: const Text('Crear cuenta', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const FranjaTricolor(),
+        ],
+      ),
+    );
+  }
+}
+
+// ==========================================
+// 2. Carrusel Interactivo de las 4 Regiones del Ecuador
+// ==========================================
+class _CarruselRegionesEcuador extends StatefulWidget {
+  const _CarruselRegionesEcuador();
+
+  @override
+  State<_CarruselRegionesEcuador> createState() => _CarruselRegionesEcuadorState();
+}
+
+class _CarruselRegionesEcuadorState extends State<_CarruselRegionesEcuador> {
+  final PageController _controller = PageController(viewportFraction: 0.94);
+  int _paginaActual = 0;
+  Timer? _timer;
+
+  static const _regiones = [
+    (
+      'Sierra Andina',
+      'Volcanes imponentes, ciudades coloniales y senderos ancestrales',
+      'Descubre la majestuosidad de los Andes ecuatorianos con vuelos directos hacia Quito, Cuenca y Loja.',
+      Icons.terrain,
+      Color(0xFF1E3A8A),
+      Color(0xFF3B82F6),
+      '🏔️ Vistas de cordillera',
+    ),
+    (
+      'Costa del Pacífico',
+      'Playas doradas, brisa marina y la mejor gastronomía costera',
+      'Siente la calidez y dinamismo de Guayaquil, los atardeceres de Manta y la alegría de su gente.',
+      Icons.beach_access,
+      Color(0xFF065F46),
+      Color(0xFF10B981),
+      '🌊 Sol y playas todo el año',
+    ),
+    (
+      'Amazonía Viva',
+      'El pulmón del mundo con ríos caudalosos y biodiversidad infinita',
+      'Atrévete a explorar la selva virgen y comunidades originarias volando directamente a El Coca.',
+      Icons.forest,
+      Color(0xFF14532D),
+      Color(0xFF22C55E),
+      '🌿 Aventura en la selva',
+    ),
+    (
+      'Islas Galápagos',
+      'Un paraíso evolutivo único en el planeta',
+      'Conecta con tortugas gigantes, aguas cristalinas y un ecosistema legendario protegido para la humanidad.',
+      Icons.pets,
+      Color(0xFF0F766E),
+      Color(0xFF14B8A6),
+      '🐢 Patrimonio Natural Mundial',
+    ),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!mounted) return;
+      final siguiente = (_paginaActual + 1) % _regiones.length;
+      _controller.animateToPage(
+        siguiente,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOutCubic,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 960),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Descubre las 4 regiones del Ecuador',
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: AppColors.azulNoche),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Vuela a través de paisajes únicos con la flota y calidez de Kuntur EC.',
+                        style: TextStyle(fontSize: 13, color: AppColors.textoSecundario),
+                      ),
+                    ],
+                  ),
+                ),
+                Row(
                   children: [
-                    const Center(child: MarcaKuntur(vertical: false)),
-                    const SizedBox(height: 24),
-                    const HeroIsometricoAndes(alto: 190),
-                    const SizedBox(height: 24),
-                    const TituloCinetico('Vuele por los cielos del Ecuador', textAlign: TextAlign.center),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Reserve vuelos nacionales de forma simple y segura, con el precio final claro desde el primer momento.',
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.cuerpo,
+                    IconButton(
+                      tooltip: 'Región anterior',
+                      icon: const Icon(Icons.arrow_back_ios, size: 16),
+                      onPressed: () => _controller.previousPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOut,
+                      ),
                     ),
-                    const SizedBox(height: 24),
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [
-                        SizedBox(
-                          width: 200,
-                          child: BotonDegradado(texto: 'Iniciar sesión', onPressed: () => context.go(AppRoutes.login)),
-                        ),
-                        SizedBox(
-                          width: 200,
-                          child: BotonDegradado(
-                            texto: 'Crear cuenta',
-                            variante: VarianteBoton.secundario,
-                            onPressed: () => context.go(AppRoutes.registro),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 16,
-                      runSpacing: 16,
-                      children: [for (final v in _ventajas) _TarjetaVentaja(icono: v.$1, titulo: v.$2, texto: v.$3)],
-                    ),
-                    const SizedBox(height: 16),
-                    Center(
-                      child: TextButton(
-                        onPressed: () => context.go(AppRoutes.estado),
-                        child: const Text('Estado del servicio'),
+                    IconButton(
+                      tooltip: 'Siguiente región',
+                      icon: const Icon(Icons.arrow_forward_ios, size: 16),
+                      onPressed: () => _controller.nextPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOut,
                       ),
                     ),
                   ],
                 ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 980),
+          child: SizedBox(
+            height: 195,
+            child: PageView.builder(
+              controller: _controller,
+              itemCount: _regiones.length,
+              onPageChanged: (idx) => setState(() => _paginaActual = idx),
+              itemBuilder: (context, index) {
+                final r = _regiones[index];
+                return Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [r.$5, r.$6],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(22),
+                    boxShadow: [
+                      BoxShadow(
+                        color: r.$5.withValues(alpha: 0.32),
+                        blurRadius: 18,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(22),
+                      onTap: () => context.go(AppRoutes.login),
+                      child: Padding(
+                        padding: const EdgeInsets.all(22),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.22),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      r.$7,
+                                      style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    r.$1,
+                                    style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    r.$3,
+                                    style: TextStyle(color: Colors.white.withValues(alpha: 0.92), fontSize: 13, height: 1.35),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Container(
+                              padding: const EdgeInsets.all(18),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.16),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(r.$4, size: 44, color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Indicadores de puntos
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(
+            _regiones.length,
+            (idx) => Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              width: _paginaActual == idx ? 24 : 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: _paginaActual == idx ? AppColors.azul : const Color(0xFFCBD5E1),
+                borderRadius: BorderRadius.circular(4),
               ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ==========================================
+// 3. Banner Experiencia del Viajero
+// ==========================================
+class _BannerExperienciaViajero extends StatelessWidget {
+  const _BannerExperienciaViajero();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 880),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 16,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(22),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.amarillo,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'EXPERIENCIA DE PRIMERA',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.azulNoche,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      const Text(
+                        'Puntualidad, calidez y confort en cada despegue',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'En Kuntur EC cuidamos cada detalle para que tu viaje sea placentero, seguro y memorable desde que reservas hasta tu destino final.',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.85),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.amarillo,
+                    foregroundColor: AppColors.azulNoche,
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: () => context.go(AppRoutes.login),
+                  child: const Text('Comenzar viaje', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+                ),
+              ],
             ),
           ),
         ),
@@ -90,27 +480,275 @@ class InicioPage extends StatelessWidget {
   }
 }
 
-class _TarjetaVentaja extends StatelessWidget {
-  const _TarjetaVentaja({required this.icono, required this.titulo, required this.texto});
+// ==========================================
+// 5. Destinos Reales desde la BD (Supabase)
+// ==========================================
+class _SeccionDestinosDinamicos extends StatelessWidget {
+  const _SeccionDestinosDinamicos({required this.onSeleccionarDestino});
 
-  final IconData icono;
-  final String titulo;
-  final String texto;
+  final ValueChanged<String> onSeleccionarDestino;
 
   @override
-  Widget build(BuildContext context) => Container(
-        width: 232,
-        padding: const EdgeInsets.all(18),
-        decoration: AppDecorations.tarjeta,
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 880),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icono, color: AppColors.azul, size: 28),
-            const SizedBox(height: 10),
-            Text(titulo, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-            const SizedBox(height: 6),
-            Text(texto, style: AppTextStyles.nota),
+            const Text(
+              'Destinos populares del Ecuador',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppColors.azulNoche),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Rutas reales disponibles en nuestra flota con las mejores tarifas vigentes.',
+              style: TextStyle(fontSize: 13, color: AppColors.textoSecundario),
+            ),
+            const SizedBox(height: 18),
+            Consumer(
+              builder: (context, ref, _) {
+                final destinos = ref.watch(destinosPopularesProvider).value ?? _destinosRealesBase;
+                return Wrap(
+                  spacing: 14,
+                  runSpacing: 14,
+                  children: [
+                    for (final d in destinos)
+                      InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () => onSeleccionarDestino(d.ciudad),
+                        child: Container(
+                          width: 195,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.03),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.azul.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      d.codigoIata,
+                                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11, color: AppColors.azul),
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    'Desde \$${d.precioMinimo.toStringAsFixed(0)}',
+                                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: AppColors.exito),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              Text(d.ciudad, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                              const SizedBox(height: 4),
+                              Text(d.lema, style: const TextStyle(fontSize: 12, color: AppColors.textoSuave, height: 1.3)),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
           ],
         ),
-      );
+      ),
+    );
+  }
+}
+
+// ==========================================
+// 6. Beneficios para el Cliente (No técnicos)
+// ==========================================
+class _SeccionBeneficiosCliente extends StatelessWidget {
+  const _SeccionBeneficiosCliente();
+
+  static const _ventajas = [
+    (
+      Icons.event_seat,
+      'Elige tu asiento favorito',
+      'Selecciona en tiempo real si prefieres ventana para admirar los volcanes o pasillo para mayor movilidad.',
+    ),
+    (
+      Icons.shield_outlined,
+      'Tu viaje protegido',
+      'Seguridad total en tu reserva con confirmación inmediata y respaldo en cada vuelo de nuestra flota.',
+    ),
+    (
+      Icons.receipt_long,
+      'Comprobante al instante',
+      'Descarga tu factura electrónica oficial al momento de confirmar, lista para tus declaraciones o viáticos.',
+    ),
+    (
+      Icons.schedule,
+      'Puntualidad garantizada',
+      'Monitoreo continuo de despegues y aterrizajes para que llegues a tiempo a tus reuniones o vacaciones.',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 16),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 880),
+          child: Column(
+            children: [
+              const Text(
+                '¿Por qué volar con Kuntur EC?',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppColors.azulNoche),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Nuestra pasión es llevarte más alto con calidez y confianza.',
+                style: TextStyle(fontSize: 13, color: AppColors.textoSecundario),
+              ),
+              const SizedBox(height: 24),
+              Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                alignment: WrapAlignment.center,
+                children: [
+                  for (final v in _ventajas)
+                    SizedBox(
+                      width: 200,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.azul.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(v.$1, color: AppColors.azul, size: 24),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(v.$2, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                          const SizedBox(height: 4),
+                          Text(v.$3, style: const TextStyle(fontSize: 12, color: AppColors.textoSuave, height: 1.3)),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ==========================================
+// 7. Pie de Página (Footer)
+// ==========================================
+class _PieDePagina extends StatelessWidget {
+  const _PieDePagina();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.azulNoche,
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 16),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 880),
+          child: Column(
+            children: [
+              Wrap(
+                spacing: 24,
+                runSpacing: 16,
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.start,
+                children: [
+                  const SizedBox(
+                    width: 320,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        MarcaKuntur(tamanoLogo: 28, vertical: false, enOscuro: true),
+                        SizedBox(height: 8),
+                        Text(
+                          'Kuntur EC · Las alas del Ecuador conectando nuestra gente y nuestras regiones con excelencia.',
+                          style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.4),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(
+                    width: 200,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Accesos',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13),
+                        ),
+                        const SizedBox(height: 6),
+                        InkWell(
+                          onTap: () => context.go(AppRoutes.login),
+                          child: const Text('Ingreso de clientes', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                        ),
+                        const SizedBox(height: 4),
+                        InkWell(
+                          onTap: () => context.go(AppRoutes.registro),
+                          child: const Text('Registro nuevo', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                        ),
+                        const SizedBox(height: 4),
+                        InkWell(
+                          onTap: () => context.push(AppRoutes.estado),
+                          child: const Text('Estado de vuelos', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Divider(color: Colors.white12),
+              const SizedBox(height: 10),
+              const Wrap(
+                spacing: 12,
+                runSpacing: 6,
+                alignment: WrapAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '© 2026 Kuntur EC · Aerolínea Ecuatoriana',
+                    style: TextStyle(color: Colors.white54, fontSize: 11),
+                  ),
+                  Text(
+                    'Pasión por volar sobre nuestra tierra',
+                    style: TextStyle(color: Colors.white54, fontSize: 11),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

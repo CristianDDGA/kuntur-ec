@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../config/app_motion.dart';
 import '../config/app_theme.dart';
@@ -54,7 +55,34 @@ class PanelAutenticacion extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const MarcaKuntur(),
+                        // Enlace para volver a la página de inicio
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.textoSecundario,
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            ),
+                            icon: const Icon(Icons.arrow_back, size: 18),
+                            label: const Text('Volver al inicio'),
+                            onPressed: () => Navigator.of(context).canPop()
+                                ? Navigator.of(context).pop()
+                                : GoRouter.of(context).go('/'),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Semantics(
+                          button: true,
+                          label: 'Ir al inicio',
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () => GoRouter.of(context).go('/'),
+                            child: const Padding(
+                              padding: EdgeInsets.all(4),
+                              child: MarcaKuntur(),
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 20),
                         // Ilustración 2.5D de los Andes sobre la tarjeta de acceso.
                         const HeroIsometricoAndes(alto: 130),

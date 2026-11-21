@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../config/app_motion.dart';
 import '../config/app_router.dart';
@@ -45,19 +46,46 @@ class _ComprobantePageState extends ConsumerState<ComprobantePage> {
     return KunturScaffold(
       conAtras: true,
       seccion: Seccion.reservas,
-      maxAncho: 640,
+      maxAncho: 880,
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         children: [
           Migas([
             const Miga('Mis reservas', ruta: AppRoutes.reservas),
             Miga(numero, ruta: AppRoutes.reserva(widget.reservaId)),
             const Miga('Comprobante'),
           ]),
-          const SizedBox(height: 10),
-          const Text('Comprobante', style: AppTextStyles.titulo),
-          const SizedBox(height: 4),
-          const Text('La factura de su reserva, tal como la emitió el sistema.', style: AppTextStyles.cuerpo),
+          const SizedBox(height: 14),
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 12,
+            runSpacing: 10,
+            children: [
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 520),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Comprobante de venta', style: AppTextStyles.titulo),
+                    SizedBox(height: 4),
+                    Text('Factura electrónica oficial emitida para su reserva.', style: AppTextStyles.cuerpo),
+                  ],
+                ),
+              ),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.azul,
+                  side: const BorderSide(color: Color(0xFFCBD5E1)),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: () => context.go(AppRoutes.reserva(widget.reservaId)),
+                icon: const Icon(Icons.arrow_back, size: 16),
+                label: const Text('Volver a reserva', style: TextStyle(fontWeight: FontWeight.w700)),
+              ),
+            ],
+          ),
           const SizedBox(height: 16),
           if (factura.isLoading && !factura.hasValue)
             const CargandoDetalleVista()
@@ -263,12 +291,9 @@ class _VistaXml extends StatefulWidget {
 }
 
 class _VistaXmlState extends State<_VistaXml> {
-  bool _copiado = false;
-
   Future<void> _copiar() async {
     await Clipboard.setData(ClipboardData(text: widget.factura.xml));
     if (!mounted) return;
-    setState(() => _copiado = true);
     mostrarAviso(context, 'XML copiado al portapapeles.');
   }
 
@@ -276,20 +301,40 @@ class _VistaXmlState extends State<_VistaXml> {
   Widget build(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              const Expanded(
-                child: Text('Así lo entrega el servidor (application/xml).', style: AppTextStyles.nota),
-              ),
-              const SizedBox(width: 8),
-              OutlinedButton.icon(
-                onPressed: _copiar,
-                icon: AnimatedSwitcher(
-                  duration: AppMotion.rapidaDe(context),
-                  child: Icon(_copiado ? Icons.check : Icons.copy, key: ValueKey(_copiado), size: 18),
-                ),
-                label: Text(_copiado ? 'Copiado' : 'Copiar XML'),
-                style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14)),
+              const Text('Documento digital XML estructurado con firma y autorización.', style: AppTextStyles.nota),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.azul,
+                      side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: _copiar,
+                    icon: const Icon(Icons.copy, size: 16),
+                    label: const Text('Copiar XML', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.azul,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: _copiar,
+                    icon: const Icon(Icons.download, size: 16),
+                    label: const Text('Descargar factura (XML)', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  ),
+                ],
               ),
             ],
           ),

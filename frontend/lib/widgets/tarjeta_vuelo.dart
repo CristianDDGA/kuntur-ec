@@ -19,14 +19,25 @@ class TarjetaVuelo extends StatelessWidget {
       button: true,
       label: 'Vuelo ${vuelo.codigo} de ${vuelo.origen} a ${vuelo.destino}',
       child: Container(
-        decoration: AppDecorations.tarjeta,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
             onTap: onTap,
             child: Padding(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -34,29 +45,77 @@ class TarjetaVuelo extends StatelessWidget {
                     children: [
                       CodigoVuelo(vuelo.codigo),
                       const SizedBox(width: 10),
-                      Expanded(child: Text(Formatos.fecha(vuelo.fecha), style: AppTextStyles.cuerpo)),
+                      Expanded(
+                        child: Text(
+                          Formatos.fecha(vuelo.fecha),
+                          style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+                        ),
+                      ),
                       EtiquetaAsientos(vuelo: vuelo),
                     ],
                   ),
                   const SizedBox(height: 14),
                   RutaVuelo(vuelo: vuelo),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      const Expanded(child: Text('Por persona', style: AppTextStyles.nota)),
-                      const SizedBox(width: 8),
-                      // FittedBox: el precio nunca desborda en tarjetas angostas.
-                      Flexible(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerRight,
-                          child: OdometroCinetico(
-                            texto: Formatos.dinero(vuelo.precioCentavos),
-                            estilo: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.azul),
+                  const Divider(height: 24, color: Color(0xFFF1F5F9)),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final esEstrecho = constraints.maxWidth < 460;
+                      if (esEstrecho) {
+                        return Row(
+                          children: [
+                            const Expanded(child: Text('Por persona', style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)))),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerRight,
+                                child: OdometroCinetico(
+                                  texto: Formatos.dinero(vuelo.precioCentavos),
+                                  estilo: const TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+
+                      return Row(
+                        children: [
+                          const Icon(Icons.luggage_outlined, size: 16, color: Color(0xFF64748B)),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'Equipaje de mano incluido',
+                            style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
                           ),
-                        ),
-                      ),
-                    ],
+                          const Spacer(),
+                          const Text('Por persona', style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+                          const SizedBox(width: 8),
+                          OdometroCinetico(
+                            texto: Formatos.dinero(vuelo.precioCentavos),
+                            estilo: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.azul,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            onPressed: onTap,
+                            child: const Text('Seleccionar', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),

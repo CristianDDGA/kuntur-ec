@@ -20,14 +20,25 @@ class TarjetaReserva extends StatelessWidget {
       button: true,
       label: 'Reserva ${reserva.numero}, ${v.origen} a ${v.destino}',
       child: Container(
-        decoration: AppDecorations.tarjeta,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
             onTap: onTap,
             child: Padding(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -35,35 +46,68 @@ class TarjetaReserva extends StatelessWidget {
                     children: [
                       CodigoVuelo(v.codigo),
                       const SizedBox(width: 10),
-                      Expanded(child: Text(reserva.numero, style: AppTextStyles.nota)),
+                      Text(
+                        reserva.numero,
+                        style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF64748B), fontSize: 13),
+                      ),
+                      const Spacer(),
                       EtiquetaEstadoReserva(reserva: reserva),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Text('${v.origen} → ${v.destino}', style: AppTextStyles.subtitulo),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${Formatos.fecha(v.fecha)} · ${Formatos.hora(v.horaSalida)}',
-                    style: AppTextStyles.cuerpo,
-                  ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 14),
                   Row(
                     children: [
-                      const Icon(Icons.event_seat_outlined, size: 18, color: AppColors.textoSuave),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('${v.origen} → ${v.destino}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+                            const SizedBox(height: 3),
+                            Text(
+                              '${Formatos.fecha(v.fecha)} · Salida ${Formatos.hora(v.horaSalida)}',
+                              style: const TextStyle(color: Color(0xFF475569), fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text('Total reserva', style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
+                          Text(
+                            Formatos.dinero(reserva.totalCentavos),
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              color: reserva.cancelada ? AppColors.textoSuave : const Color(0xFF0F172A),
+                              decoration: reserva.cancelada ? TextDecoration.lineThrough : null,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 24, color: Color(0xFFF1F5F9)),
+                  Row(
+                    children: [
+                      const Icon(Icons.event_seat_outlined, size: 16, color: Color(0xFF64748B)),
                       const SizedBox(width: 6),
                       Text(
                         reserva.cantidad == 1 ? '1 asiento' : '${reserva.cantidad} asientos',
-                        style: AppTextStyles.cuerpo,
+                        style: const TextStyle(fontSize: 13, color: Color(0xFF475569), fontWeight: FontWeight.w600),
                       ),
                       const Spacer(),
-                      Text(
-                        Formatos.dinero(reserva.totalCentavos),
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: reserva.cancelada ? AppColors.textoSuave : AppColors.azul,
-                          decoration: reserva.cancelada ? TextDecoration.lineThrough : null,
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.azul,
+                          side: const BorderSide(color: Color(0xFFCBD5E1)),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
+                        onPressed: onTap,
+                        icon: const Icon(Icons.visibility_outlined, size: 16),
+                        label: const Text('Ver detalle', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
                       ),
                     ],
                   ),
