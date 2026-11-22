@@ -20,6 +20,9 @@ from utils.excepciones import ForbiddenError, UnauthorizedError
 
 F = TypeVar("F", bound=Callable[..., Any])
 
+# Blueprints que no son servicios propios y no pueden llevar decoradores (Swagger UI de flasgger).
+_BLUEPRINTS_AJENOS = (None, "flasgger")
+
 
 def _token_de_la_cabecera() -> str:
     tipo, _, valor = request.headers.get("Authorization", "").partition(" ")
@@ -38,7 +41,7 @@ def publica(vista: F) -> F:
 def exigir_acceso_declarado() -> None:
     """before_request: una ruta de la API sin @publica ni @token_requerido/@rol_requerido responde 500
     en vez de quedar abierta por olvido."""
-    if request.blueprint is None:
+    if request.blueprint in _BLUEPRINTS_AJENOS:
         return  # Swagger, 404 y otras rutas que no son de nuestros servicios
     vista = current_app.view_functions.get(request.endpoint)
     if getattr(vista, "_acceso", None) is None:
