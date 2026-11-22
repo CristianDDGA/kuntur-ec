@@ -45,3 +45,8 @@ def test_una_ruta_publica_declarada_responde():
 
     app.register_blueprint(abierta, url_prefix="/api/abierta")
     assert app.test_client().get("/api/abierta/ok").status_code == 200
+
+
+def test_swagger_ui_responde_aunque_no_declare_acceso(client):
+    assert client.get("/api/docs/").status_code == 200
+    assert client.get("/api/apispec.json").status_code == 200
