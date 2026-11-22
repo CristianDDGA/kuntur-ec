@@ -1,0 +1,39 @@
+import '../models/asientos.dart';
+import '../models/destino.dart';
+import '../models/vuelo.dart';
+import 'api_exception.dart';
+import 'rest_client.dart';
+
+/// Consume el servicio de Vuelos de la API (`/vuelos`).
+class VueloService {
+  const VueloService(this._client);
+
+  final RestClient _client;
+
+  /// `GET /vuelos?origen=&destino=&fecha=&pagina=&por_pagina=`: una página de vuelos que aún no parten.
+  Future<PaginaVuelos> buscar(FiltroVuelos filtro) async =>
+      PaginaVuelos.fromJson(asJsonMap(await _client.get('/vuelos', query: filtro.consulta)));
+
+  /// `GET /vuelos/destinos`: ciudades con vuelos próximos y su tarifa mínima. Es público (portada).
+  Future<List<DestinoPopular>> destinos() async {
+    final lista = asJsonMap(await _client.get('/vuelos/destinos'))['destinos'];
+    if (lista is! List) throw const InvalidResponseFailure();
+    return [for (final d in lista) DestinoPopular.fromJson(asJsonMap(d))];
+  }
+
+  /// `GET /vuelos/{id}`. Lanza [ServerFailure] con 404 si el vuelo no existe.
+  Future<Vuelo> obtener(int id) async =>
+      Vuelo.fromJson(asJsonMap(await _client.get('/vuelos/$id')));
+
+  /// `GET /vuelos/{id}/asientos`: mapa de asientos (capacidad y ocupados). Es público.
+  Future<MapaAsientos> mapaAsientos(int id) async =>
+      MapaAsientos.fromJson(asJsonMap(await _client.get('/vuelos/$id/asientos')));
+
+  /// `POST /vuelos` (solo administrador).
+  Future<Vuelo> crear(NuevoVuelo datos) async {
+    final json = asJsonMap(await _client.post('/vuelos', body: datos.toJson()));
+    final vuelo = json['vuelo'];
+    if (vuelo is! JsonMap) throw const InvalidResponseFailure();
+    return Vuelo.fromJson(vuelo);
+  }
+}

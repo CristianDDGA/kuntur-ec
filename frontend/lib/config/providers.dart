@@ -2,10 +2,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../services/auth_service.dart';
+import '../services/google_proveedor.dart';
+import '../services/avion_service.dart';
 import '../services/http_rest_client.dart';
+import '../services/iva_service.dart';
+import '../services/reserva_service.dart';
 import '../services/rest_client.dart';
 import '../services/sistema_service.dart';
 import '../services/token_storage.dart';
+import '../services/vuelo_service.dart';
 import 'app_config.dart';
 
 /// Inyección de dependencias: único lugar donde se crean los servicios.
@@ -37,6 +43,30 @@ final restClientProvider = Provider<RestClient>(
 
 // ---- Servicios (uno por servicio SOA de la API) ----
 
+final authServiceProvider = Provider<AuthService>(
+  (ref) => AuthService(ref.watch(restClientProvider), ref.watch(tokenStorageProvider)),
+);
+
 final sistemaServiceProvider = Provider<SistemaService>(
   (ref) => SistemaService(ref.watch(restClientProvider)),
+);
+
+final vueloServiceProvider = Provider<VueloService>(
+  (ref) => VueloService(ref.watch(restClientProvider)),
+);
+
+final ivaServiceProvider = Provider<IvaService>(
+  (ref) => IvaService(ref.watch(restClientProvider)),
+);
+
+final reservaServiceProvider = Provider<ReservaService>(
+  (ref) => ReservaService(ref.watch(restClientProvider)),
+);
+
+final proveedorGoogleProvider = Provider<ProveedorGoogle>(
+  (ref) => ProveedorGoogleReal(AppConfig.googleClientId),
+);
+
+final avionServiceProvider = Provider<AvionService>(
+  (ref) => AvionService(ref.watch(restClientProvider)),
 );

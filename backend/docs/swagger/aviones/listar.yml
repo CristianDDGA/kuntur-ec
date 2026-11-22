@@ -1,0 +1,26 @@
+# Contrato del servicio aviones: Listar aviones (solo administrador)
+summary: "Listar los aviones registrados (solo administrador)"
+tags: [Aviones]
+security: [{Bearer: []}]
+produces: [application/json, application/xml]
+responses:
+  200:
+    description: Aviones ordenados por matrícula. La capacidad es filas x 4 asientos (A-D).
+    schema:
+      type: object
+      properties:
+        total: {type: integer, example: 2}
+        aviones:
+          type: array
+          items:
+            type: object
+            properties:
+              id: {type: integer, example: 1}
+              matricula: {type: string, example: HC-ABC}
+              modelo: {type: string, example: Airbus A320}
+              filas: {type: integer, example: 30}
+              capacidad: {type: integer, example: 120}
+  401:
+    description: Sin token o token inválido.
+  403:
+    description: El usuario no es administrador.

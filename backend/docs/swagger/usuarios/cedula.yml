@@ -1,0 +1,34 @@
+# Contrato del servicio usuarios: Completar la cédula
+summary: "Guardar la cédula de una cuenta que no la tiene"
+description: |
+  Para clientes sin cédula (p. ej. los que entraron con Google). Se valida igual que en el registro (10 dígitos,
+  provincia y dígito verificador) y es única. **Una vez guardada no se puede cambiar.**
+tags: [Usuarios]
+security: [{Bearer: []}]
+consumes: [application/json]
+produces: [application/json, application/xml]
+parameters:
+  - in: body
+    name: body
+    required: true
+    schema:
+      type: object
+      required: [cedula]
+      properties:
+        cedula: {type: string, example: "1710034065"}
+responses:
+  200:
+    description: Cédula guardada.
+    schema:
+      type: object
+      properties:
+        mensaje: {type: string}
+        usuario: {type: object}
+  400:
+    description: Cédula inválida.
+  401:
+    description: Sin token o token inválido.
+  403:
+    description: Solo los clientes completan su cédula.
+  409:
+    description: La cédula ya pertenece a otra cuenta, o esta cuenta ya tiene una (no se cambia).

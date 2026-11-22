@@ -9,4 +9,9 @@ python-dotenv==1.2.2
 # EXCEPCIÓN: la antepenúltima de flasgger (0.9.4, año 2020) no es compatible con Flask 3
 # (ImportError: Markup). 0.9.7.1 es la única versión que lo soporta.
 flasgger==0.9.7.1
+# Inicio de sesión con Google: google-auth valida el id_token con las claves públicas de Google.
+google-auth==2.62.1
+requests==2.34.0
+# Servidor de producción (Render). Antepenúltima estable; solo se usa al desplegar (en Windows se corre con `python app.py`).
+gunicorn==26.2.0
 pytest==9.1.0

@@ -8,6 +8,13 @@ class AppConfig {
     defaultValue: 'http://localhost:5000/api',
   );
 
+  /// ID de cliente OAuth web de Google (no es secreto; el servidor valida el id_token contra este mismo ID).
+  /// Vacío = el botón de Google no se muestra:  --dart-define=GOOGLE_CLIENT_ID=
+  static const String googleClientId = String.fromEnvironment(
+    'GOOGLE_CLIENT_ID',
+    defaultValue: '804537826653-ti79nuv63v45qh8ods48nut3ckfrm9n9.apps.googleusercontent.com',
+  );
+
   static const Duration requestTimeout = Duration(seconds: 15);
   static const String appName = 'Kuntur EC';
 }

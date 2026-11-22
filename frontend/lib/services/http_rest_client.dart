@@ -68,7 +68,11 @@ class HttpRestClient implements RestClient {
     final request = http.Request(method, Uri.parse('$_apiBaseUrl$path').replace(queryParameters: query))
       ..headers['Accept'] = accept;
     if (token != null) request.headers['Authorization'] = 'Bearer $token';
-    if (body != null) {
+    if (body is String) {
+      // Un texto se envía tal cual como archivo CSV (importación de aviones); lo demás va como JSON.
+      request.headers['Content-Type'] = 'text/csv; charset=utf-8';
+      request.body = body;
+    } else if (body != null) {
       request.headers['Content-Type'] = _json;
       request.body = jsonEncode(body);
     }

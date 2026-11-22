@@ -1,23 +1,37 @@
 """Rutas de estado del servicio."""
 from datetime import datetime, timezone
 
-from flask import Blueprint
+from flasgger import swag_from
+from flask import Blueprint, current_app
 
+from utils.documentacion import contrato
+from utils.autenticacion import publica
 from utils.respuestas import respond
 
 health_bp = Blueprint("health", __name__)
 
 
-@health_bp.get("/health")
+def _estado_base_datos() -> str:
+    db = current_app.extensions.get("db")
+    if db is None:
+        return "sin_configurar"
+    return "conectada" if db.disponible() else "no_disponible"
+
+
+# =============================
+# GET - Estado del servicio
+# =============================
+
+@health_bp.route("/health", methods=["GET"])
+@swag_from(contrato("sistema", "health"))
+@publica
 def health():
-    """Estado del servicio
-    ---
-    tags: [Sistema]
-    responses:
-      200:
-        description: El servicio está disponible.
-    """
     return respond(
-        {"estado": "ok", "servicio": "kuntur-ec-api", "hora": datetime.now(timezone.utc)},
+        {
+            "estado": "ok",
+            "servicio": "kuntur-ec-api",
+            "base_datos": _estado_base_datos(),
+            "hora": datetime.now(timezone.utc),
+        },
         root="salud",
     )

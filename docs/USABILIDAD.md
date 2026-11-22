@@ -1,0 +1,61 @@
+# Kuntur EC · Usabilidad (heurísticas de Nielsen)
+
+Revisión de la interfaz con las 10 heurísticas de usabilidad de Jakob Nielsen y lo que se hizo con cada una.
+El caso que la disparó: en el detalle de una reserva un usuario común solo tenía la flecha "Volver"; no
+sabía cómo ir al inicio ni a sus reservas.
+
+## Hallazgos y mejoras
+
+| # | Heurística | Problema detectado | Mejora aplicada |
+|---|---|---|---|
+| 1 | Visibilidad del estado del sistema | El usuario no sabía en qué sección estaba. | Barra de navegación inferior con la sección resaltada y migas de pan ("Mis reservas › KEC-0058 › Comprobante"). Contadores ("12 vuelos disponibles", "Asientos 3 de 10"), indicadores de carga y avisos de éxito. |
+| 2 | Relación con el mundo real | Datos técnicos o en inglés. | Todo en español; fechas "mar 1 dic 2026", horas 24 h, dinero "$75.50", asientos como en un avión (1A, 2B) con pasillo. |
+| 3 | Control y libertad del usuario | Solo se podía retroceder con la flecha; no había salida clara. | Logo siempre lleva al inicio; barra inferior a cualquier sección; migas tocables; "Reiniciar selección" / "Restablecer"; aviso "¿Salir sin guardar?" al abandonar el mapa con cambios; confirmación al cancelar una reserva y al cerrar sesión. |
+| 4 | Consistencia y estándares | Íconos sueltos sin texto (escudo, ticket, nube) y acciones distintas según la pantalla. | Menú de cuenta único (avatar) y barra inferior con **texto** en cada destino; misma barra superior en todas las pantallas; botones con el mismo nombre para la misma acción. |
+| 5 | Prevención de errores | Se podían escribir datos fuera de rango. | Campos que no dejan escribir lo inválido (letras en precio, más de 200 asientos, emojis); máximo 10 asientos por reserva (el resto se atenúa); asientos ocupados bloqueados; botones desactivados si no hay nada que enviar; protección contra doble toque. |
+| 6 | Reconocer antes que recordar | El usuario debía recordar cómo llegó. | Migas de pan, filtros que se conservan al volver, leyenda del mapa (Disponible / Seleccionado / Ocupado), resumen fijo con asientos y total. |
+| 7 | Flexibilidad y eficiencia | — | Búsqueda por origen/destino/fecha, paginación, Enter envía los formularios, copiar el XML con un toque. |
+| 8 | Diseño estético y minimalista | — | Una acción principal por pantalla; paleta sobria de Ecuador; el panel del administrador separado del resto. |
+| 9 | Ayudar a reconocer, diagnosticar y recuperarse de errores | — | Mensajes en español que dicen qué pasó y qué hacer ("Actualice el mapa y elija de nuevo"), botón "Reintentar", y si alguien toma un asiento la app lo quita de la selección y recarga el mapa. |
+| 10 | Ayuda y documentación | El mapa no explicaba cómo usarse. | Texto de ayuda breve sobre el mapa ("Toque los asientos que quiere (hasta 10)…"), textos auxiliares en los formularios ("Máximo $10000, hasta 2 decimales"). |
+
+## Flujos de cuenta (registro, correo, Google, cédula)
+
+| Heurística | Cómo se aplica |
+|---|---|
+| Visibilidad del estado | «Confirme su correo» dice **a qué dirección** se envió el código y cuánto vale (10 minutos); el botón «Reenviar código» muestra la cuenta atrás de 60 s; la importación de aviones muestra «Archivo correcto: 3 aviones nuevos» o «tiene 2 problemas». |
+| Prevención de errores | El campo de cédula y el del código solo admiten dígitos y cortan en 10 y 6; la cédula se valida con el dígito verificador **mientras se escribe**; «Importar» solo se activa con el archivo limpio (se revisa antes de guardar). |
+| Reconocer, diagnosticar y recuperarse de errores | Un código malo dice cuántos intentos quedan; los errores del CSV indican **la línea** y el motivo; si el correo no salió, la pantalla pide otro código sola; si Google falla, el mensaje lo explica sin tecnicismos. |
+| Control y libertad | «Volver a iniciar sesión» desde la verificación; «Cerrar sesión» desde «Complete su perfil»; un login con el correo sin verificar no muestra un error sino el siguiente paso (pedir el código). |
+| Flexibilidad y eficiencia | «Continuar con Google» evita crear contraseña y verificar el correo; tras verificar el código la app inicia sesión sola; Enter envía el código. |
+| Ayuda | Textos auxiliares: «10 dígitos. Se valida el número, no se consulta ningún registro» y las instrucciones del formato del CSV en la propia pantalla. |
+
+## Navegación (resumen)
+
+- **Cliente:** Vuelos · Mis reservas (barra inferior). **Administrador:** Vuelos · Administración.
+- Arriba, siempre: logo (→ inicio), flecha Volver (cuando hay a dónde volver) y el avatar de la cuenta
+  (nombre, correo, rol, estado del servicio y cerrar sesión).
+- El mapa de asientos no lleva barra inferior a propósito: es un paso a medio camino con su propio resumen y
+  botón de confirmar; se sale con la flecha, el logo o las migas (y avisa si hay una selección sin guardar).
+
+## Pendiente (ideas, no bloquea)
+- Descargar el comprobante como archivo `.xml`/PDF.
+- Recordar la sesión en varias pestañas y mostrar el tiempo restante del token.
+
+## Diseño web adaptable (rama `feature/ajuste-ancho-web`)
+
+Kuntur EC es una **página web que se adapta** al dispositivo (no una app móvil). Cambios y su motivo:
+
+| Cambio | Antes | Ahora | Heurística / criterio |
+|---|---|---|---|
+| Ancho del contenido | Columna de 640–980 px con grandes márgenes vacíos en escritorio | Hasta 1200 px (1240 px en la portada); en celular ocupa todo el ancho | Diseño estético y minimalista; uso eficiente del espacio |
+| Barra de desplazamiento | Dentro de la columna central, angosta y lejos del borde | Una sola barra pegada al borde de la ventana | Consistencia con las convenciones web |
+| Vuelos y reservas | Una tarjeta por fila siempre | 2 columnas en pantallas anchas, 1 en celular (`RejillaAdaptable`) | Reconocer antes que recordar: se ven más resultados a la vez |
+| Portada | Carrusel en tarjeta centrada, destinos en tarjetas fijas | Carrusel a pantalla completa (420 px de alto), destinos y beneficios en hasta 4 columnas | Estética; la portada es la primera impresión |
+| Carrusel | Solo degradado e ícono | Fondo con foto por región (`assets/regiones/*.jpg`); si falta, degradado de respaldo | Robustez: la portada nunca queda rota |
+| Migas de pan | Se apilaban y parecían enlaces planos subrayados | En una línea, enlaces en azul y la miga actual en negrita | Visibilidad del estado del sistema |
+| Factura XML | «Descargar» solo copiaba al portapapeles | Descarga un archivo `factura-<número>.xml` en el navegador | Control y libertad del usuario |
+
+Técnica: `KunturScaffold` limita el ancho y dibuja la barra de desplazamiento; `RejillaAdaptable` calcula las columnas según el
+ancho disponible; la descarga usa importación condicional (`descarga_web.dart` / `descarga_otros.dart`) sin paquetes nuevos.
+

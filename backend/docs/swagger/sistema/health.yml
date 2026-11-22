@@ -1,0 +1,6 @@
+# Contrato del servicio sistema: Estado del servicio y de la base de datos
+summary: "Estado del servicio y de la base de datos"
+tags: [Sistema]
+responses:
+  200:
+    description: El servicio está disponible (base_datos = conectada | no_disponible | sin_configurar).

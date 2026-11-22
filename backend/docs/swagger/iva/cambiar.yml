@@ -1,0 +1,33 @@
+# Contrato del servicio iva: Cambiar el IVA (solo administrador)
+summary: "Programar una nueva tarifa de IVA (solo administrador)"
+description: "Cierra la tarifa abierta el día anterior a la fecha de inicio. No altera reservas ya hechas."
+tags: [IVA]
+security: [{Bearer: []}]
+consumes: [application/json]
+produces: [application/json, application/xml]
+parameters:
+  - in: body
+    name: body
+    required: true
+    schema:
+      type: object
+      required: [porcentaje, vigente_desde]
+      properties:
+        porcentaje: {type: number, example: 15, description: "0 a 100, máximo 2 decimales"}
+        vigente_desde: {type: string, format: date, example: "2027-01-01", description: "Hoy o una fecha futura (AAAA-MM-DD)"}
+responses:
+  201:
+    description: Tarifa registrada.
+    schema:
+      type: object
+      properties:
+        mensaje: {type: string}
+        tarifa: {$ref: "#/definitions/TarifaIva"}
+  400:
+    description: Porcentaje o fecha inválidos (fecha pasada, más de 2 años, fuera de 0-100...).
+  401:
+    description: Sin token o token inválido.
+  403:
+    description: El usuario no es administrador.
+  409:
+    description: Ya existe una tarifa que empieza en esa fecha o después.

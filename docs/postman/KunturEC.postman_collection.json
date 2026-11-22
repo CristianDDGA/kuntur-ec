@@ -1,0 +1,3089 @@
+{
+  "info": {
+    "name": "Kuntur EC · API de Reservas de Vuelos (SOA)",
+    "description": "Pruebas funcionales por servicio (éxito y errores). Ejecutar en orden con el Collection Runner: cada petición guarda las variables que usa la siguiente (token, ids, versión).\n\nRequisitos: backend corriendo en {{base_url}} con la base cargada (python database.py) y un cliente ya verificado (python docs/postman/preparar_cliente.py). Para no recibir correos de prueba, arrancar el backend sin SMTP_* (el código de verificación queda en el log).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000/api"
+    },
+    {
+      "key": "admin_correo",
+      "value": "admin@kuntur.ec",
+      "description": "Administrador de desarrollo (database/seed.sql)"
+    },
+    {
+      "key": "admin_password",
+      "value": "KunturAdmin2026",
+      "description": "Contraseña de desarrollo (database/seed.sql)"
+    },
+    {
+      "key": "cliente_correo",
+      "value": "cliente.postman@kuntur.test",
+      "description": "Cliente YA VERIFICADO y con cédula: se prepara con `python docs/postman/preparar_cliente.py`"
+    },
+    {
+      "key": "cliente_password",
+      "value": "Clave2026"
+    },
+    {
+      "key": "token_cliente",
+      "value": ""
+    },
+    {
+      "key": "token_admin",
+      "value": ""
+    },
+    {
+      "key": "vuelo_id",
+      "value": ""
+    },
+    {
+      "key": "vuelo_codigo",
+      "value": ""
+    },
+    {
+      "key": "reserva_id",
+      "value": ""
+    },
+    {
+      "key": "reserva_version",
+      "value": ""
+    },
+    {
+      "key": "cliente_cedula",
+      "value": "1700000001",
+      "description": "Cédula del cliente preparado (la usa el script preparar_cliente.py)"
+    },
+    {
+      "key": "nuevo_correo",
+      "value": "",
+      "description": "Correo de la cuenta que se registra en cada ejecución (se genera solo)"
+    },
+    {
+      "key": "nuevo_cedula",
+      "value": "",
+      "description": "Cédula válida generada en cada ejecución (módulo 10)"
+    },
+    {
+      "key": "avion_matricula",
+      "value": "",
+      "description": "Matrícula única generada en cada ejecución"
+    },
+    {
+      "key": "avion_id",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Sistema",
+      "description": "Estado del servicio.",
+      "item": [
+        {
+          "name": "Health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Base de datos conectada\", () => { const json = pm.response.json(); pm.expect(json.base_datos).to.eql(\"conectada\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Usuarios",
+      "description": "Servicio de Usuarios: registro.",
+      "item": [
+        {
+          "name": "Registro correcto (201)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const cedulaValida = () => { const base = String(1 + Math.floor(Math.random() * 24)).padStart(2, '0') + Math.floor(Math.random() * 6) + Array.from({length: 6}, () => Math.floor(Math.random() * 10)).join(''); let s = 0; for (let i = 0; i < 9; i++) { let p = Number(base[i]) * (i % 2 === 0 ? 2 : 1); if (p > 9) p -= 9; s += p; } return base + ((10 - (s % 10)) % 10); };",
+                  "pm.collectionVariables.set(\"nuevo_correo\", `nuevo.${Date.now()}@kuntur.test`);",
+                  "pm.collectionVariables.set(\"nuevo_cedula\", cedulaValida());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Rol cliente, sin contraseña y pendiente de verificar\", () => { const json = pm.response.json(); pm.expect(json.usuario.rol).to.eql(\"cliente\"); pm.expect(json.usuario).to.not.have.property(\"password_hash\"); pm.expect(json.usuario.correo_verificado).to.eql(false); pm.expect(json.verificacion_pendiente).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios/registro",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios",
+                "registro"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Nuevo Postman\",\n  \"cedula\": \"{{nuevo_cedula}}\",\n  \"correo\": \"{{nuevo_correo}}\",\n  \"password\": \"{{cliente_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Correo repetido (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Error uniforme 'conflicto'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"conflicto\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios/registro",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios",
+                "registro"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Otra\",\n  \"cedula\": \"0102030400\",\n  \"correo\": \"{{nuevo_correo}}\",\n  \"password\": \"{{cliente_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Cédula repetida (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios/registro",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios",
+                "registro"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Otra\",\n  \"cedula\": \"{{nuevo_cedula}}\",\n  \"correo\": \"otra.{{nuevo_correo}}\",\n  \"password\": \"{{cliente_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Error uniforme 'conflicto'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"conflicto\"); pm.expect(json.mensaje).to.be.a(\"string\"); });",
+                  "pm.test(\"Habla de la cédula\", () => pm.expect(pm.response.json().mensaje).to.include(\"cédula\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cédula con el dígito verificador mal (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios/registro",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios",
+                "registro"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Ana\",\n  \"cedula\": \"1710034066\",\n  \"correo\": \"cedula.mala@kuntur.test\",\n  \"password\": \"Clave2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error uniforme 'datos_invalidos'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"datos_invalidos\"); pm.expect(json.mensaje).to.be.a(\"string\"); });",
+                  "pm.test(\"Dice que la cédula no es válida\", () => pm.expect(pm.response.json().mensaje).to.include(\"cédula\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Falta la cédula (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios/registro",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios",
+                "registro"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Ana\",\n  \"correo\": \"sin.cedula@kuntur.test\",\n  \"password\": \"Clave2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error uniforme 'datos_invalidos'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"datos_invalidos\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Contraseña débil (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error uniforme 'datos_invalidos'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"datos_invalidos\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios/registro",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios",
+                "registro"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Ana\",\n  \"cedula\": \"1710034065\",\n  \"correo\": \"debil@kuntur.test\",\n  \"password\": \"123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Falta un campo (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error uniforme 'datos_invalidos'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"datos_invalidos\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios/registro",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios",
+                "registro"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cedula\": \"1710034065\",\n  \"correo\": \"x@kuntur.test\",\n  \"password\": \"Clave2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Cuerpo que no es JSON (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error uniforme 'datos_invalidos'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"datos_invalidos\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios/registro",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios",
+                "registro"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "[1, 2, 3]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Autenticación",
+      "description": "Servicio de Autenticación: login y perfil (el logout está al final).",
+      "item": [
+        {
+          "name": "Login con contraseña incorrecta (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Error uniforme 'no_autenticado'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"no_autenticado\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{cliente_correo}}\",\n  \"password\": \"Incorrecta1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Login sin verificar el correo (403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{nuevo_correo}}\",\n  \"password\": \"{{cliente_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Error uniforme 'correo_no_verificado'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"correo_no_verificado\"); pm.expect(json.mensaje).to.be.a(\"string\"); });",
+                  "pm.test(\"Indica el correo\", () => pm.expect(pm.response.json().correo).to.eql(pm.collectionVariables.get(\"nuevo_correo\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verificar con un código incorrecto (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/verificar-correo",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "verificar-correo"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{nuevo_correo}}\",\n  \"codigo\": \"000000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "El código real llega por correo (o al log del servidor sin SMTP): no se puede automatizar. Aquí se prueba el camino de error."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error uniforme 'datos_invalidos'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"datos_invalidos\"); pm.expect(json.mensaje).to.be.a(\"string\"); });",
+                  "pm.test(\"Dice cuántos intentos quedan\", () => pm.expect(pm.response.json().mensaje).to.match(/intentos|incorrecto|venció/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Código con formato inválido (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/verificar-correo",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "verificar-correo"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{nuevo_correo}}\",\n  \"codigo\": \"12ab\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error uniforme 'datos_invalidos'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"datos_invalidos\"); pm.expect(json.mensaje).to.be.a(\"string\"); });",
+                  "pm.test(\"Dice que son 6 dígitos\", () => pm.expect(pm.response.json().mensaje).to.include(\"6 dígitos\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pedir otro código a un correo que no existe (200, responde igual)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/reenviar-codigo",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "reenviar-codigo"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"no.existe.{{$timestamp}}@kuntur.test\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"No revela si la cuenta existe\", () => pm.expect(pm.response.json().mensaje).to.include(\"Si la cuenta existe\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Recuperar contraseña de un correo que no existe (200, responde igual)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/recuperar-clave",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "recuperar-clave"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"no.existe.{{$timestamp}}@kuntur.test\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Responde igual exista o no la cuenta, para no revelar qué correos están registrados. El código real llega por correo (o al log del servidor sin SMTP): no se puede automatizar."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"No revela si la cuenta existe\", () => pm.expect(pm.response.json().mensaje).to.include(\"Si el correo está registrado\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Recuperar contraseña con un correo inválido (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/recuperar-clave",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "recuperar-clave"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"no-es-un-correo\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error uniforme 'datos_invalidos'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"datos_invalidos\"); pm.expect(json.mensaje).to.be.a(\"string\"); });",
+                  "pm.test(\"Dice que el correo no es válido\", () => pm.expect(pm.response.json().mensaje).to.include(\"correo\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Restablecer con un código que no sirve (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/restablecer-clave",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "restablecer-clave"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"no.existe.{{$timestamp}}@kuntur.test\",\n  \"codigo\": \"000000\",\n  \"password\": \"ClaveNueva2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Un código que no corresponde (o una cuenta que no existe) responde siempre lo mismo."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error uniforme 'datos_invalidos'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"datos_invalidos\"); pm.expect(json.mensaje).to.be.a(\"string\"); });",
+                  "pm.test(\"Mismo mensaje para cualquier código malo\", () => pm.expect(pm.response.json().mensaje).to.match(/no es correcto o ya venció/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Restablecer con un código de formato inválido (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/restablecer-clave",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "restablecer-clave"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{cliente_correo}}\",\n  \"codigo\": \"12ab\",\n  \"password\": \"ClaveNueva2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error uniforme 'datos_invalidos'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"datos_invalidos\"); pm.expect(json.mensaje).to.be.a(\"string\"); });",
+                  "pm.test(\"Dice que son 6 dígitos\", () => pm.expect(pm.response.json().mensaje).to.include(\"6 dígitos\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Restablecer con una contraseña débil (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/restablecer-clave",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "restablecer-clave"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{cliente_correo}}\",\n  \"codigo\": \"123456\",\n  \"password\": \"corta\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "La contraseña se valida antes de tocar la base: una contraseña floja no gasta un intento del código."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error uniforme 'datos_invalidos'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"datos_invalidos\"); pm.expect(json.mensaje).to.be.a(\"string\"); });",
+                  "pm.test(\"Pide al menos 8 caracteres\", () => pm.expect(pm.response.json().mensaje).to.include(\"8 caracteres\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login cliente (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Devuelve token Bearer\", () => { const json = pm.response.json(); pm.expect(json.tipo).to.eql(\"Bearer\"); pm.collectionVariables.set(\"token_cliente\", json.token); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{cliente_correo}}\",\n  \"password\": \"{{cliente_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Login admin (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Rol admin\", () => { const json = pm.response.json(); pm.expect(json.usuario.rol).to.eql(\"admin\"); pm.collectionVariables.set(\"token_admin\", json.token); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{admin_correo}}\",\n  \"password\": \"{{admin_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Perfil sin token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Error uniforme 'no_autenticado'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"no_autenticado\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/perfil",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "perfil"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Perfil con token (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Es el cliente\", () => { const json = pm.response.json(); pm.expect(json.usuario.correo).to.eql(pm.collectionVariables.get(\"cliente_correo\")); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/perfil",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "perfil"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Vuelos",
+      "description": "Servicio de Vuelos: búsqueda pública y alta solo para administradores.",
+      "item": [
+        {
+          "name": "Buscar todos (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Página con total, paginación y vuelos\", () => { const json = pm.response.json(); pm.expect(json.vuelos).to.be.an(\"array\"); pm.expect(json.total).to.be.above(0); pm.expect(json.vuelos.length).to.be.above(0); pm.expect(json.por_pagina).to.be.above(0); pm.expect(json.vuelos.length <= json.por_pagina).to.eql(true); pm.expect(json.total >= json.vuelos.length).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/vuelos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vuelos"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Buscar Quito → Guayaquil (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Solo esa ruta\", () => { const json = pm.response.json(); json.vuelos.forEach(v => { pm.expect(v.origen).to.eql(\"Quito\"); pm.expect(v.destino).to.eql(\"Guayaquil\"); }); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/vuelos?origen=quito&destino=Guayaquil",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vuelos"
+              ],
+              "query": [
+                {
+                  "key": "origen",
+                  "value": "quito"
+                },
+                {
+                  "key": "destino",
+                  "value": "Guayaquil"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Fecha con formato inválido (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error uniforme 'datos_invalidos'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"datos_invalidos\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/vuelos?fecha=01/12/2026",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vuelos"
+              ],
+              "query": [
+                {
+                  "key": "fecha",
+                  "value": "01/12/2026"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Detalle de vuelo (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Precio con 2 decimales\", () => { const json = pm.response.json(); pm.expect(json.precio).to.match(/^\\d+\\.\\d{2}$/); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/vuelos/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vuelos",
+                "1"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Vuelo inexistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Error uniforme 'no_encontrado'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"no_encontrado\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/vuelos/999999",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vuelos",
+                "999999"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Crear vuelo sin token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Error uniforme 'no_autenticado'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"no_autenticado\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/vuelos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vuelos"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"PM000\",\n  \"origen\": \"Quito\",\n  \"destino\": \"Loja\",\n  \"fecha\": \"2026-12-30\",\n  \"hora_salida\": \"08:00\",\n  \"hora_llegada\": \"09:00\",\n  \"precio\": 99.9,\n  \"capacidad\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Crear vuelo como cliente (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Error uniforme 'sin_permiso'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"sin_permiso\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/vuelos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vuelos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"PM000\",\n  \"origen\": \"Quito\",\n  \"destino\": \"Loja\",\n  \"fecha\": \"2026-12-30\",\n  \"hora_salida\": \"08:00\",\n  \"hora_llegada\": \"09:00\",\n  \"precio\": 99.9,\n  \"capacidad\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Crear vuelo como admin (201)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"vuelo_codigo\", \"PM\" + String(Date.now()).slice(-6));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Todos los asientos libres\", () => { const json = pm.response.json(); pm.expect(json.vuelo.asientos_disponibles).to.eql(json.vuelo.capacidad); pm.collectionVariables.set(\"vuelo_id\", json.vuelo.id); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/vuelos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vuelos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"{{vuelo_codigo}}\",\n  \"origen\": \"Quito\",\n  \"destino\": \"Loja\",\n  \"fecha\": \"2026-12-30\",\n  \"hora_salida\": \"08:00\",\n  \"hora_llegada\": \"09:00\",\n  \"precio\": 99.9,\n  \"capacidad\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Crea un vuelo de 2 asientos para probar las reservas y la falta de asientos."
+          }
+        },
+        {
+          "name": "Código de vuelo repetido (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Error uniforme 'conflicto'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"conflicto\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/vuelos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vuelos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"{{vuelo_codigo}}\",\n  \"origen\": \"Quito\",\n  \"destino\": \"Loja\",\n  \"fecha\": \"2026-12-30\",\n  \"hora_salida\": \"08:00\",\n  \"hora_llegada\": \"09:00\",\n  \"precio\": 99.9,\n  \"capacidad\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Reservas",
+      "description": "Servicio de Reservas: flujo completo, control de concurrencia por versión y comprobante XML.",
+      "item": [
+        {
+          "name": "Crear reserva por cantidad (201, asigna los primeros asientos libres)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"IVA aplicado y total = subtotal + IVA\", () => { const json = pm.response.json(); const r = json.reserva; pm.expect(Number(r.total)).to.be.closeTo(Number(r.subtotal) + Number(r.iva_valor), 0.001); pm.expect(r.version).to.eql(1); pm.collectionVariables.set(\"reserva_id\", r.id); pm.collectionVariables.set(\"reserva_version\", r.version); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reservas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vuelo_id\": {{vuelo_id}},\n  \"cantidad\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Más asientos de los disponibles (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Error uniforme 'conflicto'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"conflicto\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reservas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vuelo_id\": {{vuelo_id}},\n  \"cantidad\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "El vuelo tiene 2 asientos y ya se reservó 1."
+          }
+        },
+        {
+          "name": "Cantidad fuera de rango (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error uniforme 'datos_invalidos'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"datos_invalidos\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reservas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vuelo_id\": {{vuelo_id}},\n  \"cantidad\": 11\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Reservar sin token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Error uniforme 'no_autenticado'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"no_autenticado\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reservas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vuelo_id\": 1,\n  \"cantidad\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Mis reservas (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Incluye la reserva creada\", () => { const json = pm.response.json(); pm.expect(json.reservas.map(r => r.id)).to.include(Number(pm.collectionVariables.get(\"reserva_id\"))); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/reservas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Detalle de reserva (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Trae el resumen del vuelo\", () => { const json = pm.response.json(); pm.expect(json.vuelo.codigo).to.eql(pm.collectionVariables.get(\"vuelo_codigo\")); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/reservas/{{reserva_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reservas",
+                "{{reserva_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reservas como administrador (403, el administrador no reserva)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Error uniforme 'sin_permiso'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"sin_permiso\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/reservas/{{reserva_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reservas",
+                "{{reserva_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "El admin no es dueño de la reserva: no se revela que existe."
+          }
+        },
+        {
+          "name": "Factura XML (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Es XML\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/xml\"));",
+                  "pm.test(\"Estructura de factura: cabecera, cliente, Detalle, Totales, Estado\", () => { const f = xml2Json(pm.response.text()).factura; pm.expect(f.cabecera.numero).to.match(/^KEC-\\d{8}$/); pm.expect(f.Detalle.producto.Cantidad).to.eql(\"1\"); pm.expect(f.Totales.Total).to.match(/^\\d+\\.\\d{2}$/); pm.expect(f.Estado).to.eql(\"Confirmada\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/reservas/{{reserva_id}}/comprobante",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reservas",
+                "{{reserva_id}}",
+                "comprobante"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Modificar con la versión correcta (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"La versión sube a 2\", () => { const json = pm.response.json(); pm.expect(json.reserva.cantidad_asientos).to.eql(2); pm.expect(json.reserva.version).to.eql(2); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reservas/{{reserva_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reservas",
+                "{{reserva_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cantidad\": 2,\n  \"version\": {{reserva_version}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Modificar con versión vieja (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Error uniforme 'conflicto'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"conflicto\"); pm.expect(json.mensaje).to.be.a(\"string\"); });",
+                  "pm.test(\"Ya actualizaron este registro + version_actual\", () => { const json = pm.response.json(); pm.expect(json.mensaje).to.include(\"Ya actualizaron este registro\"); pm.expect(json.version_actual).to.eql(2); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reservas/{{reserva_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reservas",
+                "{{reserva_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cantidad\": 1,\n  \"version\": {{reserva_version}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Se reenvía la versión 1 que se leyó antes: otra petición ya la cambió."
+          }
+        },
+        {
+          "name": "Cancelar reserva (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Queda cancelada\", () => { const json = pm.response.json(); pm.expect(json.reserva.estado).to.eql(\"cancelada\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/reservas/{{reserva_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reservas",
+                "{{reserva_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cancelar otra vez (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Error uniforme 'conflicto'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"conflicto\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/reservas/{{reserva_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reservas",
+                "{{reserva_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Asientos devueltos al vuelo (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Vuelve a tener 2 asientos\", () => { const json = pm.response.json(); pm.expect(json.asientos_disponibles).to.eql(2); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/vuelos/{{vuelo_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vuelos",
+                "{{vuelo_id}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Aviones (CSV)",
+      "item": [
+        {
+          "name": "Listar aviones sin token (401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/aviones",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "aviones"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Error uniforme 'no_autenticado'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"no_autenticado\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar aviones como cliente (403)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/aviones",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "aviones"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Error uniforme 'sin_permiso'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"sin_permiso\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Revisar un CSV con errores (200, no guarda nada)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/csv"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/aviones/importacion/validar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "aviones",
+                "importacion",
+                "validar"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "matricula;modelo;filas\nHC-OK1;Airbus A320;30\nx;ATR 72;99\n",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Reporta el error por línea\", () => { const j = pm.response.json(); pm.expect(j.con_errores).to.eql(1); pm.expect(j.errores[0].linea).to.eql(3); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Importar un CSV con errores (400, no importa ninguna fila)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/csv"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/aviones/importacion",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "aviones",
+                "importacion"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "matricula;modelo;filas\nHC-OK1;Airbus A320;30\nx;ATR 72;99\n",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error uniforme 'datos_invalidos'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"datos_invalidos\"); pm.expect(json.mensaje).to.be.a(\"string\"); });",
+                  "pm.test(\"Trae la lista de errores\", () => pm.expect(pm.response.json().errores.length).to.be.above(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Importar un CSV que no es text/csv (415)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/aviones/importacion",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "aviones",
+                "importacion"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matricula\": \"x\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 415\", () => pm.response.to.have.status(415));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Importar un CSV correcto como cliente (403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/csv"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/aviones/importacion",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "aviones",
+                "importacion"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "matricula;modelo;filas\nHC-OK1;Airbus A320;30\n",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Importar un CSV correcto (201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/csv"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/aviones/importacion",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "aviones",
+                "importacion"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "matricula;modelo;filas\n{{avion_matricula}};Prueba Postman;3\n",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"avion_matricula\", \"PM-\" + String(Date.now()).slice(-6));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Creó 1 avión\", () => pm.expect(pm.response.json().creados).to.eql(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Importar el mismo CSV otra vez (201, se omite)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/csv"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/aviones/importacion",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "aviones",
+                "importacion"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "matricula;modelo;filas\n{{avion_matricula}};Prueba Postman;3\n",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"No duplica\", () => { const j = pm.response.json(); pm.expect(j.creados).to.eql(0); pm.expect(j.omitidos).to.include(pm.collectionVariables.get(\"avion_matricula\")); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar aviones (200)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/aviones",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "aviones"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Está el avión importado con su capacidad\", () => { const m = pm.collectionVariables.get(\"avion_matricula\"); const a = pm.response.json().aviones.find(x => x.matricula === m); pm.expect(a).to.not.equal(undefined); pm.expect(a.capacidad).to.eql(12); pm.collectionVariables.set(\"avion_id\", a.id); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear un vuelo con el avión (201, la capacidad sale del avión)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/vuelos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vuelos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"origen\": \"Quito\",\n  \"destino\": \"Cuenca\",\n  \"fecha\": \"2026-12-30\",\n  \"hora_salida\": \"08:00\",\n  \"hora_llegada\": \"09:00\",\n  \"precio\": 50,\n  \"avion_id\": {{avion_id}},\n  \"capacidad\": 999\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "El cuerpo envía capacidad 999 a propósito: con avion_id se ignora."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Capacidad del avión (3 filas x 4), no la enviada\", () => { const v = pm.response.json().vuelo; pm.expect(v.capacidad).to.eql(12); pm.expect(v.asientos_disponibles).to.eql(12); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear un vuelo con un avión que no existe (404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/vuelos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vuelos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"origen\": \"Quito\",\n  \"destino\": \"Cuenca\",\n  \"fecha\": \"2026-12-30\",\n  \"hora_salida\": \"08:00\",\n  \"hora_llegada\": \"09:00\",\n  \"precio\": 50,\n  \"avion_id\": 999999999\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Error uniforme 'no_encontrado'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"no_encontrado\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Cédula y Google",
+      "item": [
+        {
+          "name": "Completar la cédula sin token (401)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios/cedula",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios",
+                "cedula"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cedula\": \"1710034065\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Error uniforme 'no_autenticado'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"no_autenticado\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Completar la cédula como administrador (403)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios/cedula",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios",
+                "cedula"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cedula\": \"1710034065\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Error uniforme 'sin_permiso'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"sin_permiso\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cédula inválida (400)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios/cedula",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios",
+                "cedula"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cedula\": \"1710034066\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error uniforme 'datos_invalidos'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"datos_invalidos\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Un cliente que ya tiene cédula no puede cambiarla (409)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios/cedula",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios",
+                "cedula"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cedula\": \"0102030400\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Error uniforme 'conflicto'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"conflicto\"); pm.expect(json.mensaje).to.be.a(\"string\"); });",
+                  "pm.test(\"Dice que no se puede cambiar\", () => pm.expect(pm.response.json().mensaje).to.include(\"no se puede cambiar\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Google sin id_token (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/google",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "google"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error uniforme 'datos_invalidos'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"datos_invalidos\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Google con un token inventado (401, o 503 si Google no está configurado)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/google",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "google"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_token\": \"no.es.un.token\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Con GOOGLE_CLIENT_ID configurado responde 401 (la librería rechaza el token); sin él, 503."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Un token falso nunca inicia sesión\", () => pm.expect([401, 503]).to.include(pm.response.code));",
+                  "pm.test(\"Sin token de sesión en la respuesta\", () => pm.expect(pm.response.json()).to.not.have.property(\"token\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. Cierre de sesión",
+      "description": "Logout: el token queda revocado.",
+      "item": [
+        {
+          "name": "Logout (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Perfil con token revocado (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Error uniforme 'no_autenticado'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"no_autenticado\"); pm.expect(json.mensaje).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/perfil",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "perfil"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Logout admin (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

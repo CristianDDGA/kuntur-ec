@@ -1,0 +1,17 @@
+# Contrato del servicio iva: Tarifa vigente e historial
+summary: "Tarifa de IVA vigente e historial"
+tags: [IVA]
+security: [{Bearer: []}]
+produces: [application/json, application/xml]
+responses:
+  200:
+    description: Tarifa vigente hoy (null si no hay) y todas las tarifas, la más reciente primero.
+    schema:
+      type: object
+      properties:
+        vigente: {$ref: "#/definitions/TarifaIva"}
+        tarifas:
+          type: array
+          items: {$ref: "#/definitions/TarifaIva"}
+  401:
+    description: Sin token o sesión cerrada.

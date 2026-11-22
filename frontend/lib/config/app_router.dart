@@ -1,20 +1,180 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../controllers/sesion_controller.dart';
+import '../controllers/verificacion_controller.dart';
 import '../pages/estado_api_page.dart';
+import '../pages/inicio_page.dart';
+import '../pages/admin_page.dart';
+import '../pages/comprobante_page.dart';
+import '../pages/completar_cedula_page.dart';
+import '../pages/crear_vuelo_page.dart';
+import '../pages/importar_aviones_page.dart';
+import '../pages/login_page.dart';
+import '../pages/no_encontrada_page.dart';
+import '../pages/recuperar_clave_page.dart';
+import '../pages/registro_page.dart';
+import '../pages/reserva_detalle_page.dart';
+import '../pages/reservas_page.dart';
+import '../pages/seleccion_asientos_page.dart';
+import '../pages/splash_page.dart';
+import '../pages/verificar_correo_page.dart';
+import '../pages/vuelo_detalle_page.dart';
+import '../pages/vuelos_page.dart';
 
 /// Rutas de la aplicación. Se irán agregando por feature:
-///   /login, /registro, /vuelos, /vuelos/:id, /reservas, /reservas/:id, /admin/vuelos/nuevo
+///   /reservas, /reservas/:id
 class AppRoutes {
   const AppRoutes._();
+  static const cargando = '/cargando';
+  static const login = '/login';
+  static const registro = '/registro';
+  static const verificarCorreo = '/verificar-correo';
+  static const recuperarClave = '/recuperar-clave';
+  static const completarCedula = '/completar-cedula';
   static const inicio = '/';
+  static const vuelos = '/vuelos';
+  static const estado = '/estado';
+  static const reservas = '/reservas';
+  static String reserva(int id) => '/reservas/$id';
+  static String comprobante(int id) => '/reservas/$id/comprobante';
+  static String asientosDelVuelo(int id) => '/vuelos/$id/asientos';
+  static String asientosDeLaReserva(int id) => '/reservas/$id/asientos';
+  static const admin = '/admin';
+  static const nuevoVuelo = '/admin/vuelos/nuevo';
+  static const importarAviones = '/admin/aviones/importar';
+  static String vuelo(int id) => '/vuelos/$id';
+
+  /// Se pueden ver sin haber iniciado sesión.
+  static const publicas = {inicio, login, registro, verificarCorreo, recuperarClave, estado};
 }
 
-final appRouterProvider = Provider<GoRouter>(
-  (ref) => GoRouter(
-    initialLocation: AppRoutes.inicio,
+/// A dónde volver después de la carga o del login ("/reservas/58"), o `null` si no es un destino seguro.
+///
+/// Solo se aceptan rutas internas de la app: un `volver=https://sitio-malo.com` o `volver=//otro.com`
+/// nunca debe llevar al usuario fuera, ni a las pantallas de entrada.
+String? destinoSeguro(String? valor) {
+  if (valor == null || valor.isEmpty || valor.length > 200) return null;
+  if (!valor.startsWith('/') || valor.startsWith('//') || valor.contains(r'\') || valor.contains('://')) return null;
+  final ruta = Uri.tryParse(valor)?.path ?? '';
+  const entrada = {
+    AppRoutes.cargando,
+    AppRoutes.login,
+    AppRoutes.registro,
+    AppRoutes.verificarCorreo,
+    AppRoutes.recuperarClave,
+    AppRoutes.completarCedula,
+  };
+  return ruta.isEmpty || entrada.contains(ruta) ? null : valor;
+}
+
+String _con(String ruta, String? volver) =>
+    volver == null || volver == AppRoutes.inicio ? ruta : '$ruta?volver=${Uri.encodeQueryComponent(volver)}';
+
+/// El router observa la sesión y protege las rutas:
+/// - mientras se valida el token guardado -> pantalla de carga (recordando a dónde iba el usuario);
+/// - sin sesión -> solo login, registro y estado del servicio;
+/// - con sesión -> login y registro redirigen a donde iba el usuario (o al inicio).
+///
+/// Así, recargar la página en "/reservas/58" (o volver a entrar después de que venza la sesión)
+/// deja al usuario donde estaba, en vez de mandarlo siempre al inicio.
+final appRouterProvider = Provider<GoRouter>((ref) {
+  final cambios = ValueNotifier<int>(0);
+  ref.listen(sesionControllerProvider, (_, _) => cambios.value++);
+  ref.onDispose(cambios.dispose);
+
+  return GoRouter(
+    // Sin initialLocation: en la web se respeta la dirección del navegador (recargar no pierde la pantalla).
+    refreshListenable: cambios,
+    errorBuilder: (_, _) => const NoEncontradaPage(),
+    redirect: (context, state) {
+      final sesion = ref.read(sesionControllerProvider);
+      final ruta = state.matchedLocation;
+      final volver = destinoSeguro(state.uri.queryParameters['volver']);
+
+      if (sesion.isLoading || sesion.hasError) {
+        if (ruta == AppRoutes.cargando) return null;
+        return _con(AppRoutes.cargando, destinoSeguro(state.uri.toString()));
+      }
+      final autenticado = sesion.value != null;
+      if (!autenticado) {
+        // La carga terminó sin sesión: a la página de inicio, o al login si iba a una pantalla protegida.
+        if (ruta == AppRoutes.cargando) return volver == null || volver == AppRoutes.inicio ? AppRoutes.inicio : _con(AppRoutes.login, volver);
+        // Confirmar el correo solo tiene sentido si hay una cuenta esperándolo (se pierde al recargar la página).
+        if (ruta == AppRoutes.verificarCorreo && ref.read(verificacionPendienteProvider) == null) return AppRoutes.login;
+        if (AppRoutes.publicas.contains(ruta)) return null;
+        // Solo se recuerda el destino si la sesión se perdió sin querer (venció); al cerrarla a propósito, no.
+        final seVencio = ref.read(avisoLoginProvider) != null;
+        return _con(AppRoutes.login, seVencio ? destinoSeguro(state.uri.toString()) : null);
+      }
+      if (ruta == AppRoutes.cargando ||
+          ruta == AppRoutes.login ||
+          ruta == AppRoutes.registro ||
+          ruta == AppRoutes.verificarCorreo ||
+          ruta == AppRoutes.recuperarClave) {
+        return volver ?? AppRoutes.vuelos;
+      }
+      if (ruta == AppRoutes.inicio) return AppRoutes.vuelos; // con sesión, la página de inicio es la lista de vuelos
+      // Un cliente sin cédula (p. ej. entró con Google) la completa antes de usar la app. El administrador no.
+      final usuario = sesion.value!;
+      final sinCedula = !usuario.esAdmin && usuario.cedula == null;
+      if (sinCedula && ruta != AppRoutes.completarCedula && !AppRoutes.publicas.contains(ruta)) {
+        return AppRoutes.completarCedula;
+      }
+      if (!sinCedula && ruta == AppRoutes.completarCedula) return AppRoutes.vuelos;
+      // Crear vuelos es cosa del administrador (el servidor también lo exige con 403).
+      if (ruta.startsWith(AppRoutes.admin) && !sesion.value!.esAdmin) return AppRoutes.inicio;
+      // El administrador no reserva: sus pantallas de reservas no existen (el servidor también responde 403).
+      if (ruta.startsWith(AppRoutes.reservas) && sesion.value!.esAdmin) return AppRoutes.inicio;
+      return null;
+    },
     routes: [
-      GoRoute(path: AppRoutes.inicio, builder: (_, _) => const EstadoApiPage()),
+      GoRoute(path: AppRoutes.cargando, builder: (_, _) => const SplashPage()),
+      GoRoute(path: AppRoutes.login, builder: (_, _) => const LoginPage()),
+      GoRoute(path: AppRoutes.registro, builder: (_, _) => const RegistroPage()),
+      GoRoute(path: AppRoutes.verificarCorreo, builder: (_, _) => const VerificarCorreoPage()),
+      GoRoute(path: AppRoutes.recuperarClave, builder: (_, _) => const RecuperarClavePage()),
+      GoRoute(path: AppRoutes.completarCedula, builder: (_, _) => const CompletarCedulaPage()),
+      GoRoute(path: AppRoutes.inicio, builder: (_, _) => const InicioPage()),
+      GoRoute(path: AppRoutes.vuelos, builder: (_, _) => const VuelosPage()),
+      GoRoute(path: AppRoutes.reservas, builder: (_, _) => const ReservasPage()),
+      GoRoute(
+        path: '/reservas/:id',
+        redirect: (_, state) => RegExp(r'^[1-9]\d{0,17}$').hasMatch(state.pathParameters['id'] ?? '') ? null : AppRoutes.reservas,
+        builder: (_, state) => ReservaDetallePage(reservaId: int.parse(state.pathParameters['id']!)),
+        routes: [
+          GoRoute(
+            path: 'asientos',
+            builder: (_, state) => SeleccionAsientosPage(reservaId: int.parse(state.pathParameters['id']!)),
+          ),
+          GoRoute(
+            path: 'comprobante',
+            builder: (_, state) => ComprobantePage(reservaId: int.parse(state.pathParameters['id']!)),
+          ),
+        ],
+      ),
+      GoRoute(path: AppRoutes.admin, builder: (_, _) => const AdminPage()),
+      GoRoute(path: AppRoutes.nuevoVuelo, builder: (_, _) => const CrearVueloPage()),
+      GoRoute(path: AppRoutes.importarAviones, builder: (_, _) => const ImportarAvionesPage()),
+      GoRoute(
+        path: '/vuelos/:id',
+        // Un id que no es un entero positivo razonable ("/vuelos/abc", "/vuelos/0", 20 dígitos) vuelve a la
+        // lista en vez de pedirle al servidor algo imposible. 18 dígitos = el límite de la base (BIGINT).
+        redirect: (_, state) => RegExp(r'^[1-9]\d{0,17}$').hasMatch(state.pathParameters['id'] ?? '') ? null : AppRoutes.inicio,
+        builder: (_, state) => VueloDetallePage(vueloId: int.parse(state.pathParameters['id']!)),
+        routes: [
+          // Elegir asientos es reservar: solo clientes (el administrador vuelve al detalle del vuelo).
+          GoRoute(
+            path: 'asientos',
+            redirect: (_, state) => (ref.read(sesionControllerProvider).value?.esAdmin ?? false)
+                ? AppRoutes.vuelo(int.parse(state.pathParameters['id']!))
+                : null,
+            builder: (_, state) => SeleccionAsientosPage(vueloId: int.parse(state.pathParameters['id']!)),
+          ),
+        ],
+      ),
+      GoRoute(path: AppRoutes.estado, builder: (_, _) => const EstadoApiPage()),
     ],
-  ),
-);
+  );
+});

@@ -1,0 +1,27 @@
+# Contrato del servicio auth: Pedir el código para recuperar la contraseña
+summary: "Pedir el código para recuperar la contraseña"
+description: |
+  Envía al correo un código de 6 dígitos (vence en 10 minutos) si la cuenta existe. Se puede pedir uno cada
+  60 segundos y el nuevo reemplaza al anterior. Responde siempre igual, exista o no la cuenta y salga o no el
+  correo, para no revelar qué correos están registrados. Después se usa en `POST /auth/restablecer-clave`.
+tags: [Autenticación]
+consumes: [application/json]
+produces: [application/json, application/xml]
+parameters:
+  - in: body
+    name: body
+    required: true
+    schema:
+      type: object
+      required: [correo]
+      properties:
+        correo: {type: string, example: "ana@correo.com"}
+responses:
+  200:
+    description: Solicitud recibida.
+    schema:
+      type: object
+      properties:
+        mensaje: {type: string, example: "Si el correo está registrado, le enviamos un código para restablecer su contraseña."}
+  400:
+    description: Correo con formato inválido.

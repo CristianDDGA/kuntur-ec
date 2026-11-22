@@ -1,0 +1,28 @@
+# Contrato del servicio auth: Pedir otro código de verificación
+summary: "Reenviar el código de verificación"
+description: |
+  Envía un código nuevo (reemplaza al anterior) si la cuenta existe y falta verificarla. Se puede pedir uno cada
+  60 segundos. Responde siempre igual, exista o no la cuenta, para no revelar qué correos están registrados.
+tags: [Autenticación]
+consumes: [application/json]
+produces: [application/json, application/xml]
+parameters:
+  - in: body
+    name: body
+    required: true
+    schema:
+      type: object
+      required: [correo]
+      properties:
+        correo: {type: string, example: "ana@correo.com"}
+responses:
+  200:
+    description: Solicitud recibida.
+    schema:
+      type: object
+      properties:
+        mensaje: {type: string, example: "Si la cuenta existe y falta verificarla, le enviamos un código nuevo."}
+  400:
+    description: Correo con formato inválido.
+  503:
+    description: No se pudo enviar el correo.

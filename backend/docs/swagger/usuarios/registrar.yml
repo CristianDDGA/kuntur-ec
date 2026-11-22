@@ -1,0 +1,39 @@
+# Contrato del servicio usuarios: Registrar un usuario (rol cliente)
+summary: "Registrar un usuario (rol cliente)"
+tags: [Usuarios]
+consumes: [application/json]
+produces: [application/json, application/xml]
+parameters:
+  - in: body
+    name: body
+    required: true
+    schema:
+      type: object
+      required: [nombre, cedula, correo, password]
+      properties:
+        nombre: {type: string, example: "Ana Torres"}
+        cedula: {type: string, example: "1710034065", description: "Cédula ecuatoriana de 10 dígitos (se valida provincia y dígito verificador)"}
+        correo: {type: string, example: "ana@correo.com"}
+        password: {type: string, example: "Clave2026", description: "Mínimo 8 caracteres, letras y números"}
+responses:
+  201:
+    description: Usuario creado (la contraseña nunca se devuelve).
+    schema:
+      type: object
+      properties:
+        mensaje: {type: string, example: "Usuario registrado correctamente. Revise su correo para confirmar la cuenta."}
+        verificacion_pendiente: {type: boolean, example: true, description: "La cuenta no inicia sesión hasta confirmar el correo (POST /auth/verificar-correo)"}
+        codigo_enviado: {type: boolean, example: true, description: "false si el correo falló: se puede pedir otro código con /auth/reenviar-codigo"}
+        usuario:
+          type: object
+          properties:
+            id: {type: integer, example: 2}
+            nombre: {type: string}
+            correo: {type: string}
+            cedula: {type: string, example: "1710034065"}
+            rol: {type: string, example: cliente}
+            fecha_registro: {type: string, format: date-time}
+  400:
+    description: Datos inválidos (campo faltante, cédula, correo o contraseña no válidos).
+  409:
+    description: Ya existe una cuenta con ese correo o con esa cédula.

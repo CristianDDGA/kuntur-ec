@@ -1,0 +1,12 @@
+# Contrato del servicio vuelos: Detalle de un vuelo
+summary: "Detalle de un vuelo"
+tags: [Vuelos]
+produces: [application/json, application/xml]
+parameters:
+  - {in: path, name: vuelo_id, type: integer, required: true, example: 1}
+responses:
+  200:
+    description: Datos del vuelo.
+    schema: {$ref: "#/definitions/Vuelo"}
+  404:
+    description: El vuelo no existe.
