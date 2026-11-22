@@ -17,7 +17,7 @@ Hecho (detalle en `docs/PLANIFICACION.md`, sección 8):
   por SMTP) e **inicio de sesión con Google**.
 - Endurecimiento: rutas cerradas por defecto, CORS sin `*`, clave JWT ≥ 32 caracteres, límites de largo = columnas de la BD.
 - Documentación al día: `README.md`, `backend/README.md`, `frontend/README.md`, `docs/PRUEBAS.md`, `docs/USABILIDAD.md`,
-  `docs/PRIVACIDAD.md`, colección de Postman (`docs/postman/`, 125 comprobaciones, verificada).
+  `docs/PRIVACIDAD.md`, colección de Postman (`docs/postman/`, 139 comprobaciones, verificada).
 
 **Rediseño de la portada (ya en `develop`, PR #19):**
 - `InicioPage` (`frontend/lib/pages/inicio_page.dart`): nueva portada comercial orientada al cliente (sin textos técnicos, sin buscador en la portada ni pill `Ecuador · USD $`), con el carrusel de las 4 regiones del Ecuador arriba, banner de experiencia y destinos populares.

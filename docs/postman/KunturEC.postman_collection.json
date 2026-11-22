@@ -741,6 +741,243 @@
           ]
         },
         {
+          "name": "Recuperar contraseña de un correo que no existe (200, responde igual)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/recuperar-clave",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "recuperar-clave"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"no.existe.{{$timestamp}}@kuntur.test\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Responde igual exista o no la cuenta, para no revelar qué correos están registrados. El código real llega por correo (o al log del servidor sin SMTP): no se puede automatizar."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"No revela si la cuenta existe\", () => pm.expect(pm.response.json().mensaje).to.include(\"Si el correo está registrado\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Recuperar contraseña con un correo inválido (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/recuperar-clave",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "recuperar-clave"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"no-es-un-correo\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error uniforme 'datos_invalidos'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"datos_invalidos\"); pm.expect(json.mensaje).to.be.a(\"string\"); });",
+                  "pm.test(\"Dice que el correo no es válido\", () => pm.expect(pm.response.json().mensaje).to.include(\"correo\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Restablecer con un código que no sirve (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/restablecer-clave",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "restablecer-clave"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"no.existe.{{$timestamp}}@kuntur.test\",\n  \"codigo\": \"000000\",\n  \"password\": \"ClaveNueva2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Un código que no corresponde (o una cuenta que no existe) responde siempre lo mismo."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error uniforme 'datos_invalidos'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"datos_invalidos\"); pm.expect(json.mensaje).to.be.a(\"string\"); });",
+                  "pm.test(\"Mismo mensaje para cualquier código malo\", () => pm.expect(pm.response.json().mensaje).to.match(/no es correcto o ya venció/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Restablecer con un código de formato inválido (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/restablecer-clave",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "restablecer-clave"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{cliente_correo}}\",\n  \"codigo\": \"12ab\",\n  \"password\": \"ClaveNueva2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error uniforme 'datos_invalidos'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"datos_invalidos\"); pm.expect(json.mensaje).to.be.a(\"string\"); });",
+                  "pm.test(\"Dice que son 6 dígitos\", () => pm.expect(pm.response.json().mensaje).to.include(\"6 dígitos\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Restablecer con una contraseña débil (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/restablecer-clave",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "restablecer-clave"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{cliente_correo}}\",\n  \"codigo\": \"123456\",\n  \"password\": \"corta\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "La contraseña se valida antes de tocar la base: una contraseña floja no gasta un intento del código."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error uniforme 'datos_invalidos'\", () => { const json = pm.response.json(); pm.expect(json.error).to.eql(\"datos_invalidos\"); pm.expect(json.mensaje).to.be.a(\"string\"); });",
+                  "pm.test(\"Pide al menos 8 caracteres\", () => pm.expect(pm.response.json().mensaje).to.include(\"8 caracteres\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Login cliente (200)",
           "event": [
             {
