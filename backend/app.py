@@ -22,6 +22,7 @@ from routes.usuarios_routes import usuarios_bp
 from routes.vuelos_routes import vuelos_bp
 from services.auth_service import AuthService
 from services.avion_service import AvionService
+from services.recuperacion_service import RecuperacionService
 from services.verificacion_service import VerificacionService
 from services.iva_service import IvaService
 from services.reserva_service import ReservaService
@@ -55,7 +56,7 @@ def _agregar_cabeceras_seguras(app: Flask) -> None:
 def _registrar_servicios(app: Flask, settings: Settings, db: Database | None) -> None:
     """Servicios inyectados: las rutas los leen de app.extensions y las pruebas los reemplazan por fakes."""
     if db is None:
-        app.extensions.update(usuario_service=None, auth_service=None, vuelo_service=None, reserva_service=None, iva_service=None, avion_service=None, verificacion_service=None)
+        app.extensions.update(usuario_service=None, auth_service=None, vuelo_service=None, reserva_service=None, iva_service=None, avion_service=None, verificacion_service=None, recuperacion_service=None)
         return
     usuarios = UsuarioService(db)
     app.extensions["vuelo_service"] = VueloService(db)
@@ -69,6 +70,7 @@ def _registrar_servicios(app: Flask, settings: Settings, db: Database | None) ->
     )
     app.extensions["enviador_correo"] = enviador
     app.extensions["verificacion_service"] = VerificacionService(db, enviador, settings.jwt_secret_key)
+    app.extensions["recuperacion_service"] = RecuperacionService(db, enviador, settings.jwt_secret_key)
     app.extensions["usuario_service"] = usuarios
     app.extensions["auth_service"] = AuthService(
         db,

@@ -61,6 +61,28 @@ def reenviar_codigo():
 
 
 # =============================
+# POST - Pedir el código para recuperar la contraseña
+# =============================
+
+@auth_bp.route("/recuperar-clave", methods=["POST"])
+@swag_from(contrato("auth", "recuperar_clave"))
+@publica
+def recuperar_clave():
+    return respond(current_app.extensions["recuperacion_service"].solicitar(cuerpo_json()), root="recuperacion")
+
+
+# =============================
+# POST - Restablecer la contraseña con el código
+# =============================
+
+@auth_bp.route("/restablecer-clave", methods=["POST"])
+@swag_from(contrato("auth", "restablecer_clave"))
+@publica
+def restablecer_clave():
+    return respond(current_app.extensions["recuperacion_service"].restablecer(cuerpo_json()), root="restablecimiento")
+
+
+# =============================
 # POST - Cerrar sesión
 # =============================
 

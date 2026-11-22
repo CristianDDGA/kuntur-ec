@@ -114,7 +114,7 @@ base vuelve, sin reiniciar. Cada consulta tiene un tiempo máximo de 10 s (`stat
 
 **Cerrado por defecto:** una ruta nueva sin `@publica`, `@token_requerido` o `@rol_requerido` responde 500 en vez de
 quedar abierta por olvido (`before_request`; lo verifica `tests/integration/test_cerrado_por_defecto.py`). Solo son
-públicas: `/health`, registro, login (y Google, verificar/reenviar código) y la consulta de vuelos.
+públicas: `/health`, registro, login (y Google, verificar/reenviar código, recuperar/restablecer contraseña) y la consulta de vuelos.
 
 Otras protecciones: cabeceras `X-Content-Type-Options: nosniff` y `Cache-Control: no-store` en la API; el login
 responde igual si el correo existe o no y no ejecuta bcrypt cuando ya está bloqueado.
@@ -181,6 +181,12 @@ Google   ──▶ POST /auth/google ──▶ cuenta verificada, SIN cédula �
   revelar qué correos están registrados. Un login con contraseña correcta pero sin verificar responde
   `403 correo_no_verificado`; con contraseña incorrecta sigue siendo `401` (no se revela nada).
   Las cuentas anteriores a esta función quedaron verificadas.
+- **Recuperación de contraseña** (`services/recuperacion_service.py`): mismo mecanismo que la verificación, con tabla propia
+  (`codigos_recuperacion`) para que pedir uno no invalide el código del registro. `POST /auth/recuperar-clave` envía el código
+  y responde siempre igual (exista o no la cuenta, salga o no el correo: no se revela qué correos están registrados).
+  `POST /auth/restablecer-clave` (`correo`, `codigo`, `password`) valida el código, guarda la contraseña nueva (mismas reglas del
+  registro; una contraseña floja no gasta un intento), **revoca todas las sesiones** de la cuenta y la deja verificada, porque el
+  código prueba que la persona controla el correo. Una cuenta creada con Google también puede definir así una contraseña.
 - **Google** (`services/auth_service.py::login_google`): el cliente solo envía el `id_token`; el servidor decide quién es
   la persona únicamente con lo que Google firmó. Si hay una cuenta vinculada (`google_sub`), entra; si hay una con ese
   correo, la vincula y la deja verificada; si no, crea un cliente nuevo con el correo ya verificado, sin cédula y con

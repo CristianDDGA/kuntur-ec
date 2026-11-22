@@ -1,0 +1,29 @@
+# Contrato del servicio auth: Restablecer la contraseña con el código
+summary: "Restablecer la contraseña con el código recibido"
+description: |
+  Guarda la contraseña nueva si el código de 6 dígitos que llegó al correo es correcto y sigue vigente
+  (10 minutos, 5 intentos). Al terminar se cierran todas las sesiones abiertas de la cuenta y el código deja de
+  servir. La contraseña nueva sigue las mismas reglas del registro (8 caracteres como mínimo, con letras y números).
+tags: [Autenticación]
+consumes: [application/json]
+produces: [application/json, application/xml]
+parameters:
+  - in: body
+    name: body
+    required: true
+    schema:
+      type: object
+      required: [correo, codigo, password]
+      properties:
+        correo: {type: string, example: "ana@correo.com"}
+        codigo: {type: string, example: "123456", description: "6 dígitos"}
+        password: {type: string, example: "NuevaClave2026"}
+responses:
+  200:
+    description: Contraseña actualizada.
+    schema:
+      type: object
+      properties:
+        mensaje: {type: string, example: "Contraseña actualizada. Inicie sesión con la nueva contraseña."}
+  400:
+    description: Código incorrecto, vencido o con los intentos agotados; contraseña que no cumple las reglas.

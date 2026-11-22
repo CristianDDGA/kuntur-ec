@@ -13,7 +13,7 @@ class ResultadoRegistro {
 }
 
 /// Consume los servicios de Usuarios y Autenticación de la API
-/// (`/usuarios/registro`, `/auth/login`, `/auth/perfil`, `/auth/logout`).
+/// (`/usuarios/registro`, `/auth/login`, `/auth/perfil`, `/auth/logout`, recuperación de contraseña).
 class AuthService {
   const AuthService(this._client, this._tokens);
 
@@ -78,6 +78,20 @@ class AuthService {
   /// `POST /auth/reenviar-codigo`: pide un código nuevo. Responde igual exista o no la cuenta.
   Future<void> reenviarCodigo({required String correo}) async {
     asJsonMap(await _client.post('/auth/reenviar-codigo', body: {'correo': correo.trim()}));
+  }
+
+  /// `POST /auth/recuperar-clave`: pide el código para restablecer la contraseña. Responde igual exista o no la cuenta.
+  Future<void> solicitarRecuperacion({required String correo}) async {
+    asJsonMap(await _client.post('/auth/recuperar-clave', body: {'correo': correo.trim()}));
+  }
+
+  /// `POST /auth/restablecer-clave`: guarda la contraseña nueva si el código de 6 dígitos es correcto. No inicia
+  /// sesión: el servidor cierra las sesiones abiertas y la persona entra con la contraseña nueva.
+  Future<void> restablecerClave({required String correo, required String codigo, required String password}) async {
+    asJsonMap(await _client.post(
+      '/auth/restablecer-clave',
+      body: {'correo': correo.trim(), 'codigo': codigo.trim(), 'password': password},
+    ));
   }
 
   /// Usuario dueño del token guardado. Lanza [UnauthorizedFailure] si el token venció o fue revocado.

@@ -87,7 +87,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   prefixIcon: Icon(Icons.mail_outline),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               // El foco en la contraseña mueve la onda líquida del fondo.
               Focus(
                 skipTraversal: true,
@@ -102,14 +102,25 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   onSubmitted: (_) => _enviar(),
                 ),
               ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(0, 24),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  onPressed: cargando ? null : () => context.go(AppRoutes.recuperarClave),
+                  child: const Text('¿Olvidó su contraseña?'),
+                ),
+              ),
               if (error != null) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
                 AvisoInline(texto: error),
               ],
-              const SizedBox(height: 14),
+              const SizedBox(height: 4),
               BotonDegradado(texto: 'Iniciar sesión', cargando: cargando, onPressed: _enviar),
               const BotonGoogle(),
-              const SizedBox(height: 4),
               // Wrap: si no cabe en una línea (pantallas angostas) el enlace baja a la siguiente.
               Wrap(
                 alignment: WrapAlignment.center,

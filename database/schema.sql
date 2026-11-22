@@ -163,6 +163,19 @@ CREATE TABLE IF NOT EXISTS codigos_verificacion (
 );
 
 -- ---------------------------------------------------------------------
+-- codigos_recuperacion: código de 6 dígitos enviado al correo para restablecer la contraseña olvidada. Mismo
+-- esquema que codigos_verificacion pero separado: pedir uno no invalida el código del registro ni al revés.
+-- Hay uno vigente por cuenta (uno nuevo reemplaza al anterior). Se guarda su huella HMAC, nunca el código.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS codigos_recuperacion (
+    usuario_id   BIGINT      PRIMARY KEY REFERENCES usuarios (id) ON DELETE CASCADE,
+    codigo_hash  TEXT        NOT NULL,
+    expira       TIMESTAMPTZ NOT NULL,
+    intentos     INTEGER     NOT NULL DEFAULT 0 CHECK (intentos >= 0),
+    enviado_en   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ---------------------------------------------------------------------
 -- Control de concurrencia optimista (columna version)
 -- Cada UPDATE hace `version = version + 1`. Quien modifica envía la versión
 -- que leyó; si otro la cambió antes, el UPDATE ... WHERE version = ? no
@@ -191,3 +204,4 @@ ALTER TABLE reservas    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reserva_asientos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tokens      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE codigos_verificacion ENABLE ROW LEVEL SECURITY;
+ALTER TABLE codigos_recuperacion ENABLE ROW LEVEL SECURITY;
