@@ -26,8 +26,9 @@ porque cada proceso abre un pool de hasta 5 conexiones y Supabase gratis permite
    - `GOOGLE_CLIENT_ID`: el ID de cliente OAuth web (no es secreto).
    - `JWT_SECRET_KEY` la genera Render sola (≥ 32 caracteres). `CORS_ORIGINS` ya vale `http://localhost:8080`.
 4. Esperar el despliegue y abrir `https://<servicio>.onrender.com/api/health` (debe responder `estado: ok`) y `/api/docs/` (Swagger).
-5. Ejecutar el Flutter contra la nube:
-   `flutter run -d chrome --web-port=8080 --dart-define=API_BASE_URL=https://<servicio>.onrender.com/api`
+5. Ejecutar el Flutter contra la nube: el frontend ya trae por defecto `https://kuntur-ec-api.onrender.com/api` en
+   `frontend/lib/config/app_config.dart` (la URL local quedó comentada), así que basta `flutter run -d chrome --web-port=8080`.
+   Si el servicio tiene otro nombre, cambiar esa URL o pasar `--dart-define=API_BASE_URL=https://<servicio>.onrender.com/api`.
 
 ## Cosas a tener en cuenta
 - **Plan gratuito:** el servicio se duerme tras ~15 min sin uso; la primera petición tarda 30–60 s. Antes de la demostración, abrir
