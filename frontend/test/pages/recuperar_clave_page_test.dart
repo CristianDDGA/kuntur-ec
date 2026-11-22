@@ -41,6 +41,17 @@ void main() {
     expect(find.text('Recupere su contraseña'), findsOneWidget);
   });
 
+  testWidgets('en el login el enlace de recuperar queda debajo de "¿Aún no tiene cuenta?" y centrado', (tester) async {
+    await abrirApp(tester, client: _api());
+
+    final cuenta = tester.getCenter(find.text('¿Aún no tiene cuenta?'));
+    final olvido = tester.getCenter(find.text('¿Olvidó su contraseña?'));
+    final tarjeta = tester.getCenter(find.byType(Form));
+
+    expect(olvido.dy, greaterThan(cuenta.dy), reason: 'debe ir debajo de la línea de registro');
+    expect((olvido.dx - tarjeta.dx).abs(), lessThanOrEqualTo(2.0), reason: 'debe ir centrado');
+  });
+
   testWidgets('un correo vacío o inválido no llama a la API', (tester) async {
     final client = _api();
     await _abrirRecuperacion(tester, client);
