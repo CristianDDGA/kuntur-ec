@@ -61,17 +61,17 @@ Ejemplo para probar la importación de aviones: `docs/ejemplos/aviones.csv` (for
 - **Supabase:** proyecto «Kuntur EC»; conexión por *Session pooler* (plan gratuito: 15 conexiones).
 - **Gmail:** contraseña de aplicación para enviar el código (`SMTP_*`). Se revoca en `myaccount.google.com/apppasswords`.
 - **Google Cloud**, proyecto «Kuntur EC» (`kuntur-ec`): cliente OAuth web con el origen `http://localhost:8080`. Ya se guardaron las URLs
-  de página principal y privacidad en *Información de la marca* (sin logo). Sigue en modo **«Prueba»**: falta confirmar el cambio a
-  «En producción» en *Público* (ver el punto 5.1).
+  de página principal y privacidad en *Información de la marca* (sin logo). Ya está **«En producción»** (publicada el 2026-11-21 en
+  *Público*, sin pedir verificación); falta probarla con otras cuentas (ver el punto 5.1).
 - **Estado de la base al cerrar:** solo el administrador (`database/seed.sql`), 12 vuelos, 0 aviones, 0 reservas, IVA vigente 12 %.
   Los vuelos `KT702` y `KT703` son de pruebas del autor; el IVA 12 % también lo programó él.
 
 ## 5. Pendiente
-1. **Google para cualquier cuenta.** Hay que pasar la app de «Prueba» a «En producción» (Google Cloud → Google Auth Platform →
-   Público). Las URLs públicas (`https://github.com/CristianDDGA/kuntur-ec` y
-   `https://github.com/CristianDDGA/kuntur-ec/blob/develop/docs/PRIVACIDAD.md`) ya están guardadas en *Información de la marca* (sin
-   logo); resta confirmar la publicación. Riesgo: Google puede exigir un dominio propio; si lo rechaza, alternativas: agregar usuarios
-   de prueba (hasta 100) o una página propia (p. ej. GitHub Pages). La app solo pide permisos básicos (sin verificación de Google).
+1. **Google para cualquier cuenta (publicada, falta probar).** La app ya pasó de «Prueba» a «En producción» (Google Cloud → Google
+   Auth Platform → Público) y no pidió verificación. Las URLs públicas (`https://github.com/CristianDDGA/kuntur-ec` y
+   `https://github.com/CristianDDGA/kuntur-ec/blob/develop/docs/PRIVACIDAD.md`) están en *Información de la marca* (sin logo). Falta
+   comprobar el inicio de sesión con cuentas distintas (punto 6). Si Google llegara a exigir un dominio propio, alternativas: volver al
+   modo de prueba y agregar usuarios (hasta 100) o una página propia (p. ej. GitHub Pages). La app solo pide permisos básicos.
 2. **Informe PDF con diagrama SOA** (entregable principal de la guía APE 4) y **capturas** de las pantallas nuevas
    (`docs/PRUEBAS.md`, recorrido 20–27). Datos de los integrantes del grupo para la portada.
 3. **Despliegue del backend en Render:** el repositorio ya está preparado (`render.yaml`, `backend/wsgi.py`, gunicorn, `PORT`,
