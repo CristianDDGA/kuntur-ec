@@ -90,4 +90,4 @@ Verificado el 20–21/11/2026 en el navegador contra Supabase. **Todavía no tie
 | Texto de botón desactivado poco legible | Texto oscuro sobre gris |
 | Segmento seleccionado con poco contraste | Tema de `SegmentedButton` (azul con texto blanco) |
 | Íconos y manifest por defecto de Flutter | Regenerados con el logo del cóndor; idioma `es` |
-| Accesibilidad web | Semántica activada para lectores de pantalla |
+| Accesibilidad web | Etiquetas `Semantics` en los widgets; el árbol de semántica se activa a pedido (lector de pantalla), no al arrancar, para que los campos de texto no pierdan el primer clic |

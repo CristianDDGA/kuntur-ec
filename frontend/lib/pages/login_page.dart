@@ -102,23 +102,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   onSubmitted: (_) => _enviar(),
                 ),
               ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  style: TextButton.styleFrom(
-                    minimumSize: const Size(0, 24),
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  onPressed: cargando ? null : () => context.go(AppRoutes.recuperarClave),
-                  child: const Text('¿Olvidó su contraseña?'),
-                ),
-              ),
               if (error != null) ...[
-                const SizedBox(height: 6),
+                const SizedBox(height: 10),
                 AvisoInline(texto: error),
               ],
-              const SizedBox(height: 4),
+              const SizedBox(height: 8),
               BotonDegradado(texto: 'Iniciar sesión', cargando: cargando, onPressed: _enviar),
               const BotonGoogle(),
               // Wrap: si no cabe en una línea (pantallas angostas) el enlace baja a la siguiente.
@@ -128,10 +116,29 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 children: [
                   const Text('¿Aún no tiene cuenta?'),
                   TextButton(
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(0, 32),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
                     onPressed: cargando ? null : () => context.go(AppRoutes.registro),
                     child: const Text('Cree una'),
                   ),
                 ],
+              ),
+              // Debajo de "¿Aún no tiene cuenta?", centrado y discreto (sin ocupar altura de más).
+              Center(
+                child: TextButton(
+                  // Mismo estilo que el texto "¿Aún no tiene cuenta?" (no el de enlace en negrita).
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(0, 24),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    textStyle: Theme.of(context).textTheme.bodyMedium,
+                    foregroundColor: Theme.of(context).textTheme.bodyMedium?.color,
+                  ),
+                  onPressed: cargando ? null : () => context.go(AppRoutes.recuperarClave),
+                  child: const Text('¿Olvidó su contraseña?'),
+                ),
               ),
             ],
           ),
