@@ -6,10 +6,13 @@ queda son entregables y decisiones (sección 5).
 ## 1. Estado
 
 Sistema de reservas de vuelos con **SOA**: API REST **Flask** (MVC) + cliente **Flutter web** + **Supabase** (PostgreSQL).
-Rama `develop` al día con todo lo hecho hasta el PR #20; la rama `feature/pendientes-final` está pendiente de PR. Pruebas: **pytest 651**, **flutter test 430**, `flutter analyze` sin avisos.
+Rama `develop` al día con todo lo hecho hasta el PR #20; la rama `feature/pendientes-final` está pendiente de PR. Pruebas: **pytest 692**, **flutter test 451**, `flutter analyze` sin avisos.
 
 Hecho (detalle en `docs/PLANIFICACION.md`, sección 8):
 - Núcleo: usuarios, JWT, vuelos, reservas con asientos concretos y concurrencia, IVA con historial, comprobante XML.
+- **Recuperación de contraseña** (rama `feature/recuperar-clave`): `POST /api/auth/recuperar-clave` y `/restablecer-clave`, pantalla
+  `/recuperar-clave` y enlace «¿Olvidó su contraseña?» en el login. La tabla nueva `codigos_recuperacion` ya está
+  creada en Supabase (`schema.sql` aplicado el 2026-11-21); quien use otra base debe aplicarlo (`cd backend && .venv\Scripts\python database.py`).
 - Pedido por el docente: **aviones por CSV**, **cédula** (módulo 10), **página de inicio**, **correo real** (código de 6 dígitos
   por SMTP) e **inicio de sesión con Google**.
 - Endurecimiento: rutas cerradas por defecto, CORS sin `*`, clave JWT ≥ 32 caracteres, límites de largo = columnas de la BD.
@@ -29,7 +32,7 @@ Las fotos de `frontend/assets/regiones/` (`sierra.jpg`, `costa.jpg`, `oriente.jp
 reemplazar por otras con el mismo nombre. Si falta alguna, se ve el degradado. Detalle para el informe en `docs/USABILIDAD.md` y fila Z7 de `docs/PLANIFICACION.md`. 
 
 **Pendientes finales (rama `feature/pendientes-final`):** destinos de la portada desde la BD (`GET /api/vuelos/destinos`, público; con respaldo si la API
-no responde) y **resumen de ventas** del administrador (`GET /api/reservas/resumen` + tarjeta en `AdminPage`). Pruebas finales: pytest **651**, flutter test **430**, `flutter analyze` limpio.
+no responde) y **resumen de ventas** del administrador (`GET /api/reservas/resumen` + tarjeta en `AdminPage`). Pruebas finales: pytest **692**, flutter test **451**, `flutter analyze` limpio.
 
 ## 2. Cómo correrlo
 

@@ -13,6 +13,7 @@ import '../pages/crear_vuelo_page.dart';
 import '../pages/importar_aviones_page.dart';
 import '../pages/login_page.dart';
 import '../pages/no_encontrada_page.dart';
+import '../pages/recuperar_clave_page.dart';
 import '../pages/registro_page.dart';
 import '../pages/reserva_detalle_page.dart';
 import '../pages/reservas_page.dart';
@@ -30,6 +31,7 @@ class AppRoutes {
   static const login = '/login';
   static const registro = '/registro';
   static const verificarCorreo = '/verificar-correo';
+  static const recuperarClave = '/recuperar-clave';
   static const completarCedula = '/completar-cedula';
   static const inicio = '/';
   static const vuelos = '/vuelos';
@@ -45,7 +47,7 @@ class AppRoutes {
   static String vuelo(int id) => '/vuelos/$id';
 
   /// Se pueden ver sin haber iniciado sesión.
-  static const publicas = {inicio, login, registro, verificarCorreo, estado};
+  static const publicas = {inicio, login, registro, verificarCorreo, recuperarClave, estado};
 }
 
 /// A dónde volver después de la carga o del login ("/reservas/58"), o `null` si no es un destino seguro.
@@ -61,6 +63,7 @@ String? destinoSeguro(String? valor) {
     AppRoutes.login,
     AppRoutes.registro,
     AppRoutes.verificarCorreo,
+    AppRoutes.recuperarClave,
     AppRoutes.completarCedula,
   };
   return ruta.isEmpty || entrada.contains(ruta) ? null : valor;
@@ -105,7 +108,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         final seVencio = ref.read(avisoLoginProvider) != null;
         return _con(AppRoutes.login, seVencio ? destinoSeguro(state.uri.toString()) : null);
       }
-      if (ruta == AppRoutes.cargando || ruta == AppRoutes.login || ruta == AppRoutes.registro || ruta == AppRoutes.verificarCorreo) {
+      if (ruta == AppRoutes.cargando ||
+          ruta == AppRoutes.login ||
+          ruta == AppRoutes.registro ||
+          ruta == AppRoutes.verificarCorreo ||
+          ruta == AppRoutes.recuperarClave) {
         return volver ?? AppRoutes.vuelos;
       }
       if (ruta == AppRoutes.inicio) return AppRoutes.vuelos; // con sesión, la página de inicio es la lista de vuelos
@@ -127,6 +134,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: AppRoutes.login, builder: (_, _) => const LoginPage()),
       GoRoute(path: AppRoutes.registro, builder: (_, _) => const RegistroPage()),
       GoRoute(path: AppRoutes.verificarCorreo, builder: (_, _) => const VerificarCorreoPage()),
+      GoRoute(path: AppRoutes.recuperarClave, builder: (_, _) => const RecuperarClavePage()),
       GoRoute(path: AppRoutes.completarCedula, builder: (_, _) => const CompletarCedulaPage()),
       GoRoute(path: AppRoutes.inicio, builder: (_, _) => const InicioPage()),
       GoRoute(path: AppRoutes.vuelos, builder: (_, _) => const VuelosPage()),

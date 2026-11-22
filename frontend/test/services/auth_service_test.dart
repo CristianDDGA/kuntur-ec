@@ -75,6 +75,38 @@ void main() {
     });
   });
 
+  group('recuperar la contraseña', () {
+    test('solicitarRecuperacion manda solo el correo, sin espacios', () async {
+      final client = RouteFakeRestClient({'POST /auth/recuperar-clave': {'mensaje': 'ok'}});
+      await _servicio(client).solicitarRecuperacion(correo: ' ana@correo.com ');
+      expect(client.llamada('POST', '/auth/recuperar-clave').cuerpo, {'correo': 'ana@correo.com'});
+    });
+
+    test('restablecerClave envía correo y código recortados, y la contraseña tal cual', () async {
+      final client = RouteFakeRestClient({'POST /auth/restablecer-clave': {'mensaje': 'ok'}});
+      await _servicio(client).restablecerClave(correo: ' ana@correo.com ', codigo: ' 123456 ', password: ' Nueva2026 ');
+      expect(client.llamada('POST', '/auth/restablecer-clave').cuerpo,
+          {'correo': 'ana@correo.com', 'codigo': '123456', 'password': ' Nueva2026 '});
+    });
+
+    test('restablecerClave no inicia sesión ni guarda ningún token', () async {
+      final client = RouteFakeRestClient({'POST /auth/restablecer-clave': {'mensaje': 'ok'}});
+      final tokens = InMemoryTokenStorage();
+      await _servicio(client, tokens).restablecerClave(correo: 'ana@correo.com', codigo: '123456', password: 'Nueva2026');
+      expect(await tokens.leer(), isNull);
+    });
+
+    test('un código malo llega como ServerFailure 400 con el mensaje de la API', () {
+      final client = RouteFakeRestClient({
+        'POST /auth/restablecer-clave': const ServerFailure('El código no es correcto. Le quedan 4 intentos.', statusCode: 400),
+      });
+      expect(
+        _servicio(client).restablecerClave(correo: 'ana@correo.com', codigo: '000000', password: 'Nueva2026'),
+        throwsA(isA<ServerFailure>().having((e) => e.mensaje, 'mensaje', contains('Le quedan 4'))),
+      );
+    });
+  });
+
   group('verificar el correo', () {
     test('verificarCorreo envía correo y código recortados', () async {
       final client = RouteFakeRestClient({'POST /auth/verificar-correo': {'mensaje': 'ok', 'correo': 'ana@correo.com'}});

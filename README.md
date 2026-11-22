@@ -86,6 +86,9 @@ el inicio de sesión): [`docs/PRIVACIDAD.md`](docs/PRIVACIDAD.md). Cómo publica
 - **Registro** con nombre, **cédula ecuatoriana** (se valida provincia y dígito verificador, módulo 10; es única) y
   correo. La cuenta nace sin verificar: se envía un **código de 6 dígitos al correo** (vence a los 10 minutos, 5
   intentos, reenvío cada 60 s) y solo después de confirmarlo se puede entrar.
+- **Recuperación de contraseña:** «¿Olvidó su contraseña?» en el login. Se pide el correo, llega un **código de 6 dígitos**
+  (mismas reglas: 10 minutos, 5 intentos, reenvío cada 60 s) y con él se elige una contraseña nueva. Responde igual exista o no
+  la cuenta, y al cambiarla se **cierran todas las sesiones abiertas**.
 - **Inicio de sesión con Google:** el servidor valida el `id_token` con las claves públicas de Google. Si no hay
   cuenta la crea (con el correo ya verificado) y la app pide la cédula antes de continuar; si ya había una cuenta con
   ese correo, la vincula.

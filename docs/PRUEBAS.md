@@ -4,12 +4,15 @@
 
 | Capa | Herramienta | Resultado |
 |---|---|---|
-| Backend (API, servicios, concurrencia, XML, IVA, aviones, cédula, correo, Google) | `pytest` | 646 pruebas, todas pasan (incluye pruebas contra la base real) |
-| Frontend (pantallas, router, sesión, formularios, Google, importación) | `flutter test` | 429 pruebas, todas pasan |
+| Backend (API, servicios, concurrencia, XML, IVA, aviones, cédula, correo, Google) | `pytest` | 692 pruebas, todas pasan (incluye pruebas contra la base real) |
+| Frontend (pantallas, router, sesión, formularios, Google, importación) | `flutter test` | 451 pruebas, todas pasan |
 | Análisis estático | `flutter analyze` | Sin avisos |
 | API manual | Postman (`docs/postman/`) | Colección con casos 2xx y de error (400/401/403/404/409/415) |
 
 Pruebas destacadas de las funciones nuevas:
+- **Recuperación de contraseña:** responde igual con cuenta o sin ella (y aunque falle el correo); el código se guarda como huella y no
+  sirve el de otra cuenta ni el del registro; 5 intentos; una contraseña floja no gasta un intento; al cambiarla se cierran las
+  sesiones abiertas, el código no se reutiliza y una cuenta sin verificar queda verificada. Frontend: 11 pruebas de la pantalla.
 - **Cédula:** cambiar un solo dígito de una cédula válida siempre la invalida (se prueban las 90 variantes); provincias 01–24 y 30.
 - **Correo:** el código se guarda como huella (nunca en claro), vence, cuenta intentos (el intento fallido no se deshace),
   un reenvío antes de 60 s no envía nada, y todo lo que no sirve responde lo mismo sin revelar si la cuenta existe.
