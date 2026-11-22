@@ -135,7 +135,8 @@ LoginPage / RegistroPage ──▶ LoginController / RegistroController ──�
 
 ```bash
 flutter pub get
-flutter run -d chrome                                  # usa http://localhost:5000/api
+flutter run -d chrome --web-port=8080                  # usa el backend de Render (https://kuntur-ec-api.onrender.com/api)
+flutter run -d chrome --web-port=8080 --dart-define=API_BASE_URL=http://localhost:5000/api   # backend local
 flutter run -d chrome --dart-define=API_BASE_URL=https://mi-api/api
 flutter run -d chrome --dart-define=GOOGLE_CLIENT_ID=<id>.apps.googleusercontent.com   # vacío = sin botón de Google
 flutter analyze
