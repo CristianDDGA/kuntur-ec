@@ -275,6 +275,7 @@ class _FormularioBusquedaState extends ConsumerState<_FormularioBusqueda> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const SizedBox(height: _espacioEtiqueta),
                   _campos(context),
                   if (_hayFiltros) ...[
                     const SizedBox(height: 10),
@@ -311,6 +312,10 @@ class _FormularioBusquedaState extends ConsumerState<_FormularioBusqueda> {
       ),
     );
   }
+
+  // La etiqueta flotante de los campos sube sobre el borde superior; el contenedor animado
+  // recorta todo lo que sale de sus límites, así que se le deja este espacio arriba.
+  static const _espacioEtiqueta = 8.0;
 
   Widget _campos(BuildContext context) {
     final origen = CampoTextoKuntur(
