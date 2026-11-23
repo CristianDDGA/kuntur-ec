@@ -213,6 +213,10 @@ class _DialogoCancelarState extends ConsumerState<_DialogoCancelar> {
   final _motivo = TextEditingController();
   String? _error;
 
+  /// Versión con la que se confirma. Tras un 409 pasa a la `version_actual` del servidor, así el
+  /// administrador revisa el aviso y vuelve a confirmar a sabiendas (nunca se reintenta solo).
+  late int _version = widget.vuelo.version;
+
   @override
   void dispose() {
     _motivo.dispose();
@@ -225,8 +229,20 @@ class _DialogoCancelarState extends ConsumerState<_DialogoCancelar> {
     try {
       final canceladas = await ref
           .read(cancelarVueloProvider.notifier)
-          .cancelar(widget.vuelo, ValidadoresVuelo.normalizarTexto(_motivo.text));
+          .cancelar(widget.vuelo, ValidadoresVuelo.normalizarTexto(_motivo.text), version: _version);
       if (canceladas != null && mounted) Navigator.of(context).pop(canceladas);
+    } on ServerFailure catch (e) {
+      final actual = e.detalles['version_actual'];
+      if (!mounted) return;
+      setState(() {
+        if (e.statusCode == 409 && actual is int) {
+          _version = actual;
+          _error = 'Otro administrador cambió este vuelo mientras usted lo revisaba. El listado ya muestra '
+              'sus datos actuales; si aún quiere cancelarlo, pulse «Cancelar vuelo» otra vez.';
+        } else {
+          _error = mensajeDeError(e);
+        }
+      });
     } catch (e) {
       if (mounted) setState(() => _error = mensajeDeError(e));
     }
