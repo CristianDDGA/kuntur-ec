@@ -182,6 +182,9 @@ CREATE TABLE IF NOT EXISTS codigos_recuperacion (
 -- Cada UPDATE hace `version = version + 1`. Quien modifica envía la versión
 -- que leyó; si otro la cambió antes, el UPDATE ... WHERE version = ? no
 -- afecta filas y la API responde 409 "Ya actualizaron este registro".
+-- En `vuelos` solo la suben los cambios del administrador (editar/cancelar):
+-- reservar mueve el contador de asientos, que ya se protege con un UPDATE
+-- condicional, y no debe invalidar lo que el administrador tiene en pantalla.
 -- (ADD COLUMN IF NOT EXISTS: agrega la columna en bases creadas antes.)
 -- ---------------------------------------------------------------------
 ALTER TABLE vuelos   ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1 CHECK (version >= 1);

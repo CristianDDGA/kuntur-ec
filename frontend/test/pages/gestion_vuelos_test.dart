@@ -117,6 +117,38 @@ void main() {
     expect(find.byType(AlertDialog), findsOneWidget); // no se cierra: el administrador decide
   });
 
+  testWidgets('tras un 409 con la versión actual, confirmar otra vez la envía (nunca se reintenta solo)',
+      (tester) async {
+    final versiones = <Object?>[];
+    final client = await _abrirGestion(tester, {
+      'POST /vuelos/3/cancelacion': (Object? cuerpo) {
+        final version = (cuerpo as Map)['version'];
+        versiones.add(version);
+        if (version == 1) {
+          throw const ServerFailure('Ya actualizaron este vuelo.', statusCode: 409, detalles: {'version_actual': 2});
+        }
+        return {
+          'vuelo': {...vueloQuitoGuayaquil, 'estado': 'cancelado', 'motivo_cancelacion': 'Cierre del aeropuerto'},
+          'reservas_canceladas': 2,
+        };
+      },
+    });
+    await tester.tap(find.text('Cancelar vuelo'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).last, 'Cierre del aeropuerto por ceniza');
+    await tester.tap(find.widgetWithText(FilledButton, 'Cancelar vuelo'));
+    await tester.pumpAndSettle();
+
+    expect(versiones, [1]); // un solo intento: el administrador decide
+    expect(find.textContaining('Otro administrador cambió este vuelo'), findsOneWidget);
+    expect(client.rutasSolicitadas.where((r) => r.contains('/vuelos/gestion')).length, greaterThan(1)); // recargó
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Cancelar vuelo'));
+    await tester.pumpAndSettle();
+    expect(versiones, [1, 2]);
+    expect(find.text('Vuelo KT101 cancelado junto con 2 reserva(s).'), findsOneWidget);
+  });
+
   testWidgets('editar un vuelo con asientos vendidos bloquea la ruta y guarda el precio con la versión', (tester) async {
     final client = await _abrirGestion(tester, {
       'GET /vuelos/3': {...vueloQuitoGuayaquil, 'avion_id': 7},

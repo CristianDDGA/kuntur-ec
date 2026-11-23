@@ -19,7 +19,10 @@ Control de concurrencia: se aplican las técnicas vistas en clase, pero en la BD
    asientos dos veces.
 5. Versión (optimista): al modificar, el cliente envía la `version` que leyó.
    Si otro la cambió antes -> 409 "Ya actualizaron este registro" + version_actual.
-   Cada UPDATE de vuelos y reservas hace `version = version + 1`.
+   Cada UPDATE de una reserva hace `version = version + 1`. La `version` del VUELO solo la
+   suben los cambios del administrador (editar/cancelar): el contador de asientos ya está
+   protegido por el UPDATE condicional (punto 1), y si cada reserva subiera la versión del
+   vuelo, el administrador recibiría 409 falsos cada vez que alguien reserva.
 6. Además, la BD tiene CHECK (asientos_disponibles BETWEEN 0 AND capacidad).
 
 El cliente elige asientos con `asientos: ["1A", "2B"]`. Si envía solo `cantidad`, el sistema
@@ -135,7 +138,7 @@ class ReservaService:
         with self._db.transaccion() as cur:
             tarifa = self._tarifa_vigente(cur, hoy)
             cur.execute(
-                "UPDATE vuelos SET asientos_disponibles = asientos_disponibles - %s, version = version + 1 "
+                "UPDATE vuelos SET asientos_disponibles = asientos_disponibles - %s "
                 "WHERE id = %s AND asientos_disponibles >= %s AND estado = %s "
                 "AND (fecha > %s OR (fecha = %s AND hora_salida > %s)) "
                 f"RETURNING {_COLUMNAS_VUELO}",
@@ -254,7 +257,7 @@ class ReservaService:
             diferencia = len(nuevos) - len(actuales)
             if diferencia > 0:  # más asientos: descuento atómico, igual que al crear
                 cur.execute(
-                    "UPDATE vuelos SET asientos_disponibles = asientos_disponibles - %s, version = version + 1 "
+                    "UPDATE vuelos SET asientos_disponibles = asientos_disponibles - %s "
                     f"WHERE id = %s AND asientos_disponibles >= %s RETURNING {_COLUMNAS_VUELO}",
                     (diferencia, actual.vuelo.id, diferencia),
                 )
@@ -264,7 +267,7 @@ class ReservaService:
                 vuelo = Vuelo.from_row(fila_vuelo)
             elif diferencia < 0:  # menos asientos: se devuelven
                 cur.execute(
-                    "UPDATE vuelos SET asientos_disponibles = asientos_disponibles + %s, version = version + 1 "
+                    "UPDATE vuelos SET asientos_disponibles = asientos_disponibles + %s "
                     f"WHERE id = %s RETURNING {_COLUMNAS_VUELO}",
                     (-diferencia, actual.vuelo.id),
                 )
@@ -309,7 +312,7 @@ class ReservaService:
             # Los asientos quedan en el historial de la reserva pero se liberan para otros.
             cur.execute("UPDATE reserva_asientos SET activo = FALSE WHERE reserva_id = %s", (reserva_id,))
             cur.execute(
-                "UPDATE vuelos SET asientos_disponibles = asientos_disponibles + %s, version = version + 1 "
+                "UPDATE vuelos SET asientos_disponibles = asientos_disponibles + %s "
                 f"WHERE id = %s RETURNING {_COLUMNAS_VUELO}",
                 (reserva.cantidad_asientos, reserva.vuelo_id),
             )
