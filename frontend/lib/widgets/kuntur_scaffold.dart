@@ -61,6 +61,17 @@ class KunturScaffold extends StatelessWidget {
     );
     // La barra queda pegada al borde derecho de la ventana, no al borde de la columna centrada.
     contenido = Scrollbar(child: contenido);
+    // La barra usa el controlador principal de la ruta. Flutter solo conecta las listas a ese
+    // controlador en Android/iOS; en web y escritorio la barra quedaba sin lista ("The Scrollbar's
+    // ScrollController has no ScrollPosition attached" en cada scroll). Aquí se conectan en todas.
+    final principal = PrimaryScrollController.maybeOf(context);
+    if (principal != null) {
+      contenido = PrimaryScrollController(
+        controller: principal,
+        automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
+        child: contenido,
+      );
+    }
     if (!sinSafeArea) contenido = SafeArea(child: contenido);
 
     return Scaffold(
