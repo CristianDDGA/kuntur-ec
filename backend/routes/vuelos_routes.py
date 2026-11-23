@@ -46,6 +46,22 @@ def destinos():
 
 
 # =============================
+# GET - Gestión de vuelos (admin): todos, también cancelados y ya partidos
+# =============================
+
+@vuelos_bp.route("/gestion", methods=["GET"])
+@swag_from(contrato("vuelos", "gestion"))
+@rol_requerido(Rol.ADMIN)
+def gestion():
+    pagina = _servicio().gestion(
+        pagina=request.args.get("pagina"),
+        por_pagina=request.args.get("por_pagina"),
+        estado=request.args.get("estado"),
+    )
+    return respond(pagina.to_dict(), root="vuelos")
+
+
+# =============================
 # GET - Obtener vuelo por ID
 # =============================
 
@@ -77,3 +93,27 @@ def asientos(vuelo_id: int):
 def crear():
     vuelo = _servicio().crear(cuerpo_json())
     return respond({"mensaje": "Vuelo creado correctamente.", "vuelo": vuelo.to_dict()}, status=201, root="vuelo")
+
+
+# =============================
+# PUT - Editar vuelo (admin)
+# =============================
+
+@vuelos_bp.route("/<id:vuelo_id>", methods=["PUT"])
+@swag_from(contrato("vuelos", "editar"))
+@rol_requerido(Rol.ADMIN)
+def editar(vuelo_id: int):
+    vuelo = _servicio().editar(vuelo_id, cuerpo_json())
+    return respond({"mensaje": "Vuelo actualizado correctamente.", "vuelo": vuelo.to_dict()}, root="vuelo")
+
+
+# =============================
+# POST - Cancelar vuelo (admin): no se borra, queda en el historial
+# =============================
+
+@vuelos_bp.route("/<id:vuelo_id>/cancelacion", methods=["POST"])
+@swag_from(contrato("vuelos", "cancelar"))
+@rol_requerido(Rol.ADMIN)
+def cancelar(vuelo_id: int):
+    resultado = _servicio().cancelar(vuelo_id, cuerpo_json())
+    return respond({"mensaje": "Vuelo cancelado correctamente."} | resultado.to_dict(), root="cancelacion")

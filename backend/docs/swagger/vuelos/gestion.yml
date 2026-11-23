@@ -1,0 +1,37 @@
+# Contrato del servicio vuelos: Gestión de vuelos (solo administrador)
+summary: "Listar todos los vuelos para gestionarlos (solo administrador)"
+description: >
+  A diferencia de la búsqueda pública, incluye los vuelos cancelados y los que ya partieron.
+  Primero los que aún no parten (el más cercano arriba) y luego el historial (el más reciente arriba).
+tags: [Vuelos]
+security: [{Bearer: []}]
+produces: [application/json, application/xml]
+parameters:
+  - {in: query, name: estado, type: string, enum: [programado, cancelado], required: false}
+  - {in: query, name: pagina, type: integer, required: false, example: 1}
+  - {in: query, name: por_pagina, type: integer, required: false, example: 20}
+responses:
+  200:
+    description: Página de vuelos; cada uno incluye `ya_partio` y `asientos_vendidos`.
+    schema:
+      type: object
+      properties:
+        total: {type: integer, example: 12}
+        pagina: {type: integer, example: 1}
+        por_pagina: {type: integer, example: 20}
+        total_paginas: {type: integer, example: 1}
+        vuelos:
+          type: array
+          items:
+            allOf:
+              - {$ref: "#/definitions/Vuelo"}
+              - type: object
+                properties:
+                  ya_partio: {type: boolean, example: false}
+                  asientos_vendidos: {type: integer, example: 3}
+  400:
+    description: Filtro de estado o paginación inválidos.
+  401:
+    description: Sin token o token inválido.
+  403:
+    description: El usuario no es administrador.

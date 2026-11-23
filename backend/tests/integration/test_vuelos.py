@@ -1,8 +1,10 @@
+from decimal import Decimal
+
 import pytest
 
-from models import Rol
+from models import EstadoVuelo, Rol
 from services.auth_service import Sesion
-from services.vuelo_service import PaginaVuelos
+from services.vuelo_service import PaginaGestion, PaginaVuelos, VueloCancelado
 from tests.factories import un_usuario, un_vuelo
 from utils.excepciones import ConflictError, NotFoundError, UnauthorizedError
 
@@ -37,6 +39,22 @@ class VuelosFalso:
         if datos["codigo"] == "REPETIDO":
             raise ConflictError("Ya existe un vuelo con el código REPETIDO.")
         return un_vuelo(id=50, codigo=datos["codigo"])
+
+    def gestion(self, **filtros):
+        self.filtros = filtros
+        return PaginaGestion([un_vuelo(asientos_disponibles=58)], total=1, pagina=1, por_pagina=10)
+
+    def editar(self, vuelo_id, datos):
+        self.recibido = (vuelo_id, datos)
+        if datos.get("version") == 1:
+            raise ConflictError("Ya actualizaron este vuelo.", version_actual=2)
+        return un_vuelo(id=vuelo_id, precio=Decimal("99.00"), version=2)
+
+    def cancelar(self, vuelo_id, datos):
+        self.recibido = (vuelo_id, datos)
+        return VueloCancelado(
+            un_vuelo(id=vuelo_id, estado=EstadoVuelo.CANCELADO, motivo_cancelacion=datos["motivo"]), 3
+        )
 
 
 class AuthFalso:
@@ -126,3 +144,65 @@ def test_crear_sin_ser_admin_es_rechazado(client, vuelos, cabeceras, status, cod
 def test_crear_codigo_repetido_es_409(client, vuelos):
     resp = client.post("/api/vuelos", json=NUEVO | {"codigo": "REPETIDO"}, headers=_bearer("tok-admin"))
     assert resp.status_code == 409
+
+
+# ---------------------------------------------------------------- gestión, editar y cancelar (admin)
+
+_ADMIN = [
+    ("get", "/api/vuelos/gestion", None),
+    ("put", "/api/vuelos/10", {"precio": 99, "version": 2}),
+    ("post", "/api/vuelos/10/cancelacion", {"motivo": "Mantenimiento no programado", "version": 2}),
+]
+
+
+@pytest.mark.parametrize(("metodo", "ruta", "cuerpo"), _ADMIN)
+@pytest.mark.parametrize(
+    ("cabeceras", "status", "codigo"),
+    [({}, 401, "no_autenticado"), (_bearer("tok-cliente"), 403, "sin_permiso")],
+)
+def test_gestionar_vuelos_es_solo_para_el_admin(client, vuelos, metodo, ruta, cuerpo, cabeceras, status, codigo):
+    resp = getattr(client, metodo)(ruta, json=cuerpo, headers=cabeceras)
+    assert resp.status_code == status
+    assert resp.get_json()["error"] == codigo
+
+
+def test_gestion_devuelve_asientos_vendidos_y_pasa_el_filtro(client, vuelos):
+    resp = client.get("/api/vuelos/gestion?estado=cancelado&pagina=2", headers=_bearer("tok-admin"))
+    assert resp.status_code == 200
+    assert vuelos.filtros == {"pagina": "2", "por_pagina": None, "estado": "cancelado"}
+    vuelo = resp.get_json()["vuelos"][0]
+    assert (vuelo["asientos_vendidos"], vuelo["estado"]) == (2, "programado")
+
+
+def test_editar_como_admin_responde_el_vuelo_actualizado(client, vuelos):
+    resp = client.put("/api/vuelos/10", json={"precio": 99, "version": 2}, headers=_bearer("tok-admin"))
+    assert resp.status_code == 200
+    cuerpo = resp.get_json()
+    assert cuerpo["mensaje"] == "Vuelo actualizado correctamente."
+    assert (cuerpo["vuelo"]["precio"], cuerpo["vuelo"]["version"]) == ("99.00", 2)
+    assert vuelos.recibido == (10, {"precio": 99, "version": 2})
+
+
+def test_editar_con_version_vieja_es_409_con_version_actual(client, vuelos):
+    resp = client.put("/api/vuelos/10", json={"version": 1}, headers=_bearer("tok-admin"))
+    assert resp.status_code == 409
+    assert resp.get_json()["version_actual"] == 2
+
+
+def test_editar_sin_cuerpo_json_es_rechazado(client, vuelos):
+    resp = client.put("/api/vuelos/10", data="precio=1", headers=_bearer("tok-admin"))
+    assert resp.status_code == 415
+
+
+def test_cancelar_como_admin_informa_las_reservas_canceladas(client, vuelos):
+    cuerpo = {"motivo": "Mantenimiento no programado", "version": 2}
+    resp = client.post("/api/vuelos/10/cancelacion", json=cuerpo, headers=_bearer("tok-admin"))
+    assert resp.status_code == 200
+    datos = resp.get_json()
+    assert datos["reservas_canceladas"] == 3
+    assert (datos["vuelo"]["estado"], datos["vuelo"]["motivo_cancelacion"]) == ("cancelado", cuerpo["motivo"])
+
+
+def test_no_existe_borrar_un_vuelo(client, vuelos):
+    resp = client.delete("/api/vuelos/10", headers=_bearer("tok-admin"))
+    assert resp.status_code == 405

@@ -10,7 +10,7 @@ import pytest
 from dotenv import load_dotenv
 
 from database import CARPETA_SQL, Database
-from models import EstadoReserva, EstadoToken, Rol
+from models import EstadoReserva, EstadoToken, EstadoVuelo, Rol
 from utils import limites
 
 # (tabla, columna) de tipo VARCHAR que el usuario escribe -> límite que aplica el código
@@ -24,10 +24,12 @@ LIMITES_DE_ENTRADA = {
     ("usuarios", "cedula"): limites.CEDULA,
     ("aviones", "matricula"): limites.MATRICULA,
     ("aviones", "modelo"): limites.MODELO_AVION,
+    ("vuelos", "motivo_cancelacion"): limites.MOTIVO_CANCELACION,
 }
 # VARCHAR que NO escribe el usuario: los llena el sistema con valores controlados.
 VARCHAR_INTERNOS = {
     ("usuarios", "password_hash"), ("usuarios", "google_sub"), ("usuarios", "rol"), ("reservas", "estado"), ("tokens", "estado"),
+    ("vuelos", "estado"),
 }
 
 
@@ -57,6 +59,7 @@ def test_los_valores_internos_caben_en_sus_columnas():
     assert all(len(r.value) <= varchar[("usuarios", "rol")] for r in Rol)
     assert all(len(e.value) <= varchar[("reservas", "estado")] for e in EstadoReserva)
     assert all(len(e.value) <= varchar[("tokens", "estado")] for e in EstadoToken)
+    assert all(len(e.value) <= varchar[("vuelos", "estado")] for e in EstadoVuelo)
     assert 60 <= varchar[("usuarios", "password_hash")]  # un hash bcrypt mide 60 caracteres
 
 

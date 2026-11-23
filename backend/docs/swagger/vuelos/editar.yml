@@ -1,0 +1,49 @@
+# Contrato del servicio vuelos: Editar un vuelo (solo administrador)
+summary: "Editar un vuelo (solo administrador)"
+description: >
+  Se envían todos los datos del vuelo (como al crearlo) y la `version` que se leyó.
+  Reglas: no se edita un vuelo cancelado ni uno que ya partió; la nueva fecha y hora siguen las
+  mismas reglas que al crear; si el vuelo ya tiene asientos vendidos solo se puede cambiar la
+  fecha, las horas y el precio (la ruta y el avión no). El precio nuevo no cambia lo que pagaron
+  las reservas existentes. El código del vuelo nunca cambia.
+tags: [Vuelos]
+security: [{Bearer: []}]
+consumes: [application/json]
+produces: [application/json, application/xml]
+parameters:
+  - {in: path, name: vuelo_id, type: integer, required: true}
+  - in: body
+    name: body
+    required: true
+    schema:
+      type: object
+      required: [origen, destino, fecha, hora_salida, hora_llegada, precio, version]
+      properties:
+        origen: {type: string, example: Quito}
+        destino: {type: string, example: Esmeraldas}
+        fecha: {type: string, format: date, example: "2026-12-28"}
+        hora_salida: {type: string, example: "08:00", description: "HH:MM"}
+        hora_llegada: {type: string, example: "08:45", description: "HH:MM"}
+        precio: {type: number, example: 79.90}
+        avion_id: {type: integer, example: 2, description: "Opcional. Solo se puede cambiar si el vuelo no tiene asientos vendidos."}
+        version: {type: integer, example: 1, description: "Versión del vuelo que se leyó"}
+responses:
+  200:
+    description: Vuelo actualizado (version + 1). Si no cambió nada, se devuelve igual.
+    schema:
+      type: object
+      properties:
+        mensaje: {type: string, example: "Vuelo actualizado correctamente."}
+        vuelo: {$ref: "#/definitions/Vuelo"}
+  400:
+    description: Datos inválidos, campo no editable, fecha pasada o el vuelo ya partió.
+  401:
+    description: Sin token o token inválido.
+  403:
+    description: El usuario no es administrador.
+  404:
+    description: El vuelo o el avión no existen.
+  409:
+    description: >
+      Ya actualizaron este vuelo (incluye version_actual), el vuelo está cancelado o tiene
+      asientos vendidos y se intentó cambiar la ruta o el avión.

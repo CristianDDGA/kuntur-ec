@@ -13,6 +13,8 @@ class ResumenVuelo {
     required this.fecha,
     required this.horaSalida,
     required this.horaLlegada,
+    this.estado = EstadoVuelo.programado,
+    this.motivoCancelacion,
   });
 
   factory ResumenVuelo.fromJson(JsonMap json) {
@@ -22,7 +24,16 @@ class ResumenVuelo {
     final fecha = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(json['fecha']?.toString() ?? '');
     final salida = _hora(json['hora_salida']);
     final llegada = _hora(json['hora_llegada']);
-    if (codigo is! String || origen is! String || destino is! String || fecha == null || salida == null || llegada == null) {
+    final estado = EstadoVuelo.desde(json['estado']);
+    final motivo = json['motivo_cancelacion'];
+    if (codigo is! String ||
+        origen is! String ||
+        destino is! String ||
+        fecha == null ||
+        salida == null ||
+        llegada == null ||
+        estado == null ||
+        (motivo != null && motivo is! String)) {
       throw const InvalidResponseFailure();
     }
     return ResumenVuelo(
@@ -32,6 +43,8 @@ class ResumenVuelo {
       fecha: DateTime(int.parse(fecha[1]!), int.parse(fecha[2]!), int.parse(fecha[3]!)),
       horaSalida: salida,
       horaLlegada: llegada,
+      estado: estado,
+      motivoCancelacion: motivo as String?,
     );
   }
 
@@ -41,6 +54,12 @@ class ResumenVuelo {
   final DateTime fecha;
   final Duration horaSalida;
   final Duration horaLlegada;
+  final EstadoVuelo estado;
+
+  /// Por qué la aerolínea canceló el vuelo (se le muestra al pasajero).
+  final String? motivoCancelacion;
+
+  bool get cancelado => estado == EstadoVuelo.cancelado;
 
   /// Momento de salida. Un vuelo "ya partió" cuando llega su fecha y hora.
   DateTime get salida => fecha.add(horaSalida);

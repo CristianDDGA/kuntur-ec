@@ -11,6 +11,7 @@ Cada valor es exactamente el tamaño de su columna en `database/schema.sql`:
     usuarios.cedula   VARCHAR(10)  -> CEDULA
     aviones.matricula VARCHAR(10)  -> MATRICULA
     aviones.modelo    VARCHAR(60)  -> MODELO_AVION
+    vuelos.motivo_cancelacion VARCHAR(200) -> MOTIVO_CANCELACION
 
 Si se cambia el tamaño de una columna hay que cambiarlo aquí, y viceversa. La prueba
 `tests/unit/test_limites_bd.py` compara estos valores con `schema.sql` y con la base real
@@ -26,11 +27,13 @@ ASIENTO = 4  # "1A" ... "50D"
 CEDULA = 10  # cédula ecuatoriana: 10 dígitos
 MATRICULA = 10
 MODELO_AVION = 60
+MOTIVO_CANCELACION = 200
 
 # --- reglas de negocio (siempre dentro de lo que admite la columna) ---
 CONTRASENA = 128             # caracteres; bcrypt además solo admite 72 bytes
 PRECIO_MAXIMO = 10_000       # NUMERIC(10,2) admitiría hasta 99 999 999,99
 CAPACIDAD_MAXIMA = 200       # vuelos.capacidad (CHECK 1..200): el mapa de asientos debe ser manejable
+MOTIVO_MINIMO = 10           # letras mínimas del motivo de cancelación (que explique algo al pasajero)
 ASIENTOS_POR_RESERVA = 10    # reservas.cantidad_asientos INTEGER
 FILAS_MAXIMAS = 50           # aviones.filas (CHECK 1..50) x 4 asientos = CAPACIDAD_MAXIMA
 BYTES_CSV = 1024 * 1024      # tamaño máximo de un archivo CSV de importación

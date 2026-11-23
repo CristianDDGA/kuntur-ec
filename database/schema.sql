@@ -54,6 +54,8 @@ CREATE TABLE IF NOT EXISTS vuelos (
     capacidad             INTEGER       NOT NULL CHECK (capacidad BETWEEN 1 AND 200),
     asientos_disponibles  INTEGER       NOT NULL,
     version               INTEGER       NOT NULL DEFAULT 1 CHECK (version >= 1),
+    estado                VARCHAR(12)   NOT NULL DEFAULT 'programado' CHECK (estado IN ('programado', 'cancelado')),
+    motivo_cancelacion    VARCHAR(200),
     CONSTRAINT ck_vuelos_ruta     CHECK (lower(btrim(origen)) <> lower(btrim(destino))),
     -- Nunca negativos ni más que la capacidad: protege contra sobreventa.
     CONSTRAINT ck_vuelos_asientos CHECK (asientos_disponibles BETWEEN 0 AND capacidad)
@@ -189,6 +191,18 @@ ALTER TABLE reservas ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1
 -- creadas antes con otro límite.
 ALTER TABLE vuelos DROP CONSTRAINT IF EXISTS ck_vuelos_capacidad_maxima;
 ALTER TABLE vuelos ADD CONSTRAINT ck_vuelos_capacidad_maxima CHECK (capacidad BETWEEN 1 AND 200);
+
+-- ---------------------------------------------------------------------
+-- Cancelación de vuelos (administrador). Un vuelo no se borra: pasa a 'cancelado' con su
+-- motivo, sus reservas se cancelan y queda en el historial. Solo un vuelo cancelado tiene motivo.
+-- (ADD COLUMN IF NOT EXISTS: agrega las columnas en bases creadas antes.)
+-- ---------------------------------------------------------------------
+ALTER TABLE vuelos ADD COLUMN IF NOT EXISTS estado VARCHAR(12) NOT NULL DEFAULT 'programado'
+    CHECK (estado IN ('programado', 'cancelado'));
+ALTER TABLE vuelos ADD COLUMN IF NOT EXISTS motivo_cancelacion VARCHAR(200);
+ALTER TABLE vuelos DROP CONSTRAINT IF EXISTS ck_vuelos_motivo_cancelacion;
+ALTER TABLE vuelos ADD CONSTRAINT ck_vuelos_motivo_cancelacion
+    CHECK ((estado = 'cancelado') = (motivo_cancelacion IS NOT NULL AND btrim(motivo_cancelacion) <> ''));
 
 -- ---------------------------------------------------------------------
 -- Seguridad de Supabase
