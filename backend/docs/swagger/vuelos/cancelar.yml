@@ -1,0 +1,41 @@
+# Contrato del servicio vuelos: Cancelar un vuelo (solo administrador)
+summary: "Cancelar un vuelo (solo administrador)"
+description: >
+  El vuelo no se borra: pasa a estado `cancelado` con su motivo y deja de aparecer en la búsqueda.
+  En la misma transacción todas sus reservas confirmadas pasan a `cancelada` y sus asientos se
+  liberan; los pasajeros ven el motivo en su reserva. No se puede cancelar un vuelo que ya partió
+  ni uno ya cancelado. No se puede deshacer.
+tags: [Vuelos]
+security: [{Bearer: []}]
+consumes: [application/json]
+produces: [application/json, application/xml]
+parameters:
+  - {in: path, name: vuelo_id, type: integer, required: true}
+  - in: body
+    name: body
+    required: true
+    schema:
+      type: object
+      required: [motivo, version]
+      properties:
+        motivo: {type: string, example: "Condiciones climáticas adversas en el aeropuerto de destino.", description: "De 10 letras a 200 caracteres. Lo leen los pasajeros."}
+        version: {type: integer, example: 1, description: "Versión del vuelo que se leyó"}
+responses:
+  200:
+    description: Vuelo cancelado.
+    schema:
+      type: object
+      properties:
+        mensaje: {type: string, example: "Vuelo cancelado correctamente."}
+        vuelo: {$ref: "#/definitions/Vuelo"}
+        reservas_canceladas: {type: integer, example: 4}
+  400:
+    description: Motivo o versión inválidos, o el vuelo ya partió.
+  401:
+    description: Sin token o token inválido.
+  403:
+    description: El usuario no es administrador.
+  404:
+    description: El vuelo no existe.
+  409:
+    description: Ya actualizaron este vuelo (incluye version_actual) o ya estaba cancelado.

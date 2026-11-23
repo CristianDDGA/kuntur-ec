@@ -36,7 +36,7 @@ from psycopg import Cursor
 from psycopg.errors import UniqueViolation
 
 from database import Database
-from models import EstadoReserva, Reserva, TarifaIva, Vuelo
+from models import EstadoReserva, EstadoVuelo, Reserva, TarifaIva, Vuelo
 from services.auth_service import Sesion
 from utils.asientos import etiquetas, lista_de_asientos, orden, validar_existen
 from utils.excepciones import ConflictError, NotFoundError, ValidationError
@@ -47,13 +47,17 @@ from utils.validaciones import MAX_VERSION, entero, identificador
 
 _COLUMNAS_VUELO = (
     "id, codigo, origen, destino, fecha, hora_salida, hora_llegada, "
-    "precio, capacidad, asientos_disponibles, version"
+    "precio, capacidad, asientos_disponibles, version, estado, motivo_cancelacion"
 )
 _COLUMNAS_RESERVA = (
     "id, usuario_id, vuelo_id, cantidad_asientos, subtotal, iva_porcentaje, "
     "iva_valor, total, estado, fecha_reserva, version"
 )
-_RESUMEN_VUELO = ("codigo", "origen", "destino", "fecha", "hora_salida", "hora_llegada")
+# `estado` y `motivo_cancelacion` le explican al pasajero por qué se canceló su reserva.
+_RESUMEN_VUELO = (
+    "codigo", "origen", "destino", "fecha", "hora_salida", "hora_llegada", "estado", "motivo_cancelacion",
+)
+_VUELO_CANCELADO = "El vuelo fue cancelado por la aerolínea: ya no admite reservas ni cambios."
 _REGISTRO_MODIFICADO = "Ya actualizaron este registro. Consulte la reserva y vuelva a intentarlo."
 _ASIENTO_TOMADO = "Uno o más asientos ya fueron reservados por otra persona. Actualice el mapa y elija de nuevo."
 # Asientos de una reserva, ordenados por fila y columna ("2A" antes que "10A").
@@ -132,10 +136,10 @@ class ReservaService:
             tarifa = self._tarifa_vigente(cur, hoy)
             cur.execute(
                 "UPDATE vuelos SET asientos_disponibles = asientos_disponibles - %s, version = version + 1 "
-                "WHERE id = %s AND asientos_disponibles >= %s "
+                "WHERE id = %s AND asientos_disponibles >= %s AND estado = %s "
                 "AND (fecha > %s OR (fecha = %s AND hora_salida > %s)) "
                 f"RETURNING {_COLUMNAS_VUELO}",
-                (cantidad, vuelo_id, cantidad, hoy, hoy, hora),
+                (cantidad, vuelo_id, cantidad, EstadoVuelo.PROGRAMADO.value, hoy, hoy, hora),
             )
             fila = cur.fetchone()
             if fila is None:
@@ -381,6 +385,8 @@ class ReservaService:
         fila = cur.fetchone()
         if fila is None:
             raise NotFoundError("El vuelo solicitado no existe.")
+        if Vuelo.from_row(fila).esta_cancelado:
+            raise ConflictError(_VUELO_CANCELADO)
         if self._ya_partio(Vuelo.from_row(fila)):
             raise ValidationError("No se puede reservar un vuelo que ya partió.")
         raise ConflictError("No hay suficientes asientos disponibles en el vuelo.")
@@ -409,6 +415,8 @@ class ReservaService:
         return self._detalle(fila)
 
     def _validar_editable(self, detalle: ReservaDetalle, accion: str) -> None:
+        if detalle.vuelo.esta_cancelado:
+            raise ConflictError(_VUELO_CANCELADO)
         if detalle.reserva.esta_cancelada:
             raise ConflictError(f"No se puede {accion} una reserva cancelada.")
         if self._ya_partio(detalle.vuelo):

@@ -66,6 +66,9 @@
 | Vuelos | GET | `/api/vuelos/{id}` | – | Detalle de vuelo → 200 · 404 |
 | Vuelos | GET | `/api/vuelos/{id}/asientos` | – | Mapa de asientos: `{vuelo_id, capacidad, columnas: [A,B,C,D], ocupados: ["2B"]}`. Los asientos existentes se deducen de la capacidad (1A, 1B, 1C, 1D, 2A…) → 200 · 404 |
 | Vuelos | POST | `/api/vuelos` | JWT admin | Crea vuelo con `avion_id` (su capacidad = filas × 4 manda) o, por compatibilidad, `capacidad` → 201 · 400 · 401 · 403 · 404 avión inexistente · 409 código repetido |
+| Vuelos | GET | `/api/vuelos/gestion?estado=&pagina=&por_pagina=` | JWT admin | Todos los vuelos (también cancelados y ya partidos), cada uno con `ya_partio` y `asientos_vendidos` → 200 · 400 estado inválido · 401 · 403 |
+| Vuelos | PUT | `/api/vuelos/{id}` | JWT admin | Edita fecha, horas, precio y, solo sin asientos vendidos, ruta y avión. Exige `version` (concurrencia optimista) → 200 · 400 datos/fecha pasada/ya partió · 404 · 409 versión vieja, vuelo cancelado o ruta con reservas |
+| Vuelos | POST | `/api/vuelos/{id}/cancelacion` | JWT admin | Cancela (no borra) con `motivo` (10 letras a 200 caracteres) y `version`; en la misma transacción cancela sus reservas confirmadas y libera los asientos → 200 `{vuelo, reservas_canceladas}` · 400 · 404 · 409 ya cancelado o versión vieja |
 | Aviones | GET | `/api/aviones` | JWT admin | Flota registrada (`matricula`, `modelo`, `filas`, `capacidad`) |
 | Aviones | POST | `/api/aviones/importacion/validar` | JWT admin | Revisa un CSV (`Content-Type: text/csv`, `matricula;modelo;filas`) **sin guardar**: vista previa, existentes y errores por línea → 200 · 400 · 413 · 415 |
 | Aviones | POST | `/api/aviones/importacion` | JWT admin | Importa el CSV, todo o nada (400 con la lista de errores si alguna fila falla; las matrículas existentes se omiten) → 201 |

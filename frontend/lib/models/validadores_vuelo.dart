@@ -33,6 +33,17 @@ class ValidadoresVuelo {
   static const int precioMaxCentavos = 10000 * 100;
   static const int diasMaxAdelante = 730;
 
+  // Motivo de cancelación: vuelos.motivo_cancelacion VARCHAR(200) y al menos 10 letras
+  // (utils/limites.py: MOTIVO_CANCELACION y MOTIVO_MINIMO).
+  static const int motivoMax = 200;
+  static const int motivoMinLetras = 10;
+
+  /// El motivo es texto libre en una sola línea (el servidor rechaza saltos de línea) y de largo acotado.
+  static final List<TextInputFormatter> entradaMotivo = [
+    FilteringTextInputFormatter.deny(RegExp(r'[\r\n\t]'), replacementString: ' '),
+    LengthLimitingTextInputFormatter(motivoMax),
+  ];
+
   static final RegExp _ciudad = RegExp(r"^[\p{L}\p{M} .'’-]+$", unicode: true);
   static final RegExp _letra = RegExp(r'\p{L}', unicode: true);
   static final RegExp _control = RegExp(r'[\u0000-\u001F\u007F-\u009F]');
@@ -159,4 +170,16 @@ class ValidadoresVuelo {
   /// Fecha de inicio de una tarifa: desde hoy hasta 2 años (igual que una fecha de vuelo).
   static String? inicioTarifa(DateTime? valor, {DateTime? hoy}) =>
       valor == null ? 'Elija desde cuándo rige.' : fecha(valor, hoy: hoy);
+
+  /// Motivo de cancelación de un vuelo: lo leen los pasajeros, así que debe explicar algo.
+  static String? motivoCancelacion(String? valor) {
+    if (_control.hasMatch(valor ?? '')) return 'Contiene caracteres no permitidos.';
+    final texto = normalizarTexto(valor);
+    if (texto.isEmpty) return 'Escriba el motivo de la cancelación.';
+    if (texto.length > motivoMax) return 'No puede superar $motivoMax caracteres.';
+    if (_letra.allMatches(texto).length < motivoMinLetras) {
+      return 'Explique el motivo con al menos $motivoMinLetras letras.';
+    }
+    return null;
+  }
 }
