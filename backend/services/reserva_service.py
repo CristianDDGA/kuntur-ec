@@ -42,6 +42,7 @@ from utils.asientos import etiquetas, lista_de_asientos, orden, validar_existen
 from utils.excepciones import ConflictError, NotFoundError, ValidationError
 from utils.limites import ASIENTOS_POR_RESERVA as MAX_ASIENTOS_POR_RESERVA
 from utils.paginacion import leer_pagina, total_paginas
+from utils.reloj import ahora_ecuador
 from utils.validaciones import MAX_VERSION, entero, identificador
 
 _COLUMNAS_VUELO = (
@@ -106,9 +107,9 @@ def _asientos_pedidos(datos: dict) -> list[str] | None:
 
 
 class ReservaService:
-    def __init__(self, db: Database, ahora: Callable[[], datetime] = datetime.now):
+    def __init__(self, db: Database, ahora: Callable[[], datetime] = ahora_ecuador):
         self._db = db
-        self._ahora = ahora  # inyectable en pruebas; misma hora local que usa el servicio de vuelos
+        self._ahora = ahora  # inyectable en pruebas; hora de Ecuador, como el servicio de vuelos
 
     def _momento(self) -> tuple[date, time]:
         """Fecha y hora (al minuto) actuales: un vuelo parte cuando llega su fecha y hora de salida."""
@@ -128,7 +129,7 @@ class ReservaService:
         hoy, hora = self._momento()
 
         with self._db.transaccion() as cur:
-            tarifa = self._tarifa_vigente(cur)
+            tarifa = self._tarifa_vigente(cur, hoy)
             cur.execute(
                 "UPDATE vuelos SET asientos_disponibles = asientos_disponibles - %s, version = version + 1 "
                 "WHERE id = %s AND asientos_disponibles >= %s "
@@ -361,11 +362,13 @@ class ReservaService:
     # ------------------------------------------------------------ apoyo
 
     @staticmethod
-    def _tarifa_vigente(cur: Cursor) -> TarifaIva:
+    def _tarifa_vigente(cur: Cursor, hoy: date) -> TarifaIva:
+        # La fecha va como parámetro: current_date sería la de la base (UTC), no la de Ecuador.
         cur.execute(
             "SELECT id, porcentaje, vigente_desde, vigente_hasta FROM tarifas_iva "
-            "WHERE vigente_desde <= current_date AND (vigente_hasta IS NULL OR vigente_hasta > current_date) "
-            "ORDER BY vigente_desde DESC LIMIT 1"
+            "WHERE vigente_desde <= %s AND (vigente_hasta IS NULL OR vigente_hasta > %s) "
+            "ORDER BY vigente_desde DESC LIMIT 1",
+            (hoy, hoy),
         )
         fila = cur.fetchone()
         if fila is None:

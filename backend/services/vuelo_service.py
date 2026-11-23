@@ -13,6 +13,7 @@ from models import Vuelo
 from utils.asientos import COLUMNAS
 from utils.excepciones import ConflictError, NotFoundError, ValidationError
 from utils.paginacion import leer_pagina, total_paginas
+from utils.reloj import ahora_ecuador
 from utils.limites import CAPACIDAD_MAXIMA as MAX_CAPACIDAD
 from utils.limites import CIUDAD as MAX_LARGO_CIUDAD
 from utils.limites import CODIGO_VUELO as MAX_LARGO_CODIGO
@@ -85,7 +86,7 @@ class VueloService:
         self,
         db: Database,
         hoy: Callable[[], date] | None = None,
-        ahora: Callable[[], datetime] = datetime.now,
+        ahora: Callable[[], datetime] = ahora_ecuador,
     ):
         self._db = db
         self._ahora = ahora  # inyectables para las pruebas
