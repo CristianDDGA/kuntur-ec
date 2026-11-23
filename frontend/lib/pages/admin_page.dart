@@ -52,7 +52,10 @@ class AdminPage extends ConsumerWidget {
           const SizedBox(height: 16),
           const _TarjetaResumenVentas(),
           const SizedBox(height: 16),
-          _TarjetaVuelos(onCrear: () => context.push(AppRoutes.nuevoVuelo)),
+          _TarjetaVuelos(
+            onCrear: () => context.push(AppRoutes.nuevoVuelo),
+            onGestionar: () => context.push(AppRoutes.gestionVuelos),
+          ),
           const SizedBox(height: 16),
           _TarjetaAviones(onImportar: () => context.push(AppRoutes.importarAviones)),
           const SizedBox(height: 16),
@@ -223,7 +226,8 @@ class _TarjetaAccionAdmin extends StatelessWidget {
               children: [
                 Expanded(child: info),
                 const SizedBox(width: 12),
-                accion,
+                // Flexible: si hay varios botones (Wrap) bajan a otra línea en vez de desbordar.
+                Flexible(child: Align(alignment: Alignment.centerRight, child: accion)),
               ],
             );
           },
@@ -232,16 +236,29 @@ class _TarjetaAccionAdmin extends StatelessWidget {
 }
 
 class _TarjetaVuelos extends StatelessWidget {
-  const _TarjetaVuelos({required this.onCrear});
+  const _TarjetaVuelos({required this.onCrear, required this.onGestionar});
 
   final VoidCallback onCrear;
+  final VoidCallback onGestionar;
 
   @override
   Widget build(BuildContext context) => _TarjetaAccionAdmin(
         icono: Icons.flight_takeoff,
         titulo: 'Vuelos',
-        descripcion: 'Programe un vuelo nuevo. El código se asigna solo.',
-        accion: FilledButton.icon(onPressed: onCrear, icon: const Icon(Icons.add), label: const Text('Crear')),
+        descripcion: 'Programe un vuelo nuevo, o edite y cancele los existentes.',
+        accion: Wrap(
+          alignment: WrapAlignment.end,
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            OutlinedButton.icon(
+              onPressed: onGestionar,
+              icon: const Icon(Icons.list_alt),
+              label: const Text('Gestionar'),
+            ),
+            FilledButton.icon(onPressed: onCrear, icon: const Icon(Icons.add), label: const Text('Crear')),
+          ],
+        ),
       );
 }
 

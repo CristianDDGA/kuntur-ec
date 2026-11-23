@@ -133,7 +133,7 @@ class TarjetaReserva extends StatelessWidget {
   }
 }
 
-/// "Confirmada", "Cancelada" o "Vuelo realizado".
+/// "Confirmada", "Cancelada", "Vuelo cancelado" (por la aerolínea) o "Vuelo realizado".
 class EtiquetaEstadoReserva extends StatelessWidget {
   const EtiquetaEstadoReserva({super.key, required this.reserva});
 
@@ -141,7 +141,9 @@ class EtiquetaEstadoReserva extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (texto, tipo) = reserva.cancelada
+    final (texto, tipo) = reserva.vuelo.cancelado
+        ? ('Vuelo cancelado', TipoInsignia.error)
+        : reserva.cancelada
         ? ('Cancelada', TipoInsignia.error)
         : reserva.vuelo.yaPartio()
             ? ('Vuelo realizado', TipoInsignia.neutro)

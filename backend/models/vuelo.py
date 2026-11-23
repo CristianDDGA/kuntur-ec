@@ -2,8 +2,14 @@
 from dataclasses import dataclass
 from datetime import date, time
 from decimal import Decimal
+from enum import StrEnum
 
 from models.base import Modelo, requerir, texto_presente
+
+
+class EstadoVuelo(StrEnum):
+    PROGRAMADO = "programado"
+    CANCELADO = "cancelado"
 
 
 @dataclass(frozen=True)
@@ -20,6 +26,17 @@ class Vuelo(Modelo):
     asientos_disponibles: int
     version: int = 1  # control de concurrencia optimista
     avion_id: int | None = None  # avión que opera el vuelo (None en vuelos anteriores a los aviones)
+    estado: EstadoVuelo = EstadoVuelo.PROGRAMADO
+    motivo_cancelacion: str | None = None  # solo en vuelos cancelados: se muestra a los pasajeros
+
+    @property
+    def esta_cancelado(self) -> bool:
+        return self.estado is EstadoVuelo.CANCELADO
+
+    @property
+    def tiene_reservas(self) -> bool:
+        """Hay asientos vendidos: alguien tiene una reserva confirmada en este vuelo."""
+        return self.asientos_disponibles < self.capacidad
 
     def tiene_asientos(self, cantidad: int) -> bool:
         return 0 < cantidad <= self.asientos_disponibles
@@ -41,4 +58,9 @@ class Vuelo(Modelo):
         requerir(
             0 <= self.asientos_disponibles <= self.capacidad,
             "Los asientos disponibles deben estar entre 0 y la capacidad del vuelo.",
+        )
+        requerir(isinstance(self.estado, EstadoVuelo), "El estado del vuelo no es válido.")
+        requerir(
+            self.esta_cancelado == texto_presente(self.motivo_cancelacion),
+            "Un vuelo cancelado debe tener motivo, y uno programado no.",
         )

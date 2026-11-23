@@ -16,6 +16,12 @@ class PanelReserva extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (vuelo.cancelado) {
+      return AvisoInline(
+        texto: 'La aerolínea canceló este vuelo'
+            '${vuelo.motivoCancelacion == null ? '' : ': ${vuelo.motivoCancelacion}'}. Ya no admite reservas.',
+      );
+    }
     if (vuelo.agotado) {
       return const AvisoInline(texto: 'Este vuelo ya no tiene asientos disponibles.');
     }

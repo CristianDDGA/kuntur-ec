@@ -273,7 +273,14 @@ class _ContenidoState extends ConsumerState<_Contenido> {
             );
           },
         ),
-        if (r.cancelada) ...[
+        if (r.vuelo.cancelado) ...[
+          const SizedBox(height: 12),
+          AvisoInline(
+            texto: 'La aerolínea canceló este vuelo'
+                '${r.vuelo.motivoCancelacion == null ? '' : ': ${r.vuelo.motivoCancelacion}'}. '
+                'Su reserva quedó cancelada.',
+          ),
+        ] else if (r.cancelada) ...[
           const SizedBox(height: 12),
           const AvisoInline(tipo: TipoAviso.info, texto: 'Esta reserva fue cancelada. Los asientos volvieron al vuelo.'),
         ] else if (!editable) ...[

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../controllers/sesion_controller.dart';
 import '../controllers/verificacion_controller.dart';
 import '../pages/estado_api_page.dart';
+import '../pages/gestion_vuelos_page.dart';
 import '../pages/inicio_page.dart';
 import '../pages/admin_page.dart';
 import '../pages/comprobante_page.dart';
@@ -43,6 +44,8 @@ class AppRoutes {
   static String asientosDeLaReserva(int id) => '/reservas/$id/asientos';
   static const admin = '/admin';
   static const nuevoVuelo = '/admin/vuelos/nuevo';
+  static const gestionVuelos = '/admin/vuelos';
+  static String editarVuelo(int id) => '/admin/vuelos/$id/editar';
   static const importarAviones = '/admin/aviones/importar';
   static String vuelo(int id) => '/vuelos/$id';
 
@@ -156,6 +159,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: AppRoutes.admin, builder: (_, _) => const AdminPage()),
       GoRoute(path: AppRoutes.nuevoVuelo, builder: (_, _) => const CrearVueloPage()),
+      GoRoute(path: AppRoutes.gestionVuelos, builder: (_, _) => const GestionVuelosPage()),
+      GoRoute(
+        path: '/admin/vuelos/:id/editar',
+        redirect: (_, state) =>
+            RegExp(r'^[1-9]\d{0,17}$').hasMatch(state.pathParameters['id'] ?? '') ? null : AppRoutes.gestionVuelos,
+        builder: (_, state) => CrearVueloPage(vueloId: int.parse(state.pathParameters['id']!)),
+      ),
       GoRoute(path: AppRoutes.importarAviones, builder: (_, _) => const ImportarAvionesPage()),
       GoRoute(
         path: '/vuelos/:id',

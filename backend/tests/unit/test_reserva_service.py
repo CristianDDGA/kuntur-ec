@@ -94,7 +94,11 @@ def test_crear_filtra_por_fecha_y_hora_de_salida_con_el_reloj_local():
     sql, params = db.cursor.consultas[1]
     assert "current_date" not in sql  # ya no depende del reloj (UTC) de la base
     assert "fecha > %s OR (fecha = %s AND hora_salida > %s)" in sql
-    assert params == (2, 10, 2, date(2026, 11, 11), date(2026, 11, 11), time(13, 19))
+    assert "estado = %s" in sql  # un vuelo cancelado no se vende
+    assert params == (2, 10, 2, "programado", date(2026, 11, 11), date(2026, 11, 11), time(13, 19))
+    sql_tarifa, params_tarifa = db.cursor.consultas[0]
+    assert "current_date" not in sql_tarifa  # la tarifa de IVA también se elige con la fecha de Ecuador
+    assert params_tarifa == (date(2026, 11, 11), date(2026, 11, 11))
 
 
 def test_crear_en_un_vuelo_que_ya_salio_hoy_explica_que_partio():

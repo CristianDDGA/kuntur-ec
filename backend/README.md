@@ -215,6 +215,18 @@ ahí. El vuelo guarda su `avion_id` y toma la capacidad del avión (la numeraci�
 
 `POST /api/vuelos` acepta `avion_id` (su capacidad manda) o, por compatibilidad, `capacidad` si no se envía avión.
 
+## Editar y cancelar vuelos (administrador)
+
+| Endpoint | Reglas |
+|---|---|
+| `GET /api/vuelos/gestion` | Todos los vuelos, también cancelados y ya partidos (`?estado=programado\|cancelado`) |
+| `PUT /api/vuelos/{id}` | Mismas validaciones que al crear + `version`. No se edita un vuelo cancelado ni uno que ya partió. Con asientos vendidos solo cambian fecha, horas y precio (la ruta y el avión no). El precio nuevo no altera las reservas hechas |
+| `POST /api/vuelos/{id}/cancelacion` | `motivo` (al menos 10 letras, máx. 200) + `version`. El vuelo **no se borra**: pasa a `cancelado`, sus reservas confirmadas se cancelan y los asientos se liberan en una sola transacción. No se deshace |
+
+Concurrencia: ambos bloquean la fila del vuelo (`FOR UPDATE`) y comparan la `version` (409 si otro la cambió). Cancelar
+bloquea primero las reservas y luego el vuelo, el mismo orden que usa modificar una reserva, para que no se traben entre sí.
+Un vuelo cancelado desaparece de la búsqueda pública y no admite reservas; el pasajero ve el motivo en su reserva.
+
 ## Base de datos (Supabase)
 
 1. Copiar `.env.example` como `.env` y pegar en `DATABASE_URL` la cadena del **Session pooler** de Supabase.

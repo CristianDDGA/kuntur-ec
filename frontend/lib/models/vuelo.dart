@@ -1,9 +1,25 @@
 import '../services/api_exception.dart';
 import '../services/rest_client.dart';
 
+/// Un vuelo programado se vende; uno cancelado por la aerolínea queda solo en el historial.
+enum EstadoVuelo {
+  programado,
+  cancelado;
+
+  /// `null` si el servidor envía un estado desconocido.
+  static EstadoVuelo? desde(Object? valor) {
+    if (valor == null) return EstadoVuelo.programado; // respuestas anteriores al estado
+    for (final e in values) {
+      if (e.name == valor) return e;
+    }
+    return null;
+  }
+}
+
 /// Vuelo del catálogo. Contrato de la API:
 /// {"id", "codigo", "origen", "destino", "fecha": "AAAA-MM-DD", "hora_salida": "HH:MM:SS",
-///  "hora_llegada", "precio": "75.50", "capacidad", "asientos_disponibles", "version"}.
+///  "hora_llegada", "precio": "75.50", "capacidad", "asientos_disponibles", "version",
+///  "avion_id", "estado": "programado|cancelado", "motivo_cancelacion"}.
 class Vuelo {
   const Vuelo({
     required this.id,
@@ -17,6 +33,9 @@ class Vuelo {
     required this.capacidad,
     required this.asientosDisponibles,
     required this.version,
+    this.avionId,
+    this.estado = EstadoVuelo.programado,
+    this.motivoCancelacion,
   });
 
   factory Vuelo.fromJson(JsonMap json) {
@@ -31,6 +50,9 @@ class Vuelo {
     final capacidad = json['capacidad'];
     final disponibles = json['asientos_disponibles'];
     final version = json['version'];
+    final avionId = json['avion_id'];
+    final estado = EstadoVuelo.desde(json['estado']);
+    final motivo = json['motivo_cancelacion'];
     if (id is! int ||
         codigo is! String ||
         origen is! String ||
@@ -41,7 +63,10 @@ class Vuelo {
         precio == null ||
         capacidad is! int ||
         disponibles is! int ||
-        version is! int) {
+        version is! int ||
+        (avionId != null && avionId is! int) ||
+        estado == null ||
+        (motivo != null && motivo is! String)) {
       throw const InvalidResponseFailure();
     }
     return Vuelo(
@@ -56,6 +81,9 @@ class Vuelo {
       capacidad: capacidad,
       asientosDisponibles: disponibles,
       version: version,
+      avionId: avionId as int?,
+      estado: estado,
+      motivoCancelacion: motivo as String?,
     );
   }
 
@@ -74,6 +102,19 @@ class Vuelo {
   final int capacidad;
   final int asientosDisponibles;
   final int version;
+
+  /// Avión que opera el vuelo (`null` en vuelos creados antes de existir los aviones).
+  final int? avionId;
+  final EstadoVuelo estado;
+
+  /// Por qué la aerolínea canceló el vuelo (solo en vuelos cancelados).
+  final String? motivoCancelacion;
+
+  bool get cancelado => estado == EstadoVuelo.cancelado;
+  int get asientosVendidos => capacidad - asientosDisponibles;
+
+  /// Con asientos vendidos el administrador solo puede cambiar fecha, horas y precio.
+  bool get tieneReservas => asientosVendidos > 0;
 
   bool get agotado => asientosDisponibles <= 0;
   bool get pocosAsientos => !agotado && asientosDisponibles <= 5;
@@ -208,6 +249,109 @@ class NuevoVuelo {
         'precio': precio, // como texto: así no se pierde precisión con decimales
         'avion_id': avionId,
       };
+}
+
+/// Cambios de un vuelo existente (solo administrador). Se envían todos los datos y la `version`
+/// leída: si otro administrador lo cambió antes, el servidor responde 409.
+class EdicionVuelo {
+  const EdicionVuelo({
+    required this.origen,
+    required this.destino,
+    required this.fecha,
+    required this.horaSalida,
+    required this.horaLlegada,
+    required this.precio,
+    required this.version,
+    this.avionId,
+  });
+
+  final String origen;
+  final String destino;
+  final DateTime fecha;
+  final Duration horaSalida;
+  final Duration horaLlegada;
+  final String precio;
+  final int version;
+
+  /// Solo se envía si cambia el avión (no se puede con asientos vendidos).
+  final int? avionId;
+
+  JsonMap toJson() => {
+        'origen': origen,
+        'destino': destino,
+        'fecha': Formatos.fechaIso(fecha),
+        'hora_salida': Formatos.hora(horaSalida),
+        'hora_llegada': Formatos.hora(horaLlegada),
+        'precio': precio,
+        if (avionId != null) 'avion_id': avionId,
+        'version': version,
+      };
+}
+
+/// Un vuelo en el listado del administrador, con lo que necesita para decidir qué hacer.
+class VueloGestionado {
+  const VueloGestionado({required this.vuelo, required this.yaPartio});
+
+  final Vuelo vuelo;
+
+  /// Lo calcula el servidor con la hora de Ecuador (no el reloj del navegador).
+  final bool yaPartio;
+
+  /// Solo se edita o cancela un vuelo programado que aún no parte.
+  bool get gestionable => !vuelo.cancelado && !yaPartio;
+}
+
+/// Filtro del listado del administrador (`null` = todos).
+class FiltroGestion {
+  const FiltroGestion({this.estado, this.pagina = 1});
+
+  static const int porPagina = 10;
+
+  final EstadoVuelo? estado;
+  final int pagina;
+
+  Map<String, String> get consulta => {
+        if (estado != null) 'estado': estado!.name,
+        'pagina': '$pagina',
+        'por_pagina': '$porPagina',
+      };
+
+  @override
+  bool operator ==(Object other) => other is FiltroGestion && other.estado == estado && other.pagina == pagina;
+
+  @override
+  int get hashCode => Object.hash(estado, pagina);
+}
+
+/// Página del listado del administrador. Contrato: el de [PaginaVuelos] y cada vuelo con
+/// `ya_partio` (bool) y `asientos_vendidos`.
+class PaginaGestion {
+  const PaginaGestion({
+    required this.vuelos,
+    required this.total,
+    required this.pagina,
+    required this.totalPaginas,
+  });
+
+  factory PaginaGestion.fromJson(JsonMap json) {
+    final base = PaginaVuelos.fromJson(json);
+    final partidos = [for (final v in json['vuelos'] as List) asJsonMap(v)['ya_partio']];
+    if (partidos.any((p) => p is! bool)) throw const InvalidResponseFailure();
+    return PaginaGestion(
+      vuelos: [
+        for (var i = 0; i < base.vuelos.length; i++)
+          VueloGestionado(vuelo: base.vuelos[i], yaPartio: partidos[i] as bool),
+      ],
+      total: base.total,
+      pagina: base.pagina,
+      totalPaginas: base.totalPaginas,
+    );
+  }
+
+  final List<VueloGestionado> vuelos;
+  final int total;
+  final int pagina;
+  final int totalPaginas;
 }
 
 /// Formato de fechas, horas y dinero para mostrar y para enviar.

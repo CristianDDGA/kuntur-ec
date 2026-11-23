@@ -12,6 +12,7 @@ from typing import Any
 from database import Database
 from models import TarifaIva
 from utils.excepciones import ConflictError, ValidationError
+from utils.reloj import hoy_ecuador
 from utils.validaciones import fecha_iso, porcentaje
 
 MAX_DIAS_ADELANTE = 730
@@ -29,7 +30,7 @@ def _describir(tarifa: TarifaIva, hoy: date) -> dict[str, Any]:
 
 
 class IvaService:
-    def __init__(self, db: Database, hoy: Callable[[], date] = date.today):
+    def __init__(self, db: Database, hoy: Callable[[], date] = hoy_ecuador):
         self._db = db
         self._hoy = hoy  # inyectable para las pruebas
 
