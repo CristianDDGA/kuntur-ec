@@ -227,6 +227,12 @@ Concurrencia: ambos bloquean la fila del vuelo (`FOR UPDATE`) y comparan la `ver
 bloquea primero las reservas y luego el vuelo, el mismo orden que usa modificar una reserva, para que no se traben entre sí.
 Un vuelo cancelado desaparece de la búsqueda pública y no admite reservas; el pasajero ve el motivo en su reserva.
 
+La `version` del vuelo solo la suben los cambios del administrador: reservar mueve el contador de asientos (protegido
+por su UPDATE condicional) y no debe darle al administrador un 409 falso. `tests/integration/test_cancelacion_vuelo_real.py`
+lo verifica contra la base real: 8 clientes reservando mientras se cancela el vuelo → la cancelación siempre se
+aplica, cada reserva queda "cancelada con el vuelo" o rechazada con "vuelo cancelado", y al final no queda ninguna
+reserva confirmada ni asiento ocupado; dos administradores cancelando a la vez → uno lo logra y el otro recibe 409.
+
 ## Base de datos (Supabase)
 
 1. Copiar `.env.example` como `.env` y pegar en `DATABASE_URL` la cadena del **Session pooler** de Supabase.

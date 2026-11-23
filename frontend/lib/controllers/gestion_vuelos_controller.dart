@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/providers.dart';
 import '../models/vuelo.dart';
+import '../services/api_exception.dart';
 import 'con_sesion.dart';
 import 'resumen_ventas_controller.dart';
 import 'vuelo_detalle_controller.dart';
@@ -84,16 +85,21 @@ class CancelarVueloController extends Notifier<bool> {
   @override
   bool build() => false; // `true` mientras hay una cancelación en curso
 
-  Future<int?> cancelar(Vuelo vuelo, String motivo) async {
+  /// [version] es la que el administrador tiene a la vista (tras un 409, la `version_actual`).
+  Future<int?> cancelar(Vuelo vuelo, String motivo, {required int version}) async {
     if (state) return null;
     state = true;
     try {
       final r = await conSesion(
         ref,
-        () => ref.read(vueloServiceProvider).cancelar(vuelo.id, motivo: motivo, version: vuelo.version),
+        () => ref.read(vueloServiceProvider).cancelar(vuelo.id, motivo: motivo, version: version),
       );
       _refrescarVistas(ref, vuelo.id);
       return r.reservasCanceladas;
+    } on ServerFailure catch (e) {
+      // Otro administrador cambió el vuelo: el listado debe mostrar sus datos nuevos.
+      if (e.statusCode == 409) _refrescarVistas(ref, vuelo.id);
+      rethrow;
     } finally {
       if (ref.mounted) state = false;
     }
