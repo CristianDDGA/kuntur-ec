@@ -1,39 +1,66 @@
 import 'package:flutter/material.dart';
 
-/// Tokens de movimiento de Kuntur EC.
+/// Tokens de movimiento físico de Kuntur EC.
 ///
-/// Un único lugar para duraciones y curvas: así todas las animaciones se sienten
-/// parte de la misma app. Los helpers [rapidaDe], [mediaDe] y [lentaDe] respetan
-/// la preferencia del sistema "Reducir movimiento" devolviendo `Duration.zero`
-/// (Apple HIG, `motion.md`: la animación nunca es el único portador de
-/// significado y siempre tiene una respuesta para Reduce Motion).
+/// Basado en las curvas y presupuestos de ingeniería de diseño:
+/// - Las animaciones de UI operativas permanecen por debajo de 300 ms.
+/// - Las interacciones táctiles usan timing asimétrico (`100 ms` al presionar,
+///   `160 ms` al soltar) y una curva `ease-out` fuerte (`Cubic(0.23, 1, 0.32, 1)`).
+/// - Bajo "Reducir movimiento" (`MediaQuery.disableAnimationsOf`), los desplazamientos
+///   y escalas devuelven `Duration.zero`, mientras [opacidadDe] mantiene un fundido
+///   suave de `120 ms` para no perder la legibilidad del cambio de estado.
 class AppMotion {
   const AppMotion._();
 
+  /// Compresión táctil al presionar un control (`100 ms`, respuesta instantánea).
+  static const Duration presionEntrada = Duration(milliseconds: 100);
+
+  /// Recuperación al soltar un control (`160 ms`, asentamiento limpio).
+  static const Duration presionSalida = Duration(milliseconds: 160);
+
   /// Cambios de estado inmediatos: checkmarks, selección de asiento, chips.
-  static const Duration rapida = Duration(milliseconds: 180);
+  static const Duration rapida = Duration(milliseconds: 160);
 
-  /// Entradas y transiciones de contenido: skeleton, cambio de total, hojas.
-  static const Duration media = Duration(milliseconds: 260);
+  /// Transiciones de contenido y selectores segmentados (`<= 250 ms`).
+  static const Duration media = Duration(milliseconds: 220);
 
-  /// Cambios de pantalla o revelados amplios (expansión del buscador).
-  static const Duration lenta = Duration(milliseconds: 420);
+  /// Expansiones de contenedor o revelados más amplios (`<= 300 ms`).
+  static const Duration lenta = Duration(milliseconds: 280);
 
-  /// Entrada de ilustraciones y héroes visuales (isométrico, liquid morph).
-  static const Duration heroe = Duration(milliseconds: 520);
+  /// Modales, hojas y entradas de marca (excepción documentada `<= 360 ms`).
+  static const Duration heroe = Duration(milliseconds: 320);
 
-  /// Curva de entrada: arranca rápido y frena suave (nada de rebotes bruscos).
-  static const Curve curvaEntrada = Curves.easeOutCubic;
+  /// Fundido suave preservado incluso bajo Reducir Movimiento para legibilidad de estado.
+  static const Duration opacidadReducida = Duration(milliseconds: 120);
 
-  /// Curva para respuesta táctil (presionar/soltar).
-  static const Curve curvaTactil = Curves.easeInOut;
+  /// Strong ease-out (`cubic-bezier(0.23, 1, 0.32, 1)`): arranca con respuesta inmediata.
+  static const Curve curvaSalidaFuerte = Cubic(0.23, 1, 0.32, 1);
 
-  /// Curva orgánica para el morfismo líquido y los asentamientos elásticos.
-  static const Curve curvaLiquida = Curves.easeInOutCubic;
+  /// Alias de entrada: usa siempre strong ease-out (nunca ease-in en UI).
+  static const Curve curvaEntrada = curvaSalidaFuerte;
 
-  /// Duración efectiva según la preferencia de accesibilidad del sistema.
+  /// Respuesta táctil inmediata en botones, tarjetas y asientos.
+  static const Curve curvaTactil = curvaSalidaFuerte;
+
+  /// Strong ease-in-out (`cubic-bezier(0.77, 0, 0.175, 1)`) para elementos que se mueven en pantalla.
+  static const Curve curvaLiquida = Cubic(0.77, 0, 0.175, 1);
+
+  /// Curva tipo hoja/drawer (`cubic-bezier(0.32, 0.72, 0, 1)`).
+  static const Curve curvaHoja = Cubic(0.32, 0.72, 0, 1);
+
+  /// Indica si el sistema solicita reducir movimiento.
+  static bool movimientoReducido(BuildContext context) => MediaQuery.disableAnimationsOf(context);
+
+  /// Duración efectiva para transformaciones espaciales (0 bajo Reducir Movimiento).
   static Duration duracion(BuildContext context, Duration base) =>
-      MediaQuery.disableAnimationsOf(context) ? Duration.zero : base;
+      movimientoReducido(context) ? Duration.zero : base;
+
+  /// Duración efectiva para transiciones de opacidad/color (gentil bajo Reducir Movimiento).
+  static Duration opacidadDe(BuildContext context, [Duration base = rapida]) =>
+      movimientoReducido(context) ? opacidadReducida : base;
+
+  static Duration presionDe(BuildContext context, {required bool presionado}) =>
+      duracion(context, presionado ? presionEntrada : presionSalida);
 
   static Duration rapidaDe(BuildContext context) => duracion(context, rapida);
 

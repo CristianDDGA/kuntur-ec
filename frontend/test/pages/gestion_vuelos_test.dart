@@ -78,7 +78,7 @@ void main() {
     await tester.tap(find.text('Cancelar vuelo'));
     await tester.pumpAndSettle();
     expect(find.text('¿Cancelar el vuelo KT101?'), findsOneWidget);
-    expect(find.textContaining('38 asiento(s) vendido(s)'), findsOneWidget);
+    expect(find.textContaining('38 asientos vendidos'), findsOneWidget);
 
     // Sin motivo no se envía nada.
     await tester.tap(find.widgetWithText(FilledButton, 'Cancelar vuelo'));
@@ -97,7 +97,7 @@ void main() {
       'motivo': 'Cierre del aeropuerto por ceniza',
       'version': 1,
     });
-    expect(find.text('Vuelo KT101 cancelado junto con 5 reserva(s).'), findsOneWidget);
+    expect(find.text('Vuelo KT101 cancelado junto con 5 reservas.'), findsOneWidget);
   });
 
   testWidgets('si el servidor rechaza la cancelación, el error se muestra en el mismo diálogo', (tester) async {
@@ -146,7 +146,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Cancelar vuelo'));
     await tester.pumpAndSettle();
     expect(versiones, [1, 2]);
-    expect(find.text('Vuelo KT101 cancelado junto con 2 reserva(s).'), findsOneWidget);
+    expect(find.text('Vuelo KT101 cancelado junto con 2 reservas.'), findsOneWidget);
   });
 
   testWidgets('editar un vuelo con asientos vendidos bloquea la ruta y guarda el precio con la versión', (tester) async {
@@ -162,7 +162,7 @@ void main() {
 
     expect(find.byType(CrearVueloPage), findsOneWidget);
     expect(find.text('Editar vuelo KT101'), findsOneWidget);
-    expect(find.textContaining('38 asiento(s) vendido(s)'), findsOneWidget);
+    expect(find.textContaining('38 asientos vendidos'), findsOneWidget);
     expect(_campoKuntur(tester, 'Origen').enabled, isFalse);
     expect(_campoKuntur(tester, 'Destino').enabled, isFalse);
     expect(_campoKuntur(tester, 'Origen').controlador.text, 'Quito');

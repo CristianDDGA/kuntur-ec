@@ -108,7 +108,7 @@ class ValidadoresVuelo {
     final partes = texto.split('.');
     final centavos = int.parse(partes[0]) * 100 + int.parse((partes.length > 1 ? partes[1] : '').padRight(2, '0'));
     if (centavos <= 0) return 'Debe ser mayor a 0.';
-    if (centavos > precioMaxCentavos) return 'No puede superar \$10000.';
+    if (centavos > precioMaxCentavos) return 'No puede superar ${Formatos.dinero(precioMaxCentavos)}.';
     return null;
   }
 

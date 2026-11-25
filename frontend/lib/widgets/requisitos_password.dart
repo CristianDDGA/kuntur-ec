@@ -5,10 +5,9 @@ import '../config/app_theme.dart';
 import '../models/validadores.dart';
 import 'liquid_morph.dart';
 
-/// Lista de requisitos de la contraseña que se va marcando mientras el usuario escribe.
+/// Lista de requisitos de la contraseña que se marca en vivo mientras el usuario escribe.
 ///
-/// Añade una barra de progreso animada y cambia el icono de cada requisito con una
-/// transición corta, para que el avance se sienta inmediato sin depender solo del color.
+/// Usa escala física desde `0.92 → 1.0` + opacidad (`140 ms`, nunca `scale(0)`).
 class RequisitosPassword extends StatelessWidget {
   const RequisitosPassword({super.key, required this.password});
 
@@ -24,8 +23,6 @@ class RequisitosPassword extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Relleno fluido: el mismo motor líquido que el resto de la app,
-          // con animación finita y Reduce Motion respetado.
           BarraLiquidMorph(valor: cumplidos / 3, alto: 5),
           const SizedBox(height: 8),
           _Requisito(cumplido: r.largo, texto: 'Al menos ${Validadores.passwordMin} caracteres'),
@@ -46,6 +43,7 @@ class _Requisito extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = cumplido ? AppColors.exito : AppColors.textoSuave;
+    final duracion = AppMotion.duracion(context, const Duration(milliseconds: 140));
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: Semantics(
@@ -54,8 +52,15 @@ class _Requisito extends StatelessWidget {
         child: Row(
           children: [
             AnimatedSwitcher(
-              duration: AppMotion.rapidaDe(context),
-              transitionBuilder: (hijo, animacion) => ScaleTransition(scale: animacion, child: hijo),
+              duration: duracion,
+              switchInCurve: AppMotion.curvaSalidaFuerte,
+              transitionBuilder: (hijo, animacion) => FadeTransition(
+                opacity: animacion,
+                child: ScaleTransition(
+                  scale: Tween<double>(begin: 0.92, end: 1.0).animate(animacion),
+                  child: hijo,
+                ),
+              ),
               child: Icon(
                 cumplido ? Icons.check_circle : Icons.radio_button_unchecked,
                 key: ValueKey(cumplido),
@@ -66,7 +71,7 @@ class _Requisito extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: AnimatedDefaultTextStyle(
-                duration: AppMotion.rapidaDe(context),
+                duration: AppMotion.opacidadDe(context),
                 style: TextStyle(fontSize: 12.5, color: color, fontWeight: FontWeight.w500),
                 child: Text(texto),
               ),

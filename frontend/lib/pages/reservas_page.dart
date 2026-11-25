@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../config/app_motion.dart';
 import '../config/app_router.dart';
 import '../config/app_theme.dart';
 import '../controllers/reservas_controller.dart';
-import '../services/api_exception.dart';
+import '../models/fallo.dart';
+import '../models/vuelo.dart';
 import '../widgets/control_paginas.dart';
 import '../widgets/estado_vista.dart';
-import '../widgets/kinetic_type.dart';
 import '../widgets/kuntur_scaffold.dart';
 import '../widgets/navegacion_principal.dart';
 import '../widgets/rejilla_adaptable.dart';
@@ -29,7 +30,7 @@ class ReservasPage extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
         children: [
-          const TituloCinetico('Mis reservas', estilo: AppTextStyles.titulo),
+          const Text('Mis reservas', style: AppTextStyles.titulo),
           const SizedBox(height: 4),
           const Text('Consulte, modifique o cancele sus reservas.', style: AppTextStyles.cuerpo),
           const SizedBox(height: 16),
@@ -71,12 +72,13 @@ class ReservasPage extends ConsumerWidget {
       Padding(
         padding: const EdgeInsets.only(bottom: 10),
         child: Text(
-          pagina.total == 1 ? '1 reserva' : '${pagina.total} reservas',
-          style: AppTextStyles.nota.copyWith(fontWeight: FontWeight.w700),
+          pagina.total == 1 ? '1 reserva' : '${Formatos.entero(pagina.total as int)} reservas',
+          style: AppTextStyles.nota.copyWith(fontWeight: FontWeight.w700, fontFeatures: AppTextStyles.tabular),
         ),
       ),
-      Opacity(
+      AnimatedOpacity(
         opacity: actualizando ? 0.5 : 1,
+        duration: AppMotion.opacidadDe(context),
         child: RejillaAdaptable(
           hijos: [
             for (final r in pagina.reservas)

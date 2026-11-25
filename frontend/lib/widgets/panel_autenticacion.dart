@@ -5,15 +5,12 @@ import '../config/app_motion.dart';
 import '../config/app_theme.dart';
 import 'franja_tricolor.dart';
 import 'isometric_kuntur.dart';
-import 'kinetic_type.dart';
 import 'liquid_morph.dart';
 import 'logo_kuntur.dart';
 
-/// Plantilla de las pantallas de acceso (login y registro): logo centrado y el
-/// formulario en una tarjeta simétrica sobre un fondo suave con onda líquida
-/// reactiva ([FondoLiquidMorph]) y bisel 2.5D ([MarcoIsometrico25D]).
-///
-/// Todas las animaciones son finitas y respetan «Reducir movimiento» vía [AppMotion].
+/// Plantilla simétrica de las pantallas de acceso (login, registro, verificación,
+/// recuperación y perfil): una única entrada coordinada en la tarjeta (`220 ms`),
+/// título estático legible y controles de navegación con área táctil mínima de 44×44 pt.
 class PanelAutenticacion extends StatelessWidget {
   const PanelAutenticacion({
     super.key,
@@ -21,42 +18,57 @@ class PanelAutenticacion extends StatelessWidget {
     required this.subtitulo,
     required this.child,
     this.faseLiquida = 0,
+    this.mostrarVolver = true,
   });
 
   final String titulo;
   final String subtitulo;
   final Widget child;
-
-  /// Fase del fondo líquido: `0` en reposo, `1` cuando el foco está en una
-  /// contraseña. La onda se desplaza suavemente sin distraer de la lectura.
   final double faseLiquida;
 
-  Widget _botonVolver(BuildContext context, {bool compacta = false}) => TextButton.icon(
-        style: TextButton.styleFrom(
-          foregroundColor: AppColors.textoSecundario,
-          padding: EdgeInsets.symmetric(horizontal: 10, vertical: compacta ? 2 : 6),
-          minimumSize: Size(0, compacta ? 34 : 40),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+  /// Se desactiva en flujos obligatorios con sesión iniciada (p. ej. completar cédula)
+  /// donde volver a `/` redirigiría en bucle a la misma pantalla.
+  final bool mostrarVolver;
+
+  Widget _botonVolver(BuildContext context, {bool compacta = false}) => OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.azul,
+          backgroundColor: AppColors.superficie.withValues(alpha: 0.92),
+          side: BorderSide(color: AppColors.borde.withValues(alpha: 0.95)),
+          minimumSize: Size(44, compacta ? 36 : 42),
+          tapTargetSize: compacta ? MaterialTapTargetSize.shrinkWrap : MaterialTapTargetSize.padded,
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: compacta ? 6 : 9),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          textStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
         ),
-        icon: const Icon(Icons.arrow_back, size: 18),
+        icon: const Icon(Icons.arrow_back_rounded, size: 17),
         label: const Text('Volver al inicio'),
         onPressed: () => Navigator.of(context).canPop()
             ? Navigator.of(context).pop()
             : GoRouter.of(context).go('/'),
       );
 
-  Widget _logo(BuildContext context, {required double tamano}) => Semantics(
-        button: true,
-        label: 'Ir al inicio',
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () => GoRouter.of(context).go('/'),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            child: MarcaKuntur(tamanoLogo: tamano, vertical: false),
-          ),
+  Widget _logo(BuildContext context, {required double tamano, bool compacta = false}) {
+    final marca = Padding(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: compacta ? 2 : 4),
+      child: MarcaKuntur(tamanoLogo: tamano, vertical: false),
+    );
+    if (!mostrarVolver) return marca;
+    return Semantics(
+      button: true,
+      label: 'Kuntur EC, ir al inicio',
+      onTap: () => GoRouter.of(context).go('/'),
+      excludeSemantics: true,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => GoRouter.of(context).go('/'),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: compacta ? 38 : 44, minWidth: 44),
+          child: Center(widthFactor: 1, child: marca),
         ),
-      );
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -74,13 +86,11 @@ class PanelAutenticacion extends StatelessWidget {
               child: LayoutBuilder(
                 builder: (context, caja) {
                   final compacta = caja.maxWidth < 440 || caja.maxHeight < 680;
-                  // En pantallas amplias el botón de regreso va en la esquina superior izquierda
-                  // para que el logo y el formulario queden completamente centrados y simétricos.
-                  final volverFlotante = caja.maxWidth >= 720 && caja.maxHeight >= 540;
-                  final rellenoVertical = compacta ? 8.0 : 16.0;
+                  final volverFlotante = mostrarVolver && caja.maxWidth >= 720 && caja.maxHeight >= 540;
+                  final rellenoVertical = compacta ? 4.0 : 14.0;
                   final rellenoHorizontal = caja.maxWidth < 440 ? 14.0 : 20.0;
                   final rellenoTarjeta = compacta
-                      ? const EdgeInsets.fromLTRB(18, 14, 18, 14)
+                      ? const EdgeInsets.fromLTRB(18, 10, 18, 8)
                       : const EdgeInsets.fromLTRB(26, 18, 26, 18);
 
                   final columnaCentral = ConstrainedBox(
@@ -89,34 +99,31 @@ class PanelAutenticacion extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        if (!volverFlotante) ...[
+                        if (mostrarVolver && !volverFlotante) ...[
                           Align(
                             alignment: Alignment.centerLeft,
                             child: _botonVolver(context, compacta: compacta),
                           ),
                           SizedBox(height: compacta ? 2 : 6),
                         ],
-                        // Solo el logo centrado en el lugar de la antigua ilustración para
-                        // mantener el acceso simétrico y sin scroll en pantalla completa.
-                        _logo(context, tamano: compacta ? 32 : 40),
-                        SizedBox(height: compacta ? 10 : 14),
-                        // Entrada suave del formulario (una sola vez, respetando Reduce Motion).
+                        _logo(context, tamano: compacta ? 26 : 38, compacta: compacta),
+                        SizedBox(height: compacta ? 4 : 12),
                         TweenAnimationBuilder<double>(
                           tween: Tween(begin: 0, end: 1),
                           duration: AppMotion.mediaDe(context),
-                          curve: AppMotion.curvaEntrada,
+                          curve: AppMotion.curvaSalidaFuerte,
                           builder: (context, avance, hijo) => Opacity(
-                            opacity: avance,
+                            opacity: (0.2 + 0.8 * avance).clamp(0.0, 1.0),
                             child: Transform.translate(
-                              offset: Offset(0, (1 - avance) * 14),
+                              offset: Offset(0, (1 - avance) * 10),
                               child: hijo,
                             ),
                           ),
                           child: MarcoIsometrico25D(
                             relleno: EdgeInsets.zero,
-                            radio: 24,
+                            radio: 20,
                             child: ClipRRect(
-                              borderRadius: BorderRadius.circular(24),
+                              borderRadius: BorderRadius.circular(20),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
@@ -128,14 +135,14 @@ class PanelAutenticacion extends StatelessWidget {
                                       children: [
                                         Semantics(
                                           header: true,
-                                          child: TituloCinetico(
+                                          child: Text(
                                             titulo,
-                                            estilo: AppTextStyles.titulo.copyWith(fontSize: compacta ? 23 : 26),
+                                            style: AppTextStyles.titulo.copyWith(fontSize: compacta ? 21 : 26),
                                           ),
                                         ),
-                                        const SizedBox(height: 4),
+                                        SizedBox(height: compacta ? 2 : 6),
                                         Text(subtitulo, style: AppTextStyles.cuerpo),
-                                        SizedBox(height: compacta ? 12 : 16),
+                                        SizedBox(height: compacta ? 10 : 18),
                                         child,
                                       ],
                                     ),
@@ -145,7 +152,7 @@ class PanelAutenticacion extends StatelessWidget {
                             ),
                           ),
                         ),
-                        SizedBox(height: compacta ? 8 : 12),
+                        SizedBox(height: compacta ? 6 : 14),
                         const Text(
                           'Vuelos nacionales por todo el Ecuador',
                           style: AppTextStyles.nota,

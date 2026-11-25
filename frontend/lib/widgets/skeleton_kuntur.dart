@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../config/app_motion.dart';
 import '../config/app_theme.dart';
 
-/// Bloque gris que ocupa el lugar del contenido mientras carga.
-///
-/// Se usa dentro de [SkeletonListaTarjetas] y [SkeletonDetalle]: mostrar la
-/// estructura de la pantalla evita el salto visual y comunica la espera antes
-/// de que lleguen los datos (Apple HIG, `loading.md › Showing progress`: dar
-/// señal de progreso cuanto antes y mantener el contexto de la pantalla).
+/// Bloque de estructura que ocupa el lugar del contenido mientras carga,
+/// evitando saltos visuales de layout.
 class Esqueleto extends StatelessWidget {
   const Esqueleto({super.key, this.ancho, this.alto = 14, this.radio = 8});
 
@@ -26,8 +23,7 @@ class Esqueleto extends StatelessWidget {
       );
 }
 
-/// Aparece con un latido suave de opacidad (una sola vez, sin bucles infinitos:
-/// así los tests y la batería no se quedan esperando frames para siempre).
+/// Aparición finita de opacidad dentro del presupuesto `AppMotion.mediaDe` (sin bucles infinitos).
 class _Latido extends StatelessWidget {
   const _Latido({required this.child});
 
@@ -35,15 +31,15 @@ class _Latido extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0.45, end: 1),
-        duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : const Duration(milliseconds: 320),
-        curve: Curves.easeOutCubic,
+        tween: Tween(begin: 0.55, end: 1),
+        duration: AppMotion.mediaDe(context),
+        curve: AppMotion.curvaSalidaFuerte,
         builder: (context, valor, hijo) => Opacity(opacity: valor, child: hijo),
         child: child,
       );
 }
 
-/// Esqueleto de una tarjeta de vuelo (título, ruta y precio).
+/// Esqueleto de una tarjeta de vuelo o gestión (código, ruta y precio).
 class SkeletonTarjeta extends StatelessWidget {
   const SkeletonTarjeta({super.key});
 
@@ -127,6 +123,78 @@ class SkeletonDetalle extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Esqueleto(ancho: ancho, alto: 14),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+}
+
+/// Esqueleto estructurado para bloques KPI del panel de administración.
+class SkeletonKpiResumen extends StatelessWidget {
+  const SkeletonKpiResumen({super.key});
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        label: 'Cargando resumen de ventas…',
+        liveRegion: true,
+        child: ExcludeSemantics(
+          child: _Latido(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 12,
+                  children: [
+                    for (var i = 0; i < 4; i++)
+                      const SizedBox(
+                        width: 150,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Esqueleto(ancho: 110, alto: 22),
+                            SizedBox(height: 6),
+                            Esqueleto(ancho: 90, alto: 12),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+}
+
+/// Esqueleto compacto de filas para listados de flota o historial.
+class SkeletonListaFilas extends StatelessWidget {
+  const SkeletonListaFilas({super.key, this.filas = 3});
+
+  final int filas;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        label: 'Cargando listado…',
+        liveRegion: true,
+        child: ExcludeSemantics(
+          child: _Latido(
+            child: Column(
+              children: [
+                for (var i = 0; i < filas; i++)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      children: [
+                        Esqueleto(ancho: 72, alto: 16),
+                        SizedBox(width: 12),
+                        Expanded(child: Esqueleto(alto: 14)),
+                        SizedBox(width: 12),
+                        Esqueleto(ancho: 64, alto: 16),
+                      ],
+                    ),
                   ),
               ],
             ),

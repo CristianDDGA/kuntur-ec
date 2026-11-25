@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../config/app_router.dart';
 import '../config/app_theme.dart';
 import '../controllers/sesion_controller.dart';
 import '../controllers/vuelo_detalle_controller.dart';
+import '../models/fallo.dart';
 import '../models/vuelo.dart';
-import '../services/api_exception.dart';
 import '../widgets/aviso.dart';
 import '../widgets/estado_vista.dart';
 import '../widgets/etiqueta_asientos.dart';
 import '../widgets/fila_detalle.dart';
 import '../widgets/kuntur_scaffold.dart';
 import '../widgets/liquid_morph.dart';
-import '../widgets/panel_reserva.dart';
-import '../widgets/tarjeta_vuelo.dart';
-import '../config/app_router.dart';
 import '../widgets/migas.dart';
 import '../widgets/navegacion_principal.dart';
+import '../widgets/panel_reserva.dart';
+import '../widgets/tarjeta_vuelo.dart';
 
 /// Detalle de un vuelo (V): datos del vuelo y, para clientes, el panel para reservar.
 class VueloDetallePage extends ConsumerWidget {
@@ -75,13 +75,31 @@ class _Detalle extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  CodigoVuelo(vuelo.codigo),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text(Formatos.fecha(vuelo.fecha), style: AppTextStyles.cuerpo)),
-                  EtiquetaAsientos(vuelo: vuelo),
-                ],
+              SizedBox(
+                width: double.infinity,
+                child: Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CodigoVuelo(vuelo.codigo),
+                        const SizedBox(width: 10),
+                        Flexible(
+                          child: Text(
+                            Formatos.fecha(vuelo.fecha),
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.cuerpo.copyWith(fontFeatures: AppTextStyles.tabular),
+                          ),
+                        ),
+                      ],
+                    ),
+                    EtiquetaAsientos(vuelo: vuelo),
+                  ],
+                ),
               ),
               const SizedBox(height: 20),
               RutaVuelo(vuelo: vuelo),
@@ -90,12 +108,11 @@ class _Detalle extends ConsumerWidget {
               FilaDetalle(
                 icono: Icons.event_seat_outlined,
                 etiqueta: 'Asientos',
-                valor: '${vuelo.asientosDisponibles} libres de ${vuelo.capacidad}',
+                valor: '${Formatos.entero(vuelo.asientosDisponibles)} libres de ${Formatos.entero(vuelo.capacidad)}',
               ),
               if (ocupados > 0)
                 Padding(
-                  padding: const EdgeInsets.only(left: 36, bottom: 8),
-                  // Ocupación con relleno líquido: el chorro de pasajeros se lee de un vistazo.
+                  padding: const EdgeInsets.only(left: 26, bottom: 8, top: 4),
                   child: BarraLiquidMorph(
                     valor: ocupados / vuelo.capacidad,
                     color: vuelo.pocosAsientos || vuelo.agotado ? AppColors.rojo : AppColors.azul,
@@ -111,7 +128,6 @@ class _Detalle extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 14),
-        // El administrador gestiona vuelos pero no reserva (el servidor responde 403 si lo intentara).
         if (esAdmin)
           const AvisoInline(
             tipo: TipoAviso.info,

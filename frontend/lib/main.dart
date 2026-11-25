@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -7,12 +9,16 @@ import 'config/app_router.dart';
 import 'config/app_theme.dart';
 import 'config/providers.dart';
 
+/// Bandera de compilación para suites E2E (Playwright): activa el árbol de
+/// semántica al arrancar (`flutter build web --dart-define=ENABLE_SEMANTICS=true`).
+/// En uso normal queda desactivada para evitar el bug de foco de `<input>` en Chrome.
+const bool _forzarSemanticaE2e = bool.fromEnvironment('ENABLE_SEMANTICS');
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Accesibilidad en la web: NO se fuerza el árbol de semántica al arrancar (`ensureSemantics`). Forzarlo hace que
-  // cada campo de texto pase por un <input> de semántica y en Chrome el primer clic a veces enfoca el campo sin dejar
-  // escribir hasta pasar a otro y volver. Flutter la activa sola cuando hace falta (lector de pantalla o el botón
-  // «Enable accessibility» que ofrece al teclado), y las etiquetas (`Semantics`) siguen en los widgets.
+  if (_forzarSemanticaE2e) {
+    SemanticsBinding.instance.ensureSemantics();
+  }
   final prefs = await SharedPreferences.getInstance();
 
   runApp(ProviderScope(
@@ -30,6 +36,16 @@ class KunturApp extends ConsumerWidget {
       title: AppConfig.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
+      locale: const Locale('es', 'EC'),
+      supportedLocales: const [
+        Locale('es', 'EC'),
+        Locale('es'),
+      ],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       routerConfig: ref.watch(appRouterProvider),
     );
   }

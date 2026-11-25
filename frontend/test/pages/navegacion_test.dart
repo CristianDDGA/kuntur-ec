@@ -258,4 +258,20 @@ void main() {
     expect(_barraInferior, findsNothing);
     expect(find.byWidgetPredicate((w) => w is PopupMenuButton), findsNothing);
   });
+
+  group('navegación adaptativa en escritorio (>= 1024 px)', () {
+    testWidgets('en 1280px las secciones pasan a la barra superior y desaparece NavigationBar', (tester) async {
+      await _abrir(tester);
+      tester.view.physicalSize = const Size(1280, 900);
+      await tester.pumpAndSettle();
+
+      expect(_barraInferior, findsNothing);
+      expect(find.descendant(of: find.byType(AppBar), matching: find.text('Vuelos')), findsOneWidget);
+      expect(find.descendant(of: find.byType(AppBar), matching: find.text('Mis reservas')), findsOneWidget);
+
+      await tester.tap(find.descendant(of: find.byType(AppBar), matching: find.text('Mis reservas')));
+      await tester.pumpAndSettle();
+      expect(find.byType(ReservasPage), findsOneWidget);
+    });
+  });
 }

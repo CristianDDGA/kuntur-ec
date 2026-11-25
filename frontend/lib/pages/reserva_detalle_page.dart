@@ -5,9 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../config/app_router.dart';
 import '../config/app_theme.dart';
 import '../controllers/reserva_detalle_controller.dart';
+import '../models/fallo.dart';
 import '../models/reserva.dart';
 import '../models/vuelo.dart';
-import '../services/api_exception.dart';
 import '../widgets/aviso.dart';
 import '../widgets/estado_vista.dart';
 import '../widgets/fila_detalle.dart';
@@ -19,7 +19,7 @@ import '../widgets/navegacion_principal.dart';
 import '../widgets/tarjeta_reserva.dart';
 import '../widgets/tarjeta_vuelo.dart';
 
-/// Detalle de una reserva (V): asientos, montos y las acciones de cambiar asientos o cancelar.
+/// Detalle de una reserva (V): asientos, montos tabulares y acciones de gestión.
 class ReservaDetallePage extends ConsumerWidget {
   const ReservaDetallePage({super.key, required this.reservaId});
 
@@ -79,7 +79,9 @@ class _ContenidoState extends ConsumerState<_Contenido> {
 
   Future<void> _cancelar() async {
     final r = widget.reserva;
-    final liberados = r.cantidad == 1 ? 'el asiento ${r.asientos.join()} volverá' : 'los asientos ${r.asientos.join(', ')} volverán';
+    final liberados = r.cantidad == 1
+        ? 'el asiento ${r.asientos.join()} volverá'
+        : 'los asientos ${r.asientos.join(', ')} volverán';
     final confirmado = await mostrarConfirmacionKuntur(
       context,
       titulo: '¿Cancelar la reserva?',
@@ -119,19 +121,8 @@ class _ContenidoState extends ConsumerState<_Contenido> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
-          padding: const EdgeInsets.all(26),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 18,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
+          padding: const EdgeInsets.all(24),
+          decoration: AppDecorations.tarjeta,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -155,13 +146,16 @@ class _ContenidoState extends ConsumerState<_Contenido> {
                               Text(
                                 r.numero,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF1E293B)),
+                                style: AppTextStyles.subtitulo.copyWith(
+                                  fontSize: 15,
+                                  fontFeatures: AppTextStyles.tabular,
+                                ),
                               ),
                               if (r.fechaReserva != null)
                                 Text(
                                   'Emitida el ${Formatos.fecha(r.fechaReserva!.toLocal())}',
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                  style: AppTextStyles.nota.copyWith(fontFeatures: AppTextStyles.tabular),
                                 ),
                             ],
                           ),
@@ -172,29 +166,28 @@ class _ContenidoState extends ConsumerState<_Contenido> {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
-              Text('${v.origen} → ${v.destino}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
+              const SizedBox(height: 18),
+              Text(
+                '${v.origen} → ${v.destino}',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.titulo.copyWith(fontSize: 24),
+              ),
               const SizedBox(height: 6),
               Text(
                 '${Formatos.fecha(v.fecha)} · Salida ${Formatos.hora(v.horaSalida)} (llegada aprox. ${Formatos.hora(v.horaLlegada)})',
-                style: const TextStyle(fontSize: 14, color: Color(0xFF475569), fontWeight: FontWeight.w500),
+                style: AppTextStyles.cuerpo.copyWith(fontFeatures: AppTextStyles.tabular),
               ),
-              const Divider(height: 36, color: Color(0xFFF1F5F9)),
+              const Divider(height: 32, color: AppColors.divisor),
 
-              // Asientos
-              const Text('Asientos asignados', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF1E293B))),
+              Text('Asientos asignados', style: AppTextStyles.subtitulo.copyWith(fontSize: 15)),
               const SizedBox(height: 10),
               Wrap(spacing: 8, runSpacing: 8, children: [for (final a in r.asientos) _Asiento(a, apagado: r.cancelada)]),
-              const SizedBox(height: 24),
+              const SizedBox(height: 22),
 
-              // Detalle de la factura / montos
               Container(
                 padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
+                decoration: AppDecorations.panelSutil,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -210,12 +203,12 @@ class _ContenidoState extends ConsumerState<_Contenido> {
                         ),
                       ],
                     ),
-                    const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                    FilaDetalle(etiqueta: 'Cantidad de pasajes', valor: '${r.cantidad}'),
+                    const Divider(height: 20, color: AppColors.divisor),
+                    FilaDetalle(etiqueta: 'Cantidad de pasajes', valor: Formatos.entero(r.cantidad)),
                     FilaDetalle(etiqueta: 'Subtotal', valor: Formatos.dinero(r.subtotalCentavos)),
                     FilaDetalle(etiqueta: 'IVA (${Formatos.porcentaje(r.ivaPorcentaje)})', valor: Formatos.dinero(r.ivaCentavos)),
                     const SizedBox(height: 8),
-                    const Divider(height: 1, color: Color(0xFFCBD5E1)),
+                    const Divider(height: 1, color: AppColors.borde),
                     const SizedBox(height: 8),
                     FilaDetalle(etiqueta: 'Total', valor: Formatos.dinero(r.totalCentavos), destacado: true),
                   ],
@@ -231,23 +224,17 @@ class _ContenidoState extends ConsumerState<_Contenido> {
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.azulNoche,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                minimumSize: const Size(44, 48),
               ),
               onPressed: () => context.push(AppRoutes.comprobante(r.id)),
               icon: const Icon(Icons.receipt_long, size: 18),
-              label: const Text('Ver comprobante (factura XML)', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+              label: const Text('Ver comprobante (factura XML)'),
             );
             final cambiarAsientos = OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.azul,
-                side: const BorderSide(color: AppColors.azul, width: 1.5),
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
+              style: OutlinedButton.styleFrom(minimumSize: const Size(44, 48)),
               onPressed: _enviando ? null : () => context.push(AppRoutes.asientosDeLaReserva(r.id)),
               icon: const Icon(Icons.event_seat_outlined, size: 18),
-              label: const Text('Cambiar asientos', style: TextStyle(fontWeight: FontWeight.w800)),
+              label: const Text('Cambiar asientos'),
             );
             final conEditar = editable && !r.cancelada;
             if (caja.maxWidth < 520) {
@@ -287,16 +274,16 @@ class _ContenidoState extends ConsumerState<_Contenido> {
           const SizedBox(height: 12),
           const AvisoInline(tipo: TipoAviso.info, texto: 'Este vuelo ya partió: la reserva no se puede modificar ni cancelar.'),
         ] else ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Center(
             child: TextButton.icon(
               onPressed: _enviando ? null : _cancelar,
               style: TextButton.styleFrom(
                 foregroundColor: AppColors.error,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                minimumSize: const Size(44, 44),
               ),
-              icon: const Icon(Icons.cancel_outlined, size: 16),
-              label: const Text('Cancelar reserva', style: TextStyle(fontWeight: FontWeight.w700)),
+              icon: const Icon(Icons.cancel_outlined, size: 17),
+              label: const Text('Cancelar reserva'),
             ),
           ),
         ],
@@ -309,8 +296,6 @@ class _ContenidoState extends ConsumerState<_Contenido> {
   }
 }
 
-/// Un asiento de la reserva ("1A") en una pastilla con relieve isométrico 2.5D,
-/// igual que las butacas de la cabina. Al cancelar conserva el texto tachado.
 class _Asiento extends StatelessWidget {
   const _Asiento(this.numero, {this.apagado = false});
 
@@ -328,6 +313,7 @@ class _Asiento extends StatelessWidget {
             fontWeight: FontWeight.w800,
             color: apagado ? AppColors.textoSuave : AppColors.azul,
             decoration: apagado ? TextDecoration.lineThrough : null,
+            fontFeatures: AppTextStyles.tabular,
           ),
         ),
       );

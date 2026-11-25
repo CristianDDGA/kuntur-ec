@@ -22,6 +22,10 @@ frontend/build/
 frontend/.flutter-plugins
 frontend/.flutter-plugins-dependencies
 frontend/.packages
+frontend/e2e/node_modules/
+frontend/e2e/playwright-report/
+frontend/e2e/test-results/
+frontend/e2e/.cache/
 
 # --- IDE / SO ---
 .vscode/

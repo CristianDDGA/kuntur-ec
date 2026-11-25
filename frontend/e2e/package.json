@@ -1,0 +1,18 @@
+{
+  "name": "kuntur-ec-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Suite E2E determinista con Playwright para el cliente Flutter Web de Kuntur EC",
+  "scripts": {
+    "test": "playwright test",
+    "test:desktop": "playwright test --project=desktop-chromium",
+    "test:mobile": "playwright test --project=mobile-chromium",
+    "test:live": "playwright test specs/07-live-api-smoke.spec.ts",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "@types/node": "^22.15.0",
+    "typescript": "^5.8.3"
+  }
+}

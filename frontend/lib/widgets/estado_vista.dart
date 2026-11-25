@@ -4,9 +4,7 @@ import '../config/app_theme.dart';
 import 'aviso.dart';
 import 'skeleton_kuntur.dart';
 
-/// Estado vacío amigable: icono, título, explicación y (opcional) una acción.
-///
-/// Reemplaza las 3 tarjetas de "no hay nada" que se repetían con variaciones.
+/// Estado vacío amigable: icono, título, explicación acotada a medida legible (~65 ch) y acción opcional.
 class VacioVista extends StatelessWidget {
   const VacioVista({
     super.key,
@@ -31,20 +29,25 @@ class VacioVista extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.all(28),
         decoration: elevada ? AppDecorations.tarjeta : null,
-        child: Column(
-          children: [
-            Icon(icono, size: 40, color: AppColors.textoSuave),
-            const SizedBox(height: 10),
-            Text(titulo, style: AppTextStyles.subtitulo, textAlign: TextAlign.center),
-            if (mensaje != null) ...[
-              const SizedBox(height: 4),
-              Text(mensaje!, style: AppTextStyles.cuerpo, textAlign: TextAlign.center),
-            ],
-            if (textoAccion != null && onAccion != null) ...[
-              const SizedBox(height: 14),
-              OutlinedButton(onPressed: onAccion, child: Text(textoAccion!)),
-            ],
-          ],
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Column(
+              children: [
+                Icon(icono, size: 40, color: AppColors.textoSuave),
+                const SizedBox(height: 10),
+                Text(titulo, style: AppTextStyles.subtitulo, textAlign: TextAlign.center),
+                if (mensaje != null) ...[
+                  const SizedBox(height: 6),
+                  Text(mensaje!, style: AppTextStyles.cuerpo, textAlign: TextAlign.center),
+                ],
+                if (textoAccion != null && onAccion != null) ...[
+                  const SizedBox(height: 16),
+                  OutlinedButton(onPressed: onAccion, child: Text(textoAccion!)),
+                ],
+              ],
+            ),
+          ),
         ),
       );
 }

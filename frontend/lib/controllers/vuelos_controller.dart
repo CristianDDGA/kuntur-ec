@@ -1,9 +1,29 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/providers.dart';
+import '../models/destino.dart';
+import '../models/fallo.dart';
 import '../models/vuelo.dart';
-import '../services/api_exception.dart';
 import 'sesion_controller.dart';
+
+/// Destinos de respaldo si la API pública no responde al cargar la portada.
+const destinosPopularesRespaldo = [
+  DestinoPopular(ciudad: 'Guayaquil', precioMinimoCentavos: 7200, vuelos: 0),
+  DestinoPopular(ciudad: 'Manta', precioMinimoCentavos: 8000, vuelos: 0),
+  DestinoPopular(ciudad: 'Coca', precioMinimoCentavos: 8500, vuelos: 0),
+  DestinoPopular(ciudad: 'Quito', precioMinimoCentavos: 8900, vuelos: 0),
+];
+
+/// Controlador (C) de destinos populares públicos para la portada (`GET /vuelos/destinos`).
+/// Vive en `controllers/` para cumplir MVC estricto: `InicioPage` nunca invoca `vueloServiceProvider`.
+final destinosPopularesProvider = FutureProvider<List<DestinoPopular>>((ref) async {
+  try {
+    final destinos = await ref.read(vueloServiceProvider).destinos();
+    return destinos.isEmpty ? destinosPopularesRespaldo : destinos.take(4).toList();
+  } catch (_) {
+    return destinosPopularesRespaldo;
+  }
+});
 
 /// Filtros y página que el usuario eligió. Se guardan aparte de la lista para que al volver
 /// desde el detalle la búsqueda siga como estaba.
