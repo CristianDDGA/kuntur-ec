@@ -4,17 +4,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../config/app_router.dart';
+import '../config/app_theme.dart';
 import '../controllers/login_controller.dart';
 import '../controllers/sesion_controller.dart';
+import '../controllers/vuelos_controller.dart';
+import '../models/fallo.dart';
 import '../models/validadores.dart';
-import '../services/api_exception.dart';
 import '../widgets/aviso.dart';
 import '../widgets/boton_degradado.dart';
 import '../widgets/boton_google.dart';
 import '../widgets/campo_password.dart';
 import '../widgets/panel_autenticacion.dart';
 
-/// Vista (V de MVC) del inicio de sesión. No llama a la API: delega en [LoginController].
+/// Vista (V de MVC) del inicio de sesión. Delega en [LoginController].
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
@@ -26,14 +28,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _formulario = GlobalKey<FormState>();
   final _correo = TextEditingController();
   final _password = TextEditingController();
-
-  /// Foco en la contraseña: desplaza la onda líquida del fondo del panel.
-  bool _focoPassword = false;
-
-  void _cambioFocoPassword(bool enfocado) {
-    if (!mounted || _focoPassword == enfocado) return;
-    setState(() => _focoPassword = enfocado);
-  }
 
   @override
   void dispose() {
@@ -57,12 +51,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final estado = ref.watch(loginControllerProvider);
     final cargando = estado.isLoading;
     final error = estado.hasError && !cargando ? mensajeDeError(estado.error!) : null;
-    final aviso = ref.watch(avisoLoginProvider); // p. ej. "Su sesión venció por seguridad…"
+    final aviso = ref.watch(avisoLoginProvider);
+    final destinoElegido = ref.watch(filtroVuelosProvider).destino;
 
     return PanelAutenticacion(
       titulo: 'Bienvenido de vuelta',
       subtitulo: 'Inicie sesión para consultar y reservar sus vuelos.',
-      faseLiquida: _focoPassword ? 1.0 : 0.0,
       child: AutofillGroup(
         child: Form(
           key: _formulario,
@@ -71,7 +65,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             children: [
               if (aviso != null) ...[
                 AvisoInline(texto: aviso, tipo: TipoAviso.info),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
+              ] else if (destinoElegido.isNotEmpty) ...[
+                AvisoInline(
+                  texto: 'Inicie sesión para ver vuelos disponibles hacia $destinoElegido.',
+                  tipo: TipoAviso.info,
+                ),
+                const SizedBox(height: 14),
               ],
               TextFormField(
                 autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -88,36 +88,33 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
               ),
               const SizedBox(height: 8),
-              // El foco en la contraseña mueve la onda líquida del fondo.
-              Focus(
-                skipTraversal: true,
-                onFocusChange: _cambioFocoPassword,
-                child: CampoPassword(
-                  controller: _password,
-                  label: 'Contraseña',
-                  enabled: !cargando,
-                  validator: Validadores.passwordIngreso,
-                  textInputAction: TextInputAction.done,
-                  autofillHints: const [AutofillHints.password],
-                  onSubmitted: (_) => _enviar(),
-                ),
+              CampoPassword(
+                controller: _password,
+                label: 'Contraseña',
+                enabled: !cargando,
+                validator: Validadores.passwordIngreso,
+                textInputAction: TextInputAction.done,
+                autofillHints: const [AutofillHints.password],
+                onSubmitted: (_) => _enviar(),
               ),
               if (error != null) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 AvisoInline(texto: error),
               ],
               const SizedBox(height: 8),
               BotonDegradado(texto: 'Iniciar sesión', cargando: cargando, onPressed: _enviar),
-              const BotonGoogle(),
-              // Wrap: si no cabe en una línea (pantallas angostas) el enlace baja a la siguiente.
+              BotonGoogle(habilitado: !cargando),
+              const SizedBox(height: 2),
               Wrap(
                 alignment: WrapAlignment.center,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  const Text('¿Aún no tiene cuenta?'),
+                  const Text('¿Aún no tiene cuenta?', style: AppTextStyles.cuerpo),
                   TextButton(
                     style: TextButton.styleFrom(
-                      minimumSize: const Size(0, 32),
+                      foregroundColor: AppColors.azul,
+                      minimumSize: const Size(44, 32),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                     onPressed: cargando ? null : () => context.go(AppRoutes.registro),
@@ -125,16 +122,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   ),
                 ],
               ),
-              // Debajo de "¿Aún no tiene cuenta?", centrado y discreto (sin ocupar altura de más).
               Center(
                 child: TextButton(
-                  // Mismo estilo que el texto "¿Aún no tiene cuenta?" (no el de enlace en negrita).
                   style: TextButton.styleFrom(
-                    minimumSize: const Size(0, 24),
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    foregroundColor: AppColors.azul,
+                    minimumSize: const Size(44, 30),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    textStyle: Theme.of(context).textTheme.bodyMedium,
-                    foregroundColor: Theme.of(context).textTheme.bodyMedium?.color,
+                    textStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
                   ),
                   onPressed: cargando ? null : () => context.go(AppRoutes.recuperarClave),
                   child: const Text('¿Olvidó su contraseña?'),

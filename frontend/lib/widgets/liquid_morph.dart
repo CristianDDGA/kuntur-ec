@@ -7,13 +7,12 @@ import '../config/app_theme.dart';
 
 /// Motores de **morfismo líquido** de Kuntur EC.
 ///
-/// Ondas Bézier reactivas, selectores con pastilla elástica y cápsulas que
-/// cambian de geometría. Todo con animaciones finitas y respeto a Reduce Motion.
+/// Optimizados para GPU y accesibilidad:
+/// - [FondoLiquidMorph] se aísla en `RepaintBoundary` sin repintar por foco de teclado.
+/// - [SelectorLiquidMorph] expone acciones semánticas completas (`Semantics.onTap`),
+///   soporta navegación por teclado y desliza su pastilla con `AnimatedAlign` + `FractionallySizedBox`.
 
-/// Fondo orgánico con dos ondas Bézier que se desplazan según [fase] (0 a 1).
-///
-/// Se usa detrás del panel de acceso y de las cabeceras de sección: la onda se
-/// mueve al cambiar el foco del formulario, sin distraer de la lectura.
+/// Fondo orgánico estático con ondas Bézier suaves detrás de paneles de autenticación.
 class FondoLiquidMorph extends StatelessWidget {
   const FondoLiquidMorph({super.key, this.fase = 0, this.color = AppColors.infoSuave, this.child});
 
@@ -22,15 +21,11 @@ class FondoLiquidMorph extends StatelessWidget {
   final Widget? child;
 
   @override
-  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
-        tween: Tween<double>(begin: 0, end: fase.clamp(0.0, 1.0)),
-        duration: AppMotion.heroeDe(context),
-        curve: AppMotion.curvaLiquida,
-        builder: (context, valor, hijo) => CustomPaint(
-          painter: _PintorOndas(fase: valor, color: color),
-          child: hijo,
+  Widget build(BuildContext context) => RepaintBoundary(
+        child: CustomPaint(
+          painter: _PintorOndas(fase: fase.clamp(0.0, 1.0), color: color),
+          child: child,
         ),
-        child: child,
       );
 }
 
@@ -43,11 +38,10 @@ class OpcionLiquid<T> {
   final IconData? icono;
 }
 
-/// Selector segmentado con indicador de pastilla líquida que se desliza y se
-/// asienta con curva elástica suave entre los segmentos.
+/// Selector segmentado con indicador deslizante suave (`200 ms`, `curvaSalidaFuerte`).
 ///
-/// Mantiene los textos visibles (`find.text('Factura XML')` sigue funcionando) y
-/// altura táctil de 48 pt.
+/// Cumple WCAG AA y Playwright/VoiceOver: cada segmento declara `Semantics(button, selected, onTap)`,
+/// permanece alcanzable mediante teclado y adapta su altura mínima al `textScaler` del sistema.
 class SelectorLiquidMorph<T> extends StatelessWidget {
   const SelectorLiquidMorph({
     super.key,
@@ -65,40 +59,42 @@ class SelectorLiquidMorph<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final indice = opciones.indexWhere((o) => o.valor == seleccion).clamp(0, opciones.length - 1);
-    return SizedBox(
-      height: alto,
-      child: LayoutBuilder(
-        builder: (context, caja) {
-          final ancho = caja.maxWidth / opciones.length;
-          return Stack(
-            fit: StackFit.expand,
+    final alignmentX = opciones.length <= 1 ? 0.0 : -1.0 + (2.0 * indice) / (opciones.length - 1);
+    final altoEscalado = MediaQuery.textScalerOf(context).scale(14) > 18 ? alto + 8 : alto;
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(minHeight: altoEscalado),
+      child: IntrinsicHeight(
+        child: Container(
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            color: AppColors.infoSuave,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.borde.withValues(alpha: 0.7)),
+          ),
+          child: Stack(
             children: [
               Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.infoSuave,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-              ),
-              AnimatedPositioned(
-                duration: AppMotion.mediaDe(context),
-                curve: AppMotion.curvaLiquida,
-                left: indice * ancho + 3,
-                top: 3,
-                bottom: 3,
-                width: ancho - 6,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: AppColors.azul,
-                    borderRadius: BorderRadius.circular(13),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.azul.withValues(alpha: 0.25),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
+                child: AnimatedAlign(
+                  duration: AppMotion.mediaDe(context),
+                  curve: AppMotion.curvaSalidaFuerte,
+                  alignment: Alignment(alignmentX, 0),
+                  child: FractionallySizedBox(
+                    widthFactor: 1 / opciones.length,
+                    heightFactor: 1,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: AppColors.azul,
+                        borderRadius: BorderRadius.circular(11),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.azul.withValues(alpha: 0.22),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -110,36 +106,44 @@ class SelectorLiquidMorph<T> extends StatelessWidget {
                         button: true,
                         selected: i == indice,
                         label: opcion.etiqueta,
+                        onTap: () {
+                          if (i != indice) onCambio(opcion.valor);
+                        },
                         excludeSemantics: true,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(14),
-                          onTap: i == indice ? null : () => onCambio(opcion.valor),
-                          child: Center(
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(11),
+                            onTap: () {
+                              if (i != indice) onCambio(opcion.valor);
+                            },
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (opcion.icono != null) ...[
-                                      Icon(
-                                        opcion.icono,
-                                        size: 17,
-                                        color: i == indice ? Colors.white : AppColors.textoSecundario,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              child: Center(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (opcion.icono != null) ...[
+                                        Icon(
+                                          opcion.icono,
+                                          size: 17,
+                                          color: i == indice ? Colors.white : AppColors.textoSecundario,
+                                        ),
+                                        const SizedBox(width: 6),
+                                      ],
+                                      Text(
+                                        opcion.etiqueta,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: i == indice ? FontWeight.w800 : FontWeight.w600,
+                                          color: i == indice ? Colors.white : AppColors.textoPrincipal,
+                                        ),
                                       ),
-                                      const SizedBox(width: 6),
                                     ],
-                                    Text(
-                                      opcion.etiqueta,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: i == indice ? FontWeight.w800 : FontWeight.w600,
-                                        color: i == indice ? Colors.white : AppColors.textoPrincipal,
-                                      ),
-                                    ),
-                                  ],
+                                  ),
                                 ),
                               ),
                             ),
@@ -150,20 +154,20 @@ class SelectorLiquidMorph<T> extends StatelessWidget {
                 ],
               ),
             ],
-          );
-        },
+          ),
+        ),
       ),
     );
   }
 }
 
-/// Cápsula que cambia de geometría y color al activarse (respuesta líquida).
+/// Cápsula que cambia de tono suavemente al activarse.
 class CapsulaLiquidMorph extends StatelessWidget {
   const CapsulaLiquidMorph({
     super.key,
     required this.child,
     this.activa = false,
-    this.radio = 16,
+    this.radio = 14,
     this.color,
     this.colorActiva,
     this.padding,
@@ -178,14 +182,14 @@ class CapsulaLiquidMorph extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AnimatedContainer(
-        duration: AppMotion.rapidaDe(context),
-        curve: AppMotion.curvaLiquida,
+        duration: AppMotion.opacidadDe(context),
+        curve: AppMotion.curvaSalidaFuerte,
         padding: padding,
         decoration: BoxDecoration(
           color: activa
               ? (colorActiva ?? AppColors.azul.withValues(alpha: 0.08))
               : (color ?? Colors.transparent),
-          borderRadius: BorderRadius.circular(activa ? radio * 1.35 : radio),
+          borderRadius: BorderRadius.circular(radio),
         ),
         child: child,
       );
@@ -197,7 +201,7 @@ class ContenedorLiquidMorph extends StatelessWidget {
     super.key,
     required this.child,
     this.expandido = true,
-    this.radio = 20,
+    this.radio = 16,
     this.alignment = Alignment.topCenter,
   });
 
@@ -211,7 +215,7 @@ class ContenedorLiquidMorph extends StatelessWidget {
         borderRadius: BorderRadius.circular(radio),
         child: AnimatedSize(
           duration: AppMotion.mediaDe(context),
-          curve: AppMotion.curvaLiquida,
+          curve: AppMotion.curvaSalidaFuerte,
           alignment: alignment,
           child: expandido ? child : const SizedBox(width: double.infinity),
         ),
@@ -219,11 +223,12 @@ class ContenedorLiquidMorph extends StatelessWidget {
 }
 
 /// Barra de progreso con relleno fluido (requisitos de contraseña, ocupación).
+/// Solo anima cuando cambia el valor, sin reiniciar desde 0 al montar.
 class BarraLiquidMorph extends StatelessWidget {
   const BarraLiquidMorph({
     super.key,
     required this.valor,
-    this.alto = 8,
+    this.alto = 6,
     this.color = AppColors.azul,
     this.fondo = AppColors.divisor,
   });
@@ -235,20 +240,23 @@ class BarraLiquidMorph extends StatelessWidget {
   final Color fondo;
 
   @override
-  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
-        tween: Tween<double>(begin: 0, end: valor.clamp(0.0, 1.0)),
-        duration: AppMotion.mediaDe(context),
-        curve: AppMotion.curvaLiquida,
-        builder: (context, avance, _) => ClipRRect(
-          borderRadius: BorderRadius.circular(alto),
-          child: LinearProgressIndicator(
-            value: avance,
-            minHeight: alto,
-            backgroundColor: fondo,
-            valueColor: AlwaysStoppedAnimation<Color>(avance >= 1 ? AppColors.exito : color),
-          ),
+  Widget build(BuildContext context) {
+    final objetivo = valor.clamp(0.0, 1.0);
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(end: objetivo),
+      duration: AppMotion.rapidaDe(context),
+      curve: AppMotion.curvaSalidaFuerte,
+      builder: (context, avance, _) => ClipRRect(
+        borderRadius: BorderRadius.circular(alto),
+        child: LinearProgressIndicator(
+          value: avance,
+          minHeight: alto,
+          backgroundColor: fondo,
+          valueColor: AlwaysStoppedAnimation<Color>(avance >= 1 ? AppColors.exito : color),
         ),
-      );
+      ),
+    );
+  }
 }
 
 class _PintorOndas extends CustomPainter {
@@ -262,47 +270,44 @@ class _PintorOndas extends CustomPainter {
     final w = size.width;
     final h = size.height;
 
-    // Onda principal (tono suave del tema).
     final desplazamiento = math.sin(fase * math.pi * 2);
     final ola = Path()
-      ..moveTo(0, h * (0.62 + 0.06 * desplazamiento))
+      ..moveTo(0, h * (0.64 + 0.04 * desplazamiento))
       ..cubicTo(
         w * 0.25,
-        h * (0.40 + 0.08 * desplazamiento),
+        h * (0.44 + 0.06 * desplazamiento),
         w * 0.55,
-        h * (0.78 - 0.08 * desplazamiento),
+        h * (0.78 - 0.06 * desplazamiento),
         w,
-        h * (0.52 - 0.04 * desplazamiento),
+        h * (0.54 - 0.03 * desplazamiento),
       )
       ..lineTo(w, h)
       ..lineTo(0, h)
       ..close();
-    canvas.drawPath(ola, Paint()..color = color.withValues(alpha: 0.85));
+    canvas.drawPath(ola, Paint()..color = color.withValues(alpha: 0.8));
 
-    // Segunda onda, más tenue y contrafase.
     final ola2 = Path()
-      ..moveTo(0, h * (0.78 - 0.05 * desplazamiento))
+      ..moveTo(0, h * (0.80 - 0.04 * desplazamiento))
       ..cubicTo(
         w * 0.30,
-        h * (0.92 + 0.05 * desplazamiento),
+        h * (0.92 + 0.04 * desplazamiento),
         w * 0.60,
-        h * (0.62 - 0.06 * desplazamiento),
+        h * (0.64 - 0.04 * desplazamiento),
         w,
-        h * (0.84 + 0.03 * desplazamiento),
+        h * (0.84 + 0.02 * desplazamiento),
       )
       ..lineTo(w, h)
       ..lineTo(0, h)
       ..close();
-    canvas.drawPath(ola2, Paint()..color = AppColors.azul.withValues(alpha: 0.06));
+    canvas.drawPath(ola2, Paint()..color = AppColors.azul.withValues(alpha: 0.05));
 
-    // Detalle dorado: única veta de marca.
     final veta = Path()
-      ..moveTo(w * 0.55, h * (0.70 + 0.03 * desplazamiento))
-      ..quadraticBezierTo(w * 0.75, h * 0.46, w, h * (0.58 + 0.02 * desplazamiento))
+      ..moveTo(w * 0.55, h * (0.72 + 0.02 * desplazamiento))
+      ..quadraticBezierTo(w * 0.75, h * 0.48, w, h * (0.60 + 0.02 * desplazamiento))
       ..lineTo(w, h * 0.68)
-      ..quadraticBezierTo(w * 0.78, h * 0.58, w * 0.55, h * (0.80 + 0.03 * desplazamiento))
+      ..quadraticBezierTo(w * 0.78, h * 0.58, w * 0.55, h * (0.80 + 0.02 * desplazamiento))
       ..close();
-    canvas.drawPath(veta, Paint()..color = AppColors.amarillo.withValues(alpha: 0.10));
+    canvas.drawPath(veta, Paint()..color = AppColors.amarillo.withValues(alpha: 0.09));
   }
 
   @override

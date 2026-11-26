@@ -5,10 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../config/app_router.dart';
+import '../config/app_theme.dart';
 import '../controllers/sesion_controller.dart';
 import '../controllers/verificacion_controller.dart';
+import '../models/fallo.dart';
 import '../models/validadores.dart';
-import '../services/api_exception.dart';
 import '../widgets/aviso.dart';
 import '../widgets/boton_degradado.dart';
 import '../widgets/panel_autenticacion.dart';
@@ -16,8 +17,7 @@ import '../widgets/panel_autenticacion.dart';
 /// Segundos que hay que esperar entre un código y el siguiente (el servidor aplica la misma regla).
 const int esperaReenvioSegundos = 60;
 
-/// "Confirme su correo" (V): la persona escribe el código de 6 dígitos que llegó a su correo.
-/// Después de confirmarlo inicia sesión sola.
+/// "Confirme su correo" (V): código OTP de 6 dígitos con autofill y contador tabular.
 class VerificarCorreoPage extends ConsumerStatefulWidget {
   const VerificarCorreoPage({super.key});
 
@@ -31,7 +31,6 @@ class _VerificarCorreoPageState extends ConsumerState<VerificarCorreoPage> {
   Timer? _reloj;
   int _espera = 0;
 
-  /// Aviso tras pedir otro código ("Le enviamos un código nuevo.").
   String? _aviso;
 
   @override
@@ -40,10 +39,9 @@ class _VerificarCorreoPageState extends ConsumerState<VerificarCorreoPage> {
     final pendiente = ref.read(verificacionPendienteProvider);
     if (pendiente == null) return;
     if (pendiente.enviarAlEntrar) {
-      // El correo del registro no salió, o llegó desde el login: se pide un código al abrir la pantalla.
       WidgetsBinding.instance.addPostFrameCallback((_) => _reenviar());
     } else {
-      _iniciarEspera(); // el código acaba de enviarse: se puede pedir otro en un minuto
+      _iniciarEspera();
     }
   }
 
@@ -91,7 +89,6 @@ class _VerificarCorreoPageState extends ConsumerState<VerificarCorreoPage> {
     final reenvio = ref.watch(reenviarCodigoControllerProvider);
     final verificando = estado.isLoading;
 
-    // Correo verificado pero el inicio de sesión automático falló: se lleva al login con el motivo.
     ref.listen(verificarCorreoControllerProvider, (_, siguiente) {
       final error = siguiente.error;
       if (error is ServerFailure && error.codigo == codigoVerificadoSinSesion) {
@@ -108,52 +105,63 @@ class _VerificarCorreoPageState extends ConsumerState<VerificarCorreoPage> {
       subtitulo: pendiente == null
           ? 'Inicie sesión para continuar.'
           : 'Enviamos un código de 6 dígitos a ${pendiente.correo}. Escríbalo aquí; vence en 10 minutos.',
-      child: Form(
-        key: _formulario,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextFormField(
-              autovalidateMode: AutovalidateMode.onUserInteraction,
-              controller: _codigo,
-              enabled: !verificando,
-              autofocus: true,
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 26, letterSpacing: 10, fontWeight: FontWeight.w700),
-              textInputAction: TextInputAction.done,
-              onFieldSubmitted: (_) => _verificar(),
-              validator: Validadores.codigoVerificacion,
-              inputFormatters: Validadores.entradaCodigo,
-              decoration: const InputDecoration(labelText: 'Código de verificación', hintText: '000000'),
-            ),
-            if (_aviso != null) ...[
-              const SizedBox(height: 12),
-              AvisoInline(texto: _aviso!, tipo: TipoAviso.info),
-            ],
-            if (error != null) ...[
-              const SizedBox(height: 12),
-              AvisoInline(texto: error),
-            ],
-            if (errorReenvio != null) ...[
-              const SizedBox(height: 12),
-              AvisoInline(texto: errorReenvio),
-            ],
-            const SizedBox(height: 20),
-            BotonDegradado(texto: 'Verificar', cargando: verificando, onPressed: _verificar),
-            const SizedBox(height: 8),
-            Wrap(
-              alignment: WrapAlignment.center,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                TextButton(
-                  onPressed: verificando || _espera > 0 || reenvio.isLoading ? null : _reenviar,
-                  child: Text(_espera > 0 ? 'Reenviar código en $_espera s' : 'Reenviar código'),
+      child: AutofillGroup(
+        child: Form(
+          key: _formulario,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextFormField(
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                controller: _codigo,
+                enabled: !verificando,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                autofillHints: const [AutofillHints.oneTimeCode],
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 26,
+                  letterSpacing: 10,
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: AppTextStyles.tabular,
                 ),
-                TextButton(onPressed: verificando ? null : _volver, child: const Text('Volver a iniciar sesión')),
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _verificar(),
+                validator: Validadores.codigoVerificacion,
+                inputFormatters: Validadores.entradaCodigo,
+                decoration: const InputDecoration(labelText: 'Código de verificación', hintText: '000000'),
+              ),
+              if (_aviso != null) ...[
+                const SizedBox(height: 12),
+                AvisoInline(texto: _aviso!, tipo: TipoAviso.info),
               ],
-            ),
-          ],
+              if (error != null) ...[
+                const SizedBox(height: 12),
+                AvisoInline(texto: error),
+              ],
+              if (errorReenvio != null) ...[
+                const SizedBox(height: 12),
+                AvisoInline(texto: errorReenvio),
+              ],
+              const SizedBox(height: 20),
+              BotonDegradado(texto: 'Verificar', cargando: verificando, onPressed: _verificar),
+              const SizedBox(height: 8),
+              Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: verificando || _espera > 0 || reenvio.isLoading ? null : _reenviar,
+                    child: Text(
+                      _espera > 0 ? 'Reenviar código en $_espera s' : 'Reenviar código',
+                      style: const TextStyle(fontFeatures: AppTextStyles.tabular),
+                    ),
+                  ),
+                  TextButton(onPressed: verificando ? null : _volver, child: const Text('Volver a iniciar sesión')),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -34,14 +34,14 @@ Finder _selector<T>(String etiqueta) =>
 Future<void> _elegirFecha(WidgetTester tester, String etiqueta) async {
   await tester.tap(_selector<DateTime>(etiqueta));
   await tester.pumpAndSettle();
-  await tester.tap(find.text('OK'));
+  await tester.tap(find.text(MaterialLocalizations.of(tester.element(find.byType(Dialog).last)).okButtonLabel));
   await tester.pumpAndSettle();
 }
 
 Future<void> _elegirHora(WidgetTester tester, String etiqueta) async {
   await tester.tap(_selector<Duration>(etiqueta));
   await tester.pumpAndSettle();
-  await tester.tap(find.text('OK'));
+  await tester.tap(find.text(MaterialLocalizations.of(tester.element(find.byType(Dialog).last)).okButtonLabel));
   await tester.pumpAndSettle();
 }
 

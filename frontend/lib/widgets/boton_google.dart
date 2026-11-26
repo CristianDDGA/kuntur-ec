@@ -3,16 +3,19 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../config/app_motion.dart';
 import '../config/app_theme.dart';
 import '../config/providers.dart';
 import '../controllers/google_controller.dart';
-import '../services/api_exception.dart';
+import '../models/fallo.dart';
 import 'aviso.dart';
 
-/// «O continúe con Google»: se muestra en el login y en el registro. Si Google no está disponible (falta el ID de
-/// cliente o la plataforma aún no está configurada) no ocupa lugar.
+/// «O continúe con Google»: se muestra en el login y en el registro. Si Google no está disponible
+/// no ocupa lugar. Respeta [habilitado] para evitar envíos concurrentes mientras el formulario guarda.
 class BotonGoogle extends ConsumerStatefulWidget {
-  const BotonGoogle({super.key});
+  const BotonGoogle({super.key, this.habilitado = true});
+
+  final bool habilitado;
 
   @override
   ConsumerState<BotonGoogle> createState() => _BotonGoogleState();
@@ -26,9 +29,8 @@ class _BotonGoogleState extends ConsumerState<BotonGoogle> {
     super.initState();
     final google = ref.read(proveedorGoogleProvider);
     if (!google.disponible) return;
-    // Cada vez que Google entrega un id_token, se envía al servidor.
     _tokens = google.tokens.listen((token) => ref.read(googleLoginControllerProvider.notifier).ingresar(token));
-    unawaited(google.iniciar().catchError((Object _) {})); // si el SDK falla, el botón simplemente no responde
+    unawaited(google.iniciar().catchError((Object _) {}));
   }
 
   @override
@@ -49,7 +51,7 @@ class _BotonGoogleState extends ConsumerState<BotonGoogle> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 10),
+        const SizedBox(height: 6),
         const Row(
           children: [
             Expanded(child: Divider()),
@@ -60,11 +62,18 @@ class _BotonGoogleState extends ConsumerState<BotonGoogle> {
             Expanded(child: Divider()),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         if (cargando)
           const Center(child: SizedBox(height: 28, width: 28, child: CircularProgressIndicator(strokeWidth: 3)))
         else
-          Center(child: SizedBox(height: 44, child: google.boton())),
+          IgnorePointer(
+            ignoring: !widget.habilitado,
+            child: AnimatedOpacity(
+              opacity: widget.habilitado ? 1.0 : 0.45,
+              duration: AppMotion.opacidadDe(context),
+              child: Center(child: SizedBox(height: 44, child: google.boton())),
+            ),
+          ),
         if (error != null) ...[
           const SizedBox(height: 12),
           AvisoInline(texto: error),

@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # Politica del proyecto: version exacta = ANTEPENULTIMA estable de cada paquete.
   cupertino_icons: 1.0.8

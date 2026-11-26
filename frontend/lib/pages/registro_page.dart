@@ -4,9 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../config/app_router.dart';
+import '../config/app_theme.dart';
 import '../controllers/registro_controller.dart';
+import '../models/fallo.dart';
 import '../models/validadores.dart';
-import '../services/api_exception.dart';
 import '../widgets/aviso.dart';
 import '../widgets/boton_degradado.dart';
 import '../widgets/boton_google.dart';
@@ -30,14 +31,6 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
   final _password = TextEditingController();
   final _confirmacion = TextEditingController();
 
-  /// Foco en cualquiera de las contraseñas: desplaza la onda líquida del panel.
-  bool _focoPassword = false;
-
-  void _cambioFocoPassword(bool enfocado) {
-    if (!mounted || _focoPassword == enfocado) return;
-    setState(() => _focoPassword = enfocado);
-  }
-
   @override
   void dispose() {
     _nombre.dispose();
@@ -57,7 +50,7 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
           correo: _correo.text,
           password: _password.text,
         );
-    if (creada && mounted) context.go(AppRoutes.verificarCorreo); // falta confirmar el correo
+    if (creada && mounted) context.go(AppRoutes.verificarCorreo);
   }
 
   @override
@@ -69,7 +62,6 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
     return PanelAutenticacion(
       titulo: 'Cree su cuenta',
       subtitulo: 'Solo le tomará un minuto. Con ella podrá reservar vuelos por todo el país.',
-      faseLiquida: _focoPassword ? 1.0 : 0.0,
       child: AutofillGroup(
         child: Form(
           key: _formulario,
@@ -90,7 +82,7 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
                   prefixIcon: Icon(Icons.person_outline),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
               TextFormField(
                 autovalidateMode: AutovalidateMode.onUserInteraction,
                 controller: _cedula,
@@ -105,7 +97,7 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
                   prefixIcon: Icon(Icons.badge_outlined),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
               TextFormField(
                 autovalidateMode: AutovalidateMode.onUserInteraction,
                 controller: _correo,
@@ -120,51 +112,45 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
                   prefixIcon: Icon(Icons.mail_outline),
                 ),
               ),
-              const SizedBox(height: 16),
-              // El foco en la contraseña mueve la onda líquida del fondo.
-              Focus(
-                skipTraversal: true,
-                onFocusChange: _cambioFocoPassword,
-                child: CampoPassword(
-                  controller: _password,
-                  label: 'Contraseña',
-                  enabled: !cargando,
-                  validator: Validadores.password,
-                  textInputAction: TextInputAction.next,
-                  autofillHints: const [AutofillHints.newPassword],
-                  onChanged: (_) => setState(() {}), // actualiza la lista de requisitos
-                ),
+              const SizedBox(height: 14),
+              CampoPassword(
+                controller: _password,
+                label: 'Contraseña',
+                enabled: !cargando,
+                validator: Validadores.password,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.newPassword],
               ),
               const SizedBox(height: 8),
-              RequisitosPassword(password: _password.text),
-              const SizedBox(height: 16),
-              Focus(
-                skipTraversal: true,
-                onFocusChange: _cambioFocoPassword,
-                child: CampoPassword(
-                  controller: _confirmacion,
-                  label: 'Repita la contraseña',
-                  enabled: !cargando,
-                  validator: Validadores.confirmacion(() => _password.text),
-                  textInputAction: TextInputAction.done,
-                  onSubmitted: (_) => _enviar(),
-                ),
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _password,
+                builder: (_, valor, _) => RequisitosPassword(password: valor.text),
+              ),
+              const SizedBox(height: 14),
+              CampoPassword(
+                controller: _confirmacion,
+                label: 'Repita la contraseña',
+                enabled: !cargando,
+                validator: Validadores.confirmacion(() => _password.text),
+                textInputAction: TextInputAction.done,
+                autofillHints: const [AutofillHints.newPassword],
+                onSubmitted: (_) => _enviar(),
               ),
               if (error != null) ...[
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 AvisoInline(texto: error),
               ],
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               BotonDegradado(texto: 'Crear cuenta', cargando: cargando, onPressed: _enviar),
-              const BotonGoogle(),
-              const SizedBox(height: 12),
-              // Wrap: si no cabe en una línea (pantallas angostas) el enlace baja a la siguiente.
+              BotonGoogle(habilitado: !cargando),
+              const SizedBox(height: 8),
               Wrap(
                 alignment: WrapAlignment.center,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  const Text('¿Ya tiene una cuenta?'),
+                  const Text('¿Ya tiene una cuenta?', style: AppTextStyles.cuerpo),
                   TextButton(
+                    style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
                     onPressed: cargando ? null : () => context.go(AppRoutes.login),
                     child: const Text('Inicie sesión'),
                   ),

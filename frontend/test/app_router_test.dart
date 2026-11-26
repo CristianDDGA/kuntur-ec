@@ -36,7 +36,7 @@ void main() {
       expect(find.byType(InicioPage), findsOneWidget);
       expect(client.rutasSolicitadas, ['GET /vuelos/destinos']); // nada de sesión ni de rutas protegidas
       expect(find.text('Loja'), findsOneWidget);
-      expect(find.text('Desde \$64'), findsOneWidget);
+      expect(find.text('Desde \$ 64.00'), findsOneWidget);
     });
 
     testWidgets('con un token válido recupera la sesión y entra al inicio', (tester) async {

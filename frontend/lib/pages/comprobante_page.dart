@@ -1,23 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../config/app_motion.dart';
 import '../config/app_router.dart';
 import '../config/app_theme.dart';
 import '../controllers/comprobante_controller.dart';
 import '../models/factura.dart';
+import '../models/fallo.dart';
 import '../models/reserva.dart';
 import '../models/vuelo.dart';
-import '../services/api_exception.dart';
-import '../services/descarga_otros.dart' if (dart.library.js_interop) '../services/descarga_web.dart';
 import '../widgets/aviso.dart';
 import '../widgets/estado_vista.dart';
 import '../widgets/fila_detalle.dart';
 import '../widgets/franja_tricolor.dart';
 import '../widgets/insignia_estado.dart';
-import '../widgets/kinetic_type.dart';
 import '../widgets/kuntur_scaffold.dart';
 import '../widgets/liquid_morph.dart';
 import '../widgets/logo_kuntur.dart';
@@ -26,7 +23,8 @@ import '../widgets/navegacion_principal.dart';
 
 enum _Vista { factura, xml }
 
-/// Comprobante de una reserva (V): la factura legible y, en otra pestaña, el XML tal como lo entrega el servidor.
+/// Comprobante de una reserva (V — modo lectura): factura legible y documento XML oficial.
+/// Delega la descarga XML en [ComprobanteController] para cumplir MVC estricto.
 class ComprobantePage extends ConsumerStatefulWidget {
   const ComprobantePage({super.key, required this.reservaId});
 
@@ -47,47 +45,24 @@ class _ComprobantePageState extends ConsumerState<ComprobantePage> {
     return KunturScaffold(
       conAtras: true,
       seccion: Seccion.reservas,
-      maxAncho: 1000,
+      maxAncho: 940,
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         children: [
           Migas([
             const Miga('Mis reservas', ruta: AppRoutes.reservas),
-            Miga(numero, ruta: AppRoutes.reserva(widget.reservaId)),
+            Miga(
+              'Reserva $numero',
+              ruta: AppRoutes.reserva(widget.reservaId),
+              etiquetaSemantica: 'Volver a la reserva $numero',
+            ),
             const Miga('Comprobante'),
           ]),
           const SizedBox(height: 14),
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 12,
-            runSpacing: 10,
-            children: [
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 520),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Comprobante de venta', style: AppTextStyles.titulo),
-                    SizedBox(height: 4),
-                    Text('Factura electrónica oficial emitida para su reserva.', style: AppTextStyles.cuerpo),
-                  ],
-                ),
-              ),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.azul,
-                  side: const BorderSide(color: Color(0xFFCBD5E1)),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                onPressed: () => context.go(AppRoutes.reserva(widget.reservaId)),
-                icon: const Icon(Icons.arrow_back, size: 16),
-                label: const Text('Volver a reserva', style: TextStyle(fontWeight: FontWeight.w700)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
+          const Text('Comprobante de venta', style: AppTextStyles.titulo),
+          const SizedBox(height: 4),
+          const Text('Factura electrónica oficial emitida para su reserva.', style: AppTextStyles.cuerpo),
+          const SizedBox(height: 18),
           if (factura.isLoading && !factura.hasValue)
             const CargandoDetalleVista()
           else if (factura.hasError && !factura.hasValue)
@@ -106,11 +81,21 @@ class _ComprobantePageState extends ConsumerState<ComprobantePage> {
             ),
             const SizedBox(height: 16),
             AnimatedSwitcher(
-              duration: AppMotion.mediaDe(context),
-              switchInCurve: AppMotion.curvaEntrada,
+              duration: AppMotion.duracion(context, const Duration(milliseconds: 200)),
+              reverseDuration: AppMotion.duracion(context, const Duration(milliseconds: 140)),
+              switchInCurve: AppMotion.curvaSalidaFuerte,
+              switchOutCurve: Curves.easeOut,
+              layoutBuilder: (actual, anteriores) => Stack(
+                alignment: Alignment.topCenter,
+                children: [...anteriores, if (actual != null) actual],
+              ),
               child: _vista == _Vista.factura
                   ? _VistaFactura(key: const ValueKey('factura'), factura: factura.value!)
-                  : _VistaXml(key: const ValueKey('xml'), factura: factura.value!),
+                  : _VistaXml(
+                      key: const ValueKey('xml'),
+                      reservaId: widget.reservaId,
+                      factura: factura.value!,
+                    ),
             ),
           ],
         ],
@@ -119,7 +104,7 @@ class _ComprobantePageState extends ConsumerState<ComprobantePage> {
   }
 }
 
-/// Factura legible con estética de comprobante: franja de marca, datos y perforación antes de los totales.
+/// Factura legible (superficie Read): tipografía tabular calma, sin movimiento decorativo.
 class _VistaFactura extends StatelessWidget {
   const _VistaFactura({super.key, required this.factura});
 
@@ -159,12 +144,18 @@ class _VistaFactura extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 18),
-                Text('Factura ${f.numero}', style: AppTextStyles.titulo.copyWith(fontSize: 22)),
-                Text('Emitida el ${Formatos.fecha(f.fecha)}', style: AppTextStyles.cuerpo),
+                Text(
+                  'Factura ${f.numero}',
+                  style: AppTextStyles.titulo.copyWith(fontSize: 22, fontFeatures: AppTextStyles.tabular),
+                ),
+                Text(
+                  'Emitida el ${Formatos.fecha(f.fecha)}',
+                  style: AppTextStyles.cuerpo.copyWith(fontFeatures: AppTextStyles.tabular),
+                ),
                 const Divider(height: 28, color: AppColors.divisor),
                 const _Etiqueta('Cliente'),
                 Text(f.clienteNombre, style: AppTextStyles.subtitulo.copyWith(fontSize: 16)),
-                Text(f.clienteCorreo, style: AppTextStyles.cuerpo),
+                SelectableText(f.clienteCorreo, style: AppTextStyles.cuerpo),
                 const Divider(height: 28, color: AppColors.divisor),
                 const _Etiqueta('Detalle'),
                 Text(f.descripcion, style: AppTextStyles.subtitulo.copyWith(fontSize: 15)),
@@ -180,34 +171,20 @@ class _VistaFactura extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 12),
-                FilaDetalle(etiqueta: '${f.cantidad} × ${Formatos.dinero(f.precioUnitarioCentavos)}', valor: Formatos.dinero(f.subtotalCentavos)),
+                FilaDetalle(
+                  etiqueta: '${f.cantidad} × ${Formatos.dinero(f.precioUnitarioCentavos)}',
+                  valor: Formatos.dinero(f.subtotalCentavos),
+                ),
                 const SizedBox(height: 6),
                 const _PerforadoConMuescas(),
                 const SizedBox(height: 6),
                 FilaDetalle(etiqueta: 'Subtotal', valor: Formatos.dinero(f.subtotalCentavos)),
                 FilaDetalle(etiqueta: 'IVA (${Formatos.porcentaje(f.ivaPorcentaje)})', valor: Formatos.dinero(f.ivaCentavos)),
                 const SizedBox(height: 6),
-                // El total se anima con el odómetro cinético (un único `Text` conserva `find.text`).
-                Semantics(
-                  label: 'Total: ${Formatos.dinero(f.totalCentavos)}',
-                  excludeSemantics: true,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 5),
-                    child: Row(
-                      children: [
-                        const Expanded(child: Text('Total', style: AppTextStyles.cuerpo)),
-                        const SizedBox(width: 12),
-                        OdometroCinetico(
-                          texto: Formatos.dinero(f.totalCentavos),
-                          estilo: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.textoPrincipal,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                FilaDetalle(
+                  etiqueta: 'Total',
+                  valor: Formatos.dinero(f.totalCentavos),
+                  destacado: true,
                 ),
               ],
             ),
@@ -218,14 +195,9 @@ class _VistaFactura extends StatelessWidget {
   }
 }
 
-/// Línea discontinua de perforado con las muescas semicirculares laterales
-/// propias de un *boarding pass*: dos círculos del color del fondo recortan el
-/// borde de la tarjeta a la altura de la perforación.
 class _PerforadoConMuescas extends StatelessWidget {
   const _PerforadoConMuescas();
 
-  /// El contenido de la factura lleva 22 pt de relleno lateral: el centro de la
-  /// muesca queda justo sobre el borde de la tarjeta (22 + 9 = 31).
   static const double _desplazamiento = 31;
   static const double _diametro = 18;
 
@@ -237,22 +209,13 @@ class _PerforadoConMuescas extends StatelessWidget {
           alignment: Alignment.center,
           children: [
             Center(child: _Perforado()),
-            Positioned(
-              left: -_desplazamiento,
-              top: 0,
-              child: _Muesca(diametro: _diametro),
-            ),
-            Positioned(
-              right: -_desplazamiento,
-              top: 0,
-              child: _Muesca(diametro: _diametro),
-            ),
+            Positioned(left: -_desplazamiento, top: 0, child: _Muesca(diametro: _diametro)),
+            Positioned(right: -_desplazamiento, top: 0, child: _Muesca(diametro: _diametro)),
           ],
         ),
       );
 }
 
-/// Semicírculo del color del fondo que simula el corte del troquel.
 class _Muesca extends StatelessWidget {
   const _Muesca({required this.diametro});
 
@@ -266,7 +229,6 @@ class _Muesca extends StatelessWidget {
       );
 }
 
-/// Línea discontinua que separa los datos del pago, como en un comprobante impreso.
 class _Perforado extends StatelessWidget {
   const _Perforado();
 
@@ -290,16 +252,17 @@ class _Perforado extends StatelessWidget {
       );
 }
 
-class _VistaXml extends StatefulWidget {
-  const _VistaXml({super.key, required this.factura});
+class _VistaXml extends ConsumerStatefulWidget {
+  const _VistaXml({super.key, required this.reservaId, required this.factura});
 
+  final int reservaId;
   final Factura factura;
 
   @override
-  State<_VistaXml> createState() => _VistaXmlState();
+  ConsumerState<_VistaXml> createState() => _VistaXmlState();
 }
 
-class _VistaXmlState extends State<_VistaXml> {
+class _VistaXmlState extends ConsumerState<_VistaXml> {
   Future<void> _copiar() async {
     await Clipboard.setData(ClipboardData(text: widget.factura.xml));
     if (!mounted) return;
@@ -308,10 +271,13 @@ class _VistaXmlState extends State<_VistaXml> {
 
   Future<void> _descargar() async {
     final nombre = 'factura-${widget.factura.numero}.xml';
-    if (descargarTexto(nombre, widget.factura.xml)) {
+    final descargado = ref
+        .read(comprobanteControllerProvider(widget.reservaId).notifier)
+        .descargarXml(widget.factura);
+    if (descargado) {
       mostrarAviso(context, 'Descargando $nombre.');
     } else {
-      await _copiar(); // fuera de la web no hay descarga directa
+      await _copiar();
     }
   }
 
@@ -322,8 +288,8 @@ class _VistaXmlState extends State<_VistaXml> {
           Wrap(
             alignment: WrapAlignment.spaceBetween,
             crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 8,
-            runSpacing: 8,
+            spacing: 10,
+            runSpacing: 10,
             children: [
               const Text('Documento digital XML estructurado con firma y autorización.', style: AppTextStyles.nota),
               Wrap(
@@ -332,40 +298,47 @@ class _VistaXmlState extends State<_VistaXml> {
                 children: [
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.azul,
-                      side: const BorderSide(color: Color(0xFFCBD5E1)),
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      minimumSize: const Size(44, 44),
+                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
                     ),
                     onPressed: _copiar,
                     icon: const Icon(Icons.copy, size: 16),
-                    label: const Text('Copiar XML', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                    label: const Text('Copiar XML'),
                   ),
                   FilledButton.icon(
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.azul,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      minimumSize: const Size(44, 44),
+                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
                     ),
                     onPressed: _descargar,
                     icon: const Icon(Icons.download, size: 16),
-                    label: const Text('Descargar factura (XML)', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                    label: const Text('Descargar factura (XML)'),
                   ),
                 ],
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Container(
+            constraints: const BoxConstraints(maxHeight: 520),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppColors.azulNoche,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(14),
             ),
-            child: SelectableText(
-              widget.factura.xml,
-              style: const TextStyle(fontFamily: 'monospace', fontSize: 12.5, height: 1.5, color: Color(0xFFE6E9EE)),
+            child: SingleChildScrollView(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SelectableText(
+                  widget.factura.xml,
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 12.5,
+                    height: 1.55,
+                    color: Color(0xFFE6E9EE),
+                  ),
+                ),
+              ),
             ),
           ),
         ],

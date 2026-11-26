@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../config/app_motion.dart';
 import '../config/app_router.dart';
 import '../config/app_theme.dart';
 import '../controllers/gestion_vuelos_controller.dart';
+import '../models/fallo.dart';
 import '../models/validadores_vuelo.dart';
 import '../models/vuelo.dart';
-import '../services/api_exception.dart';
 import '../widgets/aviso.dart';
 import '../widgets/control_paginas.dart';
 import '../widgets/estado_vista.dart';
@@ -16,8 +17,7 @@ import '../widgets/kuntur_scaffold.dart';
 import '../widgets/migas.dart';
 import '../widgets/navegacion_principal.dart';
 
-/// Gestión de vuelos del administrador (V): todos los vuelos, también cancelados y ya partidos,
-/// con las acciones Editar y Cancelar. Solo el administrador llega aquí (router + 403 del servidor).
+/// Gestión de vuelos del administrador (V): edición y cancelación con control optimista.
 class GestionVuelosPage extends ConsumerWidget {
   const GestionVuelosPage({super.key});
 
@@ -29,7 +29,7 @@ class GestionVuelosPage extends ConsumerWidget {
     return KunturScaffold(
       conAtras: true,
       seccion: Seccion.administracion,
-      maxAncho: 900,
+      maxAncho: 920,
       onRefrescar: () => ref.read(gestionVuelosProvider.notifier).recargar(),
       body: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -37,15 +37,32 @@ class GestionVuelosPage extends ConsumerWidget {
         children: [
           const Migas([Miga('Administración', ruta: AppRoutes.admin), Miga('Gestionar vuelos')]),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              const Expanded(child: Text('Gestionar vuelos', style: AppTextStyles.titulo)),
-              FilledButton.icon(
+          LayoutBuilder(
+            builder: (context, caja) {
+              const titulo = Text('Gestionar vuelos', style: AppTextStyles.titulo);
+              final boton = FilledButton.icon(
                 onPressed: () => context.push(AppRoutes.nuevoVuelo),
                 icon: const Icon(Icons.add),
                 label: const Text('Nuevo'),
-              ),
-            ],
+              );
+              if (caja.maxWidth < 420) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    titulo,
+                    const SizedBox(height: 10),
+                    Align(alignment: Alignment.centerLeft, child: boton),
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  const Expanded(child: titulo),
+                  const SizedBox(width: 12),
+                  boton,
+                ],
+              );
+            },
           ),
           const SizedBox(height: 4),
           const Text(
@@ -56,6 +73,7 @@ class GestionVuelosPage extends ConsumerWidget {
           const SizedBox(height: 14),
           Wrap(
             spacing: 8,
+            runSpacing: 6,
             children: [
               for (final (texto, estado) in [
                 ('Todos', null),
@@ -71,7 +89,7 @@ class GestionVuelosPage extends ConsumerWidget {
           ),
           const SizedBox(height: 14),
           if (pagina.isLoading && !pagina.hasValue)
-            const CargandoDetalleVista()
+            const CargandoVista(tarjetas: 3)
           else if (pagina.hasError && !pagina.hasValue)
             ErrorVista(
               mensaje: mensajeDeError(pagina.error!),
@@ -84,10 +102,21 @@ class GestionVuelosPage extends ConsumerWidget {
               mensaje: 'Los vuelos que cree aparecerán aquí.',
             )
           else ...[
-            Text('${pagina.value!.total} vuelo(s)', style: AppTextStyles.nota),
+            Text(
+              pagina.value!.total == 1 ? '1 vuelo' : '${Formatos.entero(pagina.value!.total)} vuelos',
+              style: AppTextStyles.nota.copyWith(fontWeight: FontWeight.w700, fontFeatures: AppTextStyles.tabular),
+            ),
             const SizedBox(height: 8),
-            for (final v in pagina.value!.vuelos)
-              Padding(padding: const EdgeInsets.only(bottom: 12), child: _TarjetaGestion(item: v)),
+            AnimatedOpacity(
+              opacity: pagina.isLoading ? 0.5 : 1,
+              duration: AppMotion.opacidadDe(context),
+              child: Column(
+                children: [
+                  for (final v in pagina.value!.vuelos)
+                    Padding(padding: const EdgeInsets.only(bottom: 12), child: _TarjetaGestion(item: v)),
+                ],
+              ),
+            ),
             ControlPaginas(
               pagina: pagina.value!.pagina,
               totalPaginas: pagina.value!.totalPaginas,
@@ -117,7 +146,9 @@ class _TarjetaGestion extends ConsumerWidget {
         context,
         canceladas == 0
             ? 'Vuelo ${item.vuelo.codigo} cancelado.'
-            : 'Vuelo ${item.vuelo.codigo} cancelado junto con $canceladas reserva(s).',
+            : canceladas == 1
+                ? 'Vuelo ${item.vuelo.codigo} cancelado junto con 1 reserva.'
+                : 'Vuelo ${item.vuelo.codigo} cancelado junto con ${Formatos.entero(canceladas)} reservas.',
       );
     }
   }
@@ -138,7 +169,7 @@ class _TarjetaGestion extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Text(v.codigo, style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.azul)),
+              Text(v.codigo, style: AppTextStyles.codigo),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -150,6 +181,7 @@ class _TarjetaGestion extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox(width: 8),
               InsigniaEstado(texto: texto, tipo: tipo),
             ],
           ),
@@ -157,25 +189,25 @@ class _TarjetaGestion extends ConsumerWidget {
           Text(
             '${Formatos.fecha(v.fecha)} · ${Formatos.hora(v.horaSalida)} → ${Formatos.hora(v.horaLlegada)} · '
             '${Formatos.dinero(v.precioCentavos)}',
-            style: AppTextStyles.cuerpo,
+            style: AppTextStyles.cuerpo.copyWith(fontFeatures: AppTextStyles.tabular),
           ),
           const SizedBox(height: 2),
           Text(
             v.cancelado
-                ? 'Capacidad ${v.capacidad} asientos'
-                : '${v.asientosVendidos} de ${v.capacidad} asientos vendidos',
-            style: AppTextStyles.nota,
+                ? 'Capacidad ${Formatos.entero(v.capacidad)} ${v.capacidad == 1 ? 'asiento' : 'asientos'}'
+                : '${Formatos.entero(v.asientosVendidos)} de ${Formatos.entero(v.capacidad)} asientos vendidos',
+            style: AppTextStyles.nota.copyWith(fontFeatures: AppTextStyles.tabular),
           ),
           if (v.cancelado && v.motivoCancelacion != null) ...[
             const SizedBox(height: 8),
             AvisoInline(tipo: TipoAviso.info, texto: 'Motivo: ${v.motivoCancelacion}'),
           ],
           if (item.gestionable) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             Wrap(
               alignment: WrapAlignment.end,
               spacing: 8,
-              runSpacing: 4,
+              runSpacing: 6,
               children: [
                 OutlinedButton.icon(
                   onPressed: () => context.push(AppRoutes.editarVuelo(v.id)),
@@ -197,8 +229,6 @@ class _TarjetaGestion extends ConsumerWidget {
   }
 }
 
-/// Pide el motivo, advierte a cuántos pasajeros afecta y cancela. Devuelve cuántas reservas se
-/// cancelaron, o `null` si el administrador se arrepintió.
 class _DialogoCancelar extends ConsumerStatefulWidget {
   const _DialogoCancelar({required this.vuelo});
 
@@ -213,8 +243,6 @@ class _DialogoCancelarState extends ConsumerState<_DialogoCancelar> {
   final _motivo = TextEditingController();
   String? _error;
 
-  /// Versión con la que se confirma. Tras un 409 pasa a la `version_actual` del servidor, así el
-  /// administrador revisa el aviso y vuelve a confirmar a sabiendas (nunca se reintenta solo).
   late int _version = widget.vuelo.version;
 
   @override
@@ -232,10 +260,10 @@ class _DialogoCancelarState extends ConsumerState<_DialogoCancelar> {
           .cancelar(widget.vuelo, ValidadoresVuelo.normalizarTexto(_motivo.text), version: _version);
       if (canceladas != null && mounted) Navigator.of(context).pop(canceladas);
     } on ServerFailure catch (e) {
-      final actual = e.detalles['version_actual'];
+      final actual = e.versionActual;
       if (!mounted) return;
       setState(() {
-        if (e.statusCode == 409 && actual is int) {
+        if (e.statusCode == 409 && actual != null) {
           _version = actual;
           _error = 'Otro administrador cambió este vuelo mientras usted lo revisaba. El listado ya muestra '
               'sus datos actuales; si aún quiere cancelarlo, pulse «Cancelar vuelo» otra vez.';
@@ -252,7 +280,12 @@ class _DialogoCancelarState extends ConsumerState<_DialogoCancelar> {
   Widget build(BuildContext context) {
     final cancelando = ref.watch(cancelarVueloProvider);
     final v = widget.vuelo;
+    final vendidosTexto = v.asientosVendidos == 1
+        ? '1 asiento vendido'
+        : '${Formatos.entero(v.asientosVendidos)} asientos vendidos';
+
     return AlertDialog(
+      scrollable: true,
       icon: const Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 32),
       title: Text('¿Cancelar el vuelo ${v.codigo}?'),
       content: SizedBox(
@@ -265,14 +298,13 @@ class _DialogoCancelarState extends ConsumerState<_DialogoCancelar> {
             children: [
               Text(
                 '${v.origen} → ${v.destino} · ${Formatos.fecha(v.fecha)} ${Formatos.hora(v.horaSalida)}',
-                style: AppTextStyles.cuerpo,
+                style: AppTextStyles.cuerpo.copyWith(fontFeatures: AppTextStyles.tabular),
               ),
               const SizedBox(height: 10),
               AvisoInline(
                 tipo: v.tieneReservas ? TipoAviso.error : TipoAviso.info,
                 texto: v.tieneReservas
-                    ? 'Tiene ${v.asientosVendidos} asiento(s) vendido(s): todas sus reservas se cancelarán y '
-                        'los pasajeros verán el motivo. No se puede deshacer.'
+                    ? 'Tiene $vendidosTexto: todas sus reservas se cancelarán y los pasajeros verán el motivo. No se puede deshacer.'
                     : 'Aún no tiene asientos vendidos. Dejará de aparecer en la búsqueda. No se puede deshacer.',
               ),
               const SizedBox(height: 14),
@@ -281,8 +313,10 @@ class _DialogoCancelarState extends ConsumerState<_DialogoCancelar> {
                 enabled: !cancelando,
                 autofocus: true,
                 minLines: 2,
-                maxLines: 4,
+                maxLines: 3,
                 maxLength: ValidadoresVuelo.motivoMax,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _confirmar(),
                 inputFormatters: ValidadoresVuelo.entradaMotivo,
                 autovalidateMode: AutovalidateMode.onUserInteraction,
                 validator: ValidadoresVuelo.motivoCancelacion,
@@ -309,7 +343,11 @@ class _DialogoCancelarState extends ConsumerState<_DialogoCancelar> {
           onPressed: cancelando ? null : _confirmar,
           style: FilledButton.styleFrom(backgroundColor: AppColors.error),
           child: cancelando
-              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
               : const Text('Cancelar vuelo'),
         ),
       ],

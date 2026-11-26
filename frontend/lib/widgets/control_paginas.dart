@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 
 /// Control de paginación: «‹ Anterior  Página 2 de 5  Siguiente ›».
-/// No se muestra si todo cabe en una sola página.
+/// Usa numerales tabulares para que los botones no salten al pasar de 9 a 10
+/// y anuncia el cambio de página como `liveRegion`.
 class ControlPaginas extends StatelessWidget {
   const ControlPaginas({
     super.key,
@@ -26,28 +27,43 @@ class ControlPaginas extends StatelessWidget {
     final anterior = pagina > 1 && !ocupado;
     final siguiente = pagina < totalPaginas && !ocupado;
     return Padding(
-      padding: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.only(top: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          IconButton.outlined(
-            tooltip: 'Página anterior',
-            onPressed: anterior ? () => onCambiar(pagina - 1) : null,
-            icon: const Icon(Icons.chevron_left),
+          ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            child: IconButton.outlined(
+              tooltip: 'Página anterior',
+              onPressed: anterior ? () => onCambiar(pagina - 1) : null,
+              icon: const Icon(Icons.chevron_left),
+            ),
           ),
           Flexible(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text('Página $pagina de $totalPaginas', style: AppTextStyles.subtitulo.copyWith(fontSize: 15)),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Semantics(
+                liveRegion: true,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'Página $pagina de $totalPaginas',
+                    style: AppTextStyles.subtitulo.copyWith(
+                      fontSize: 15,
+                      fontFeatures: AppTextStyles.tabular,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
-          IconButton.outlined(
-            tooltip: 'Página siguiente',
-            onPressed: siguiente ? () => onCambiar(pagina + 1) : null,
-            icon: const Icon(Icons.chevron_right),
+          ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            child: IconButton.outlined(
+              tooltip: 'Página siguiente',
+              onPressed: siguiente ? () => onCambiar(pagina + 1) : null,
+              icon: const Icon(Icons.chevron_right),
+            ),
           ),
         ],
       ),

@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../config/app_theme.dart';
 
-/// Familias semánticas de una insignia: el color siempre dice lo mismo.
+/// Familias semánticas de una insignia: el color siempre comunica el mismo significado.
 enum TipoInsignia { exito, aviso, error, info, neutro }
 
-/// Píldora de estado ("Agotado", "Quedan 3", "Programada", ...).
-///
-/// Única implementación de badge/píldora de la app: el color y el texto viven
-/// juntos, así una misma situación nunca se pinta de dos formas distintas.
+/// Píldora de estado ("Agotado", "Quedan 3", "Programada", ...) en una sola línea
+/// con figuras tabulares para evitar saltos de ancho en contadores.
 class InsigniaEstado extends StatelessWidget {
   const InsigniaEstado({super.key, required this.texto, this.tipo = TipoInsignia.info});
 
@@ -29,7 +27,15 @@ class InsigniaEstado extends StatelessWidget {
       decoration: BoxDecoration(color: fondo, borderRadius: BorderRadius.circular(20)),
       child: Text(
         texto,
-        style: TextStyle(color: color, fontSize: 12.5, fontWeight: FontWeight.w700),
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: color,
+          fontSize: 12.5,
+          fontWeight: FontWeight.w700,
+          fontFeatures: AppTextStyles.tabular,
+        ),
       ),
     );
   }

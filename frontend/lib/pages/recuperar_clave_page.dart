@@ -5,10 +5,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../config/app_motion.dart';
 import '../config/app_router.dart';
+import '../config/app_theme.dart';
 import '../controllers/recuperacion_controller.dart';
+import '../models/fallo.dart';
 import '../models/validadores.dart';
-import '../services/api_exception.dart';
 import '../widgets/aviso.dart';
 import '../widgets/boton_degradado.dart';
 import '../widgets/campo_password.dart';
@@ -16,9 +18,8 @@ import '../widgets/panel_autenticacion.dart';
 import '../widgets/requisitos_password.dart';
 import 'verificar_correo_page.dart' show esperaReenvioSegundos;
 
-/// "¿Olvidó su contraseña?" (V). Dos pasos en la misma pantalla:
-/// 1. la persona escribe su correo y el servidor le envía un código de 6 dígitos;
-/// 2. escribe el código y la contraseña nueva. Al terminar vuelve al login para entrar con la nueva.
+/// "¿Olvidó su contraseña?" (V). Dos pasos en la misma pantalla con transición suave
+/// y confirmación explícita al volver al inicio de sesión.
 class RecuperarClavePage extends ConsumerStatefulWidget {
   const RecuperarClavePage({super.key});
 
@@ -36,10 +37,7 @@ class _RecuperarClavePageState extends ConsumerState<RecuperarClavePage> {
   Timer? _reloj;
   int _espera = 0;
 
-  /// Correo al que se pidió el código; `null` mientras se está en el primer paso.
   String? _correoEnviado;
-
-  /// Aviso tras pedir otro código.
   String? _aviso;
 
   @override
@@ -88,7 +86,9 @@ class _RecuperarClavePageState extends ConsumerState<RecuperarClavePage> {
           codigo: _codigo.text.trim(),
           password: _password.text,
         );
-    if (ok && mounted) context.go(AppRoutes.login);
+    if (ok && mounted) {
+      context.go(AppRoutes.login);
+    }
   }
 
   void _otroCorreo() {
@@ -111,7 +111,19 @@ class _RecuperarClavePageState extends ConsumerState<RecuperarClavePage> {
       subtitulo: enPrimerPaso
           ? 'Escriba el correo de su cuenta y le enviaremos un código de 6 dígitos.'
           : 'Si $_correoEnviado está registrado, le enviamos un código. Escríbalo aquí; vence en 10 minutos.',
-      child: enPrimerPaso ? _primerPaso() : _segundoPaso(),
+      child: AnimatedSwitcher(
+        duration: AppMotion.duracion(context, const Duration(milliseconds: 200)),
+        reverseDuration: AppMotion.duracion(context, const Duration(milliseconds: 140)),
+        switchInCurve: AppMotion.curvaSalidaFuerte,
+        switchOutCurve: Curves.easeOut,
+        layoutBuilder: (actual, anteriores) => Stack(
+          alignment: Alignment.topCenter,
+          children: [...anteriores, if (actual != null) actual],
+        ),
+        child: enPrimerPaso
+            ? KeyedSubtree(key: const ValueKey('paso-correo'), child: _primerPaso())
+            : KeyedSubtree(key: const ValueKey('paso-clave'), child: _segundoPaso()),
+      ),
     );
   }
 
@@ -119,36 +131,37 @@ class _RecuperarClavePageState extends ConsumerState<RecuperarClavePage> {
     final estado = ref.watch(solicitarRecuperacionControllerProvider);
     final cargando = estado.isLoading;
     final error = estado.hasError && !cargando ? mensajeDeError(estado.error!) : null;
-    return Form(
-      key: _formularioCorreo,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextFormField(
-            autovalidateMode: AutovalidateMode.onUserInteraction,
-            controller: _correo,
-            enabled: !cargando,
-            autofocus: true,
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.done,
-            autofillHints: const [AutofillHints.email],
-            onFieldSubmitted: (_) => _pedirCodigo(),
-            validator: Validadores.correo,
-            inputFormatters: [LengthLimitingTextInputFormatter(Validadores.correoMax)],
-            decoration: const InputDecoration(labelText: 'Correo electrónico', prefixIcon: Icon(Icons.mail_outline)),
-          ),
-          if (error != null) ...[
-            const SizedBox(height: 12),
-            AvisoInline(texto: error),
+    return AutofillGroup(
+      child: Form(
+        key: _formularioCorreo,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextFormField(
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              controller: _correo,
+              enabled: !cargando,
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.done,
+              autofillHints: const [AutofillHints.email],
+              onFieldSubmitted: (_) => _pedirCodigo(),
+              validator: Validadores.correo,
+              inputFormatters: [LengthLimitingTextInputFormatter(Validadores.correoMax)],
+              decoration: const InputDecoration(labelText: 'Correo electrónico', prefixIcon: Icon(Icons.mail_outline)),
+            ),
+            if (error != null) ...[
+              const SizedBox(height: 12),
+              AvisoInline(texto: error),
+            ],
+            const SizedBox(height: 20),
+            BotonDegradado(texto: 'Enviar código', cargando: cargando, onPressed: _pedirCodigo),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: cargando ? null : () => context.go(AppRoutes.login),
+              child: const Text('Volver a iniciar sesión'),
+            ),
           ],
-          const SizedBox(height: 20),
-          BotonDegradado(texto: 'Enviar código', cargando: cargando, onPressed: _pedirCodigo),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: cargando ? null : () => context.go(AppRoutes.login),
-            child: const Text('Volver a iniciar sesión'),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -159,76 +172,89 @@ class _RecuperarClavePageState extends ConsumerState<RecuperarClavePage> {
     final cargando = estado.isLoading;
     final error = estado.hasError && !cargando ? mensajeDeError(estado.error!) : null;
     final errorReenvio = reenvio.hasError && !reenvio.isLoading ? mensajeDeError(reenvio.error!) : null;
-    return Form(
-      key: _formularioClave,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextFormField(
-            autovalidateMode: AutovalidateMode.onUserInteraction,
-            controller: _codigo,
-            enabled: !cargando,
-            autofocus: true,
-            keyboardType: TextInputType.number,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 26, letterSpacing: 10, fontWeight: FontWeight.w700),
-            textInputAction: TextInputAction.next,
-            validator: Validadores.codigoVerificacion,
-            inputFormatters: Validadores.entradaCodigo,
-            decoration: const InputDecoration(labelText: 'Código de verificación', hintText: '000000'),
-          ),
-          const SizedBox(height: 16),
-          CampoPassword(
-            controller: _password,
-            label: 'Contraseña nueva',
-            enabled: !cargando,
-            validator: Validadores.password,
-            textInputAction: TextInputAction.next,
-            autofillHints: const [AutofillHints.newPassword],
-            onChanged: (_) => setState(() {}), // actualiza la lista de requisitos
-          ),
-          const SizedBox(height: 8),
-          RequisitosPassword(password: _password.text),
-          const SizedBox(height: 16),
-          CampoPassword(
-            controller: _confirmacion,
-            label: 'Repita la contraseña',
-            enabled: !cargando,
-            validator: Validadores.confirmacion(() => _password.text),
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _cambiarClave(),
-          ),
-          if (_aviso != null) ...[
-            const SizedBox(height: 12),
-            AvisoInline(texto: _aviso!, tipo: TipoAviso.info),
-          ],
-          if (error != null) ...[
-            const SizedBox(height: 12),
-            AvisoInline(texto: error),
-          ],
-          if (errorReenvio != null) ...[
-            const SizedBox(height: 12),
-            AvisoInline(texto: errorReenvio),
-          ],
-          const SizedBox(height: 20),
-          BotonDegradado(texto: 'Cambiar contraseña', cargando: cargando, onPressed: _cambiarClave),
-          const SizedBox(height: 8),
-          Wrap(
-            alignment: WrapAlignment.center,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              TextButton(
-                onPressed: cargando || _espera > 0 || reenvio.isLoading ? null : () => _pedirCodigo(reenvio: true),
-                child: Text(_espera > 0 ? 'Reenviar código en $_espera s' : 'Reenviar código'),
+    return AutofillGroup(
+      child: Form(
+        key: _formularioClave,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextFormField(
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              controller: _codigo,
+              enabled: !cargando,
+              keyboardType: TextInputType.number,
+              autofillHints: const [AutofillHints.oneTimeCode],
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 26,
+                letterSpacing: 10,
+                fontWeight: FontWeight.w700,
+                fontFeatures: AppTextStyles.tabular,
               ),
-              TextButton(onPressed: cargando ? null : _otroCorreo, child: const Text('Usar otro correo')),
-              TextButton(
-                onPressed: cargando ? null : () => context.go(AppRoutes.login),
-                child: const Text('Volver a iniciar sesión'),
-              ),
+              textInputAction: TextInputAction.next,
+              validator: Validadores.codigoVerificacion,
+              inputFormatters: Validadores.entradaCodigo,
+              decoration: const InputDecoration(labelText: 'Código de verificación', hintText: '000000'),
+            ),
+            const SizedBox(height: 16),
+            CampoPassword(
+              controller: _password,
+              label: 'Contraseña nueva',
+              enabled: !cargando,
+              validator: Validadores.password,
+              textInputAction: TextInputAction.next,
+              autofillHints: const [AutofillHints.newPassword],
+            ),
+            const SizedBox(height: 8),
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _password,
+              builder: (_, valor, _) => RequisitosPassword(password: valor.text),
+            ),
+            const SizedBox(height: 16),
+            CampoPassword(
+              controller: _confirmacion,
+              label: 'Repita la contraseña',
+              enabled: !cargando,
+              validator: Validadores.confirmacion(() => _password.text),
+              textInputAction: TextInputAction.done,
+              autofillHints: const [AutofillHints.newPassword],
+              onSubmitted: (_) => _cambiarClave(),
+            ),
+            if (_aviso != null) ...[
+              const SizedBox(height: 12),
+              AvisoInline(texto: _aviso!, tipo: TipoAviso.info),
             ],
-          ),
-        ],
+            if (error != null) ...[
+              const SizedBox(height: 12),
+              AvisoInline(texto: error),
+            ],
+            if (errorReenvio != null) ...[
+              const SizedBox(height: 12),
+              AvisoInline(texto: errorReenvio),
+            ],
+            const SizedBox(height: 20),
+            BotonDegradado(texto: 'Cambiar contraseña', cargando: cargando, onPressed: _cambiarClave),
+            const SizedBox(height: 8),
+            Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                TextButton(
+                  onPressed: cargando || _espera > 0 || reenvio.isLoading ? null : () => _pedirCodigo(reenvio: true),
+                  child: Text(
+                    _espera > 0 ? 'Reenviar código en $_espera s' : 'Reenviar código',
+                    style: const TextStyle(fontFeatures: AppTextStyles.tabular),
+                  ),
+                ),
+                TextButton(onPressed: cargando ? null : _otroCorreo, child: const Text('Usar otro correo')),
+                TextButton(
+                  onPressed: cargando ? null : () => context.go(AppRoutes.login),
+                  child: const Text('Volver a iniciar sesión'),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

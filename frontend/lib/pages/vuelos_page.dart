@@ -7,9 +7,9 @@ import '../config/app_router.dart';
 import '../config/app_theme.dart';
 import '../controllers/sesion_controller.dart';
 import '../controllers/vuelos_controller.dart';
+import '../models/fallo.dart';
 import '../models/validadores_vuelo.dart';
 import '../models/vuelo.dart';
-import '../services/api_exception.dart';
 import '../widgets/campo_selector.dart';
 import '../widgets/campo_texto_kuntur.dart';
 import '../widgets/control_paginas.dart';
@@ -22,15 +22,15 @@ import '../widgets/rejilla_adaptable.dart';
 import '../widgets/selectores_fecha_hora.dart';
 import '../widgets/tarjeta_vuelo.dart';
 
-/// Pantalla principal (V): búsqueda y lista de vuelos. No llama a la API: delega en
-/// [VuelosController] y en [FiltroVuelosController].
+/// Pantalla principal operativa (V): búsqueda y catálogo de vuelos.
+/// Delega toda lógica en [VuelosController] y [FiltroVuelosController].
 class VuelosPage extends ConsumerWidget {
   const VuelosPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final usuario = ref.watch(sesionControllerProvider).value;
-    if (usuario == null) return const SizedBox.shrink(); // el router ya está redirigiendo al login
+    if (usuario == null) return const SizedBox.shrink();
 
     final vuelos = ref.watch(vuelosControllerProvider);
     final filtro = ref.watch(filtroVuelosProvider);
@@ -47,9 +47,11 @@ class VuelosPage extends ConsumerWidget {
               final saludo = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TituloCinetico(
+                  Text(
                     'Hola, ${usuario.nombre.split(' ').first}',
-                    estilo: AppTextStyles.titulo,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.titulo,
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -87,7 +89,6 @@ class VuelosPage extends ConsumerWidget {
             },
           ),
           const SizedBox(height: 16),
-          // La clave por filtro rehace los campos si el filtro cambia desde fuera.
           _FormularioBusqueda(key: ValueKey((filtro.origen, filtro.destino, filtro.fecha)), inicial: filtro),
           const SizedBox(height: 20),
           ..._resultado(context, ref, vuelos, filtro, esAdmin: usuario.esAdmin),
@@ -116,10 +117,9 @@ class VuelosPage extends ConsumerWidget {
     }
     final pagina = vuelos.value!;
     final lista = pagina.vuelos;
-    final actualizando = vuelos.isLoading; // se muestra la página anterior mientras llega la nueva
+    final actualizando = vuelos.isLoading;
     if (lista.isEmpty) {
-      final fueraDeRango = pagina.total > 0; // pidió una página que ya no existe (salieron vuelos)
-      // El gestor no ve el texto de cliente: necesita el siguiente paso (crear el vuelo).
+      final fueraDeRango = pagina.total > 0;
       final catalogoVacioAdmin = esAdmin && !fueraDeRango && filtro.vacio;
       return [
         VacioVista(
@@ -155,12 +155,13 @@ class VuelosPage extends ConsumerWidget {
       Padding(
         padding: const EdgeInsets.only(bottom: 10),
         child: Text(
-          pagina.total == 1 ? '1 vuelo disponible' : '${pagina.total} vuelos disponibles',
-          style: AppTextStyles.nota.copyWith(fontWeight: FontWeight.w700),
+          pagina.total == 1 ? '1 vuelo disponible' : '${Formatos.entero(pagina.total)} vuelos disponibles',
+          style: AppTextStyles.nota.copyWith(fontWeight: FontWeight.w700, fontFeatures: AppTextStyles.tabular),
         ),
       ),
-      Opacity(
+      AnimatedOpacity(
         opacity: actualizando ? 0.5 : 1,
+        duration: AppMotion.opacidadDe(context),
         child: RejillaAdaptable(
           hijos: [
             for (final vuelo in lista)
@@ -192,8 +193,6 @@ class _FormularioBusquedaState extends ConsumerState<_FormularioBusqueda> {
   late final _origen = TextEditingController(text: widget.inicial.origen);
   late final _destino = TextEditingController(text: widget.inicial.destino);
   late DateTime? _fecha = widget.inicial.fecha;
-
-  /// El buscador se puede plegar para dejar más espacio a los resultados.
   bool _abierto = true;
 
   @override
@@ -220,7 +219,6 @@ class _FormularioBusquedaState extends ConsumerState<_FormularioBusqueda> {
     ref.read(filtroVuelosProvider.notifier).limpiar();
   }
 
-  /// Intercambia origen y destino sin perder lo que ya estaba escrito.
   void _intercambiar() {
     final origen = _origen.text;
     _origen.text = _destino.text;
@@ -229,7 +227,6 @@ class _FormularioBusquedaState extends ConsumerState<_FormularioBusqueda> {
 
   Future<DateTime?> _elegirFecha() => elegirFechaDeVuelo(context, inicial: _fecha);
 
-  /// Quita un filtro activo desde su chip (sin perder los demás).
   void _quitarFiltro({bool origen = false, bool destino = false, bool fecha = false}) {
     if (origen) _origen.clear();
     if (destino) _destino.clear();
@@ -240,6 +237,15 @@ class _FormularioBusquedaState extends ConsumerState<_FormularioBusqueda> {
           fecha: fecha ? null : _fecha,
         ));
   }
+
+  Widget _chipFiltro(String texto, {required String tooltip, required VoidCallback onDeleted}) => InputChip(
+        label: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 210),
+          child: Text(texto, overflow: TextOverflow.ellipsis, maxLines: 1),
+        ),
+        onDeleted: onDeleted,
+        deleteButtonTooltipMessage: tooltip,
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -257,21 +263,22 @@ class _FormularioBusquedaState extends ConsumerState<_FormularioBusqueda> {
                 const SizedBox(width: 8),
                 const Expanded(
                   child: Text('Filtros de búsqueda', style: AppTextStyles.etiqueta),
-                ),                IconButton(
+                ),
+                IconButton(
                   tooltip: _abierto ? 'Ocultar filtros' : 'Mostrar filtros',
                   onPressed: () => setState(() => _abierto = !_abierto),
                   icon: AnimatedRotation(
                     turns: _abierto ? 0.5 : 0,
                     duration: AppMotion.rapidaDe(context),
+                    curve: AppMotion.curvaSalidaFuerte,
                     child: const Icon(Icons.expand_more),
                   ),
                 ),
               ],
             ),
-            // El formulario se pliega y despliega con geometría líquida.
             ContenedorLiquidMorph(
               expandido: _abierto,
-              radio: 16,
+              radio: 14,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -284,22 +291,22 @@ class _FormularioBusquedaState extends ConsumerState<_FormularioBusqueda> {
                       runSpacing: 6,
                       children: [
                         if (widget.inicial.origen.isNotEmpty)
-                          InputChip(
-                            label: Text('Origen: ${widget.inicial.origen}'),
+                          _chipFiltro(
+                            'Origen: ${widget.inicial.origen}',
+                            tooltip: 'Quitar filtro de origen',
                             onDeleted: () => _quitarFiltro(origen: true),
-                            deleteButtonTooltipMessage: 'Quitar filtro de origen',
                           ),
                         if (widget.inicial.destino.isNotEmpty)
-                          InputChip(
-                            label: Text('Destino: ${widget.inicial.destino}'),
+                          _chipFiltro(
+                            'Destino: ${widget.inicial.destino}',
+                            tooltip: 'Quitar filtro de destino',
                             onDeleted: () => _quitarFiltro(destino: true),
-                            deleteButtonTooltipMessage: 'Quitar filtro de destino',
                           ),
                         if (widget.inicial.fecha != null)
-                          InputChip(
-                            label: Text('Fecha: ${Formatos.fecha(widget.inicial.fecha!)}'),
+                          _chipFiltro(
+                            'Fecha: ${Formatos.fecha(widget.inicial.fecha!)}',
+                            tooltip: 'Quitar filtro de fecha',
                             onDeleted: () => _quitarFiltro(fecha: true),
-                            deleteButtonTooltipMessage: 'Quitar filtro de fecha',
                           ),
                       ],
                     ),
@@ -313,8 +320,6 @@ class _FormularioBusquedaState extends ConsumerState<_FormularioBusqueda> {
     );
   }
 
-  // La etiqueta flotante de los campos sube sobre el borde superior; el contenedor animado
-  // recorta todo lo que sale de sus límites, así que se le deja este espacio arriba.
   static const _espacioEtiqueta = 8.0;
 
   Widget _campos(BuildContext context) {
@@ -374,40 +379,45 @@ class _FormularioBusquedaState extends ConsumerState<_FormularioBusqueda> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(child: origen),
-                IconButton(
-                  tooltip: 'Intercambiar origen y destino',
-                  onPressed: _intercambiar,
-                  icon: const Icon(Icons.swap_horiz),
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: IconButton(
+                    tooltip: 'Intercambiar origen y destino',
+                    onPressed: _intercambiar,
+                    icon: const Icon(Icons.swap_horiz),
+                  ),
                 ),
                 Expanded(child: destino),
               ],
             );
           },
         ),
-        // La ruta escrita se compone en tipografía cinética solo cuando hay ambos
-        // datos. Ocupa una altura fija para no desplazar los botones mientras se
-        // escribe (el layout no baila entre pulsaciones).
+        // Reserva altura mínima fija para no desplazar los botones al escribir (sin recortar rutas largas).
         ListenableBuilder(
           listenable: Listenable.merge([_origen, _destino]),
           builder: (context, _) {
             final desde = _origen.text.trim();
             final hacia = _destino.text.trim();
-            return SizedBox(
-              height: 28,
+            return ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 32),
               child: desde.isEmpty || hacia.isEmpty
                   ? const SizedBox.shrink()
                   : Align(
                       alignment: Alignment.centerLeft,
-                      child: TextoRutaCinetica(
-                        origen: desde,
-                        destino: hacia,
-                        estilo: AppTextStyles.cuerpo.copyWith(fontWeight: FontWeight.w800, color: AppColors.azul),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: TextoRutaCinetica(
+                          origen: desde,
+                          destino: hacia,
+                          maxLines: 2,
+                          estilo: AppTextStyles.cuerpo.copyWith(fontWeight: FontWeight.w800, color: AppColors.azul),
+                        ),
                       ),
                     ),
             );
           },
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         fecha,
         const SizedBox(height: 14),
         Wrap(
