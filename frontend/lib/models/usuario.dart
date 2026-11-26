@@ -43,11 +43,16 @@ class Usuario {
 
   bool get esAdmin => rol == Rol.admin;
 
-  /// "Ana Torres" -> "AT"; "Ana" -> "A".
+  /// "Ana Torres" -> "AT"; "Ana" -> "A". Usa code points completos (runes) para no partir Unicode.
   String get iniciales {
-    final partes = nombre.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
-    if (partes.isEmpty) return '?';
-    if (partes.length == 1) return partes.first[0].toUpperCase();
-    return (partes.first[0] + partes.last[0]).toUpperCase();
+    const particulas = {'de', 'del', 'la', 'las', 'los', 'y', 'jr', 'jr.', 'sr', 'sr.', 'ii', 'iii', 'iv'};
+    final todas = nombre.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (todas.isEmpty) return '?';
+    final significativas = todas.where((p) => !particulas.contains(p.toLowerCase())).toList();
+    final partes = significativas.isNotEmpty ? significativas : todas;
+    final primera = String.fromCharCode(partes.first.runes.first);
+    if (partes.length == 1) return primera.toUpperCase();
+    final ultima = String.fromCharCode(partes.last.runes.first);
+    return (primera + ultima).toUpperCase();
   }
 }

@@ -256,7 +256,7 @@ void main() {
       await tester.ensureVisible(find.text('Rige desde'));
       await tester.tap(find.byWidgetPredicate((w) => w.runtimeType.toString().startsWith('CampoSelector<DateTime>')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('OK'));
+      await tester.tap(find.text(MaterialLocalizations.of(tester.element(find.byType(Dialog).last)).okButtonLabel));
       await tester.pumpAndSettle();
 
       await tester.ensureVisible(find.text('Programar cambio').last);
@@ -288,7 +288,7 @@ void main() {
       await tester.ensureVisible(find.text('Rige desde'));
       await tester.tap(find.byWidgetPredicate((w) => w.runtimeType.toString().startsWith('CampoSelector<DateTime>')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('OK'));
+      await tester.tap(find.text(MaterialLocalizations.of(tester.element(find.byType(Dialog).last)).okButtonLabel));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Programar cambio').last);
       await tester.tap(find.text('Programar cambio').last);
@@ -309,7 +309,7 @@ void main() {
       await tester.ensureVisible(find.text('Rige desde'));
       await tester.tap(find.byWidgetPredicate((w) => w.runtimeType.toString().startsWith('CampoSelector<DateTime>')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('OK'));
+      await tester.tap(find.text(MaterialLocalizations.of(tester.element(find.byType(Dialog).last)).okButtonLabel));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Programar cambio').last);
       await tester.tap(find.text('Programar cambio').last);

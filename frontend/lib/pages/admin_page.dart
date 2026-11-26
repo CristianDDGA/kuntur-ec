@@ -6,11 +6,11 @@ import '../config/app_router.dart';
 import '../config/app_theme.dart';
 import '../controllers/iva_controller.dart';
 import '../controllers/resumen_ventas_controller.dart';
+import '../models/fallo.dart';
 import '../models/resumen_ventas.dart';
 import '../models/tarifa_iva.dart';
 import '../models/validadores_vuelo.dart';
 import '../models/vuelo.dart';
-import '../services/api_exception.dart';
 import '../widgets/aviso.dart';
 import '../widgets/boton_degradado.dart';
 import '../widgets/campo_selector.dart';
@@ -23,9 +23,9 @@ import '../widgets/kinetic_type.dart';
 import '../widgets/kuntur_scaffold.dart';
 import '../widgets/navegacion_principal.dart';
 import '../widgets/selectores_fecha_hora.dart';
+import '../widgets/skeleton_kuntur.dart';
 
-/// Panel del administrador (V): acceso a crear vuelos y gestión del IVA.
-/// Solo lo ve quien tiene rol admin (lo garantiza el router y, además, el servidor con 403).
+/// Panel del administrador (V): resumen de ventas, vuelos, flota CSV y gestión del IVA.
 class AdminPage extends ConsumerWidget {
   const AdminPage({super.key});
 
@@ -35,11 +35,10 @@ class AdminPage extends ConsumerWidget {
 
     return KunturScaffold(
       seccion: Seccion.administracion,
-      maxAncho: 900,
+      maxAncho: 920,
       onRefrescar: () async {
         ref.invalidate(ivaControllerProvider);
         ref.invalidate(resumenVentasProvider);
-        // Espera la respuesta: así el indicador de refresco no termina antes de llegar los datos.
         await ref.read(ivaControllerProvider.future);
       },
       body: ListView(
@@ -74,7 +73,6 @@ class AdminPage extends ConsumerWidget {
   }
 }
 
-/// Resumen de ventas: si falla la carga no bloquea el resto del panel (solo muestra un aviso discreto).
 class _TarjetaResumenVentas extends ConsumerWidget {
   const _TarjetaResumenVentas();
 
@@ -89,8 +87,8 @@ class _TarjetaResumenVentas extends ConsumerWidget {
         children: [
           const Row(
             children: [
-              Icon(Icons.insights, color: AppColors.azul, size: 26),
-              SizedBox(width: 12),
+              Icon(Icons.insights, color: AppColors.azul, size: 24),
+              SizedBox(width: 10),
               Expanded(child: Text('Resumen de ventas', style: AppTextStyles.subtitulo)),
             ],
           ),
@@ -105,7 +103,7 @@ class _TarjetaResumenVentas extends ConsumerWidget {
               ],
             )
           else
-            const LinearProgressIndicator(),
+            const SkeletonKpiResumen(),
         ],
       ),
     );
@@ -119,55 +117,115 @@ class _CifrasVentas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget cifra(String etiqueta, String valor) => SizedBox(
-          width: 170,
+    Widget kpiFinanciero(String etiqueta, String valor) => Container(
+          padding: const EdgeInsets.all(14),
+          decoration: AppDecorations.panelSutil,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(valor, style: AppTextStyles.subtitulo.copyWith(color: AppColors.azul)),
               Text(etiqueta, style: AppTextStyles.nota),
+              const SizedBox(height: 4),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(valor, style: AppTextStyles.moneda.copyWith(fontSize: 22, color: AppColors.azul)),
+              ),
             ],
           ),
         );
+
+    Widget kpiOperativo(String etiqueta, String valor) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              valor,
+              style: AppTextStyles.subtitulo.copyWith(
+                fontSize: 17,
+                color: AppColors.textoPrincipal,
+                fontFeatures: AppTextStyles.tabular,
+              ),
+            ),
+            Text(etiqueta, style: AppTextStyles.nota),
+          ],
+        );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         LayoutBuilder(
           builder: (context, caja) {
-            final columnas = caja.maxWidth < 340
-                ? 1
-                : caja.maxWidth < 560
-                    ? 2
-                    : 3;
-            final ancho = (caja.maxWidth - 16 * (columnas - 1)) / columnas;
-            final cifras = [
+            final financieros = [
               ('Ingresos totales', Formatos.dinero(resumen.totalCentavos)),
               ('IVA recaudado', Formatos.dinero(resumen.ivaCentavos)),
-              ('Reservas confirmadas', '${resumen.confirmadas}'),
-              ('Reservas canceladas', '${resumen.canceladas}'),
-              ('Asientos vendidos', '${resumen.asientosVendidos}'),
             ];
-            return Wrap(
-              spacing: 16,
-              runSpacing: 12,
+            final operativos = [
+              ('Reservas confirmadas', Formatos.entero(resumen.confirmadas)),
+              ('Reservas canceladas', Formatos.entero(resumen.canceladas)),
+              ('Asientos vendidos', Formatos.entero(resumen.asientosVendidos)),
+            ];
+            final dosCol = caja.maxWidth >= 420;
+            final tresCol = caja.maxWidth >= 520;
+            final anchoOp = tresCol
+                ? (caja.maxWidth - 32) / 3
+                : dosCol
+                    ? (caja.maxWidth - 16) / 2
+                    : caja.maxWidth;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                for (final c in cifras) SizedBox(width: ancho, child: cifra(c.$1, c.$2)),
+                if (dosCol)
+                  Row(
+                    children: [
+                      Expanded(child: kpiFinanciero(financieros[0].$1, financieros[0].$2)),
+                      const SizedBox(width: 12),
+                      Expanded(child: kpiFinanciero(financieros[1].$1, financieros[1].$2)),
+                    ],
+                  )
+                else ...[
+                  kpiFinanciero(financieros[0].$1, financieros[0].$2),
+                  const SizedBox(height: 10),
+                  kpiFinanciero(financieros[1].$1, financieros[1].$2),
+                ],
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 12,
+                  children: [
+                    for (final c in operativos) SizedBox(width: anchoOp, child: kpiOperativo(c.$1, c.$2)),
+                  ],
+                ),
               ],
             );
           },
         ),
         if (resumen.top.isNotEmpty) ...[
-          const SizedBox(height: 14),
+          const Divider(height: 26, color: AppColors.divisor),
           const Text('Vuelos con más ingresos', style: AppTextStyles.etiqueta),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           for (final v in resumen.top)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 3),
+              padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 children: [
-                  SizedBox(width: 64, child: Text(v.codigo, style: const TextStyle(fontWeight: FontWeight.w800))),
-                  Expanded(child: Text('${v.ruta} · ${v.asientos} asientos', style: AppTextStyles.nota)),
-                  Text(Formatos.dinero(v.totalCentavos), style: const TextStyle(fontWeight: FontWeight.w700)),
+                  SizedBox(width: 64, child: Text(v.codigo, style: AppTextStyles.codigo)),
+                  Expanded(
+                    child: Text(
+                      '${v.ruta} · ${Formatos.entero(v.asientos)} ${v.asientos == 1 ? 'asiento' : 'asientos'}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.nota.copyWith(fontFeatures: AppTextStyles.tabular),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    Formatos.dinero(v.totalCentavos),
+                    softWrap: false,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textoPrincipal,
+                      fontFeatures: AppTextStyles.tabular,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -198,7 +256,7 @@ class _TarjetaAccionAdmin extends StatelessWidget {
           builder: (context, caja) {
             final info = Row(
               children: [
-                Icon(icono, color: AppColors.azul, size: 30),
+                Icon(icono, color: AppColors.azul, size: 28),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -212,7 +270,7 @@ class _TarjetaAccionAdmin extends StatelessWidget {
                 ),
               ],
             );
-            if (caja.maxWidth < 400) {
+            if (caja.maxWidth < 460) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -226,7 +284,6 @@ class _TarjetaAccionAdmin extends StatelessWidget {
               children: [
                 Expanded(child: info),
                 const SizedBox(width: 12),
-                // Flexible: si hay varios botones (Wrap) bajan a otra línea en vez de desbordar.
                 Flexible(child: Align(alignment: Alignment.centerRight, child: accion)),
               ],
             );
@@ -272,7 +329,7 @@ class _TarjetaAviones extends StatelessWidget {
         icono: Icons.airplanemode_active,
         titulo: 'Aviones',
         descripcion: 'Cargue la flota desde un archivo CSV. Los asientos se generan solos.',
-        accion: FilledButton.icon(
+        accion: OutlinedButton.icon(
           onPressed: onImportar,
           icon: const Icon(Icons.upload_file),
           label: const Text('Importar'),
@@ -293,8 +350,8 @@ class _SeccionIvaState extends ConsumerState<_SeccionIva> {
   final _formulario = GlobalKey<FormState>();
   final _porcentaje = TextEditingController();
   DateTime? _desde;
-  bool _enviando = false; // hay una petición en curso (se muestra el indicador de carga)
-  bool _ocupado = false; // confirmando o enviando: ignora toques repetidos
+  bool _enviando = false;
+  bool _ocupado = false;
   String? _error;
 
   @override
@@ -310,11 +367,9 @@ class _SeccionIvaState extends ConsumerState<_SeccionIva> {
     FocusScope.of(context).unfocus();
     final texto = _porcentaje.text.trim().replaceAll(',', '.');
     final desde = _desde!;
-    // Bloquea de inmediato: un doble toque no abre dos confirmaciones ni envía dos cambios.
     _ocupado = true;
     setState(() => _error = null);
 
-    // Cambiar el impuesto afecta a todas las reservas nuevas: se pide confirmar.
     final actual = widget.resumen.vigente?.porcentajeCorto;
     final nuevo = _porcentajeCorto(texto);
     final desdeTexto = Formatos.fecha(desde);
@@ -376,8 +431,8 @@ class _SeccionIvaState extends ConsumerState<_SeccionIva> {
         children: [
           const Row(
             children: [
-              Icon(Icons.percent, color: AppColors.azul, size: 28),
-              SizedBox(width: 12),
+              Icon(Icons.percent, color: AppColors.azul, size: 26),
+              SizedBox(width: 10),
               Text('IVA', style: AppTextStyles.subtitulo),
             ],
           ),
@@ -399,10 +454,12 @@ class _SeccionIvaState extends ConsumerState<_SeccionIva> {
                   height: 1,
                 ),
               ),
-              pie: Text('vigente desde ${Formatos.fecha(vigente.vigenteDesde)}', style: AppTextStyles.cuerpo),
+              pie: Text(
+                'vigente desde ${Formatos.fecha(vigente.vigenteDesde)}',
+                style: AppTextStyles.cuerpo.copyWith(fontFeatures: AppTextStyles.tabular),
+              ),
             ),
             const SizedBox(height: 10),
-            // Línea de tiempo del impuesto: pasado, presente y futuro en una sola lectura.
             const Row(
               children: [
                 Icon(Icons.timeline, size: 16, color: AppColors.textoSuave),
@@ -423,7 +480,7 @@ class _SeccionIvaState extends ConsumerState<_SeccionIva> {
                   Expanded(
                     child: Text(
                       'Próxima tarifa programada: ${programada.porcentajeCorto} desde el ${Formatos.fecha(programada.vigenteDesde)}',
-                      style: AppTextStyles.cuerpo.copyWith(color: AppColors.info),
+                      style: AppTextStyles.cuerpo.copyWith(color: AppColors.info, fontFeatures: AppTextStyles.tabular),
                     ),
                   ),
                 ],
@@ -451,6 +508,8 @@ class _SeccionIvaState extends ConsumerState<_SeccionIva> {
                   enabled: !_enviando,
                   hint: '15',
                   ayuda: 'De 0 a 100, hasta 2 decimales.',
+                  tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
+                  textInputAction: TextInputAction.next,
                   inputFormatters: ValidadoresVuelo.entradaPorcentaje,
                   validador: ValidadoresVuelo.porcentaje,
                 ),
@@ -492,14 +551,14 @@ class _SeccionIvaState extends ConsumerState<_SeccionIva> {
   }
 }
 
-/// "13.00" → "13", "12.50" → "12.5" (mismo formato que muestra una tarifa guardada).
 String _porcentajeCorto(String texto) {
   final partes = texto.trim().split('.');
   final decimales = partes.length > 1 ? partes[1].replaceFirst(RegExp(r'0+$'), '') : '';
   return decimales.isEmpty ? partes[0] : '${partes[0]}.$decimales';
 }
 
-class _FilaTarifa extends StatelessWidget {  const _FilaTarifa({required this.tarifa});
+class _FilaTarifa extends StatelessWidget {
+  const _FilaTarifa({required this.tarifa});
 
   final TarifaIva tarifa;
 
@@ -511,26 +570,45 @@ class _FilaTarifa extends StatelessWidget {  const _FilaTarifa({required this.ta
       EstadoTarifa.anterior => ('Anterior', TipoInsignia.neutro),
     };
     final hasta = tarifa.vigenteHasta;
+    final rango = hasta == null
+        ? 'Desde ${Formatos.fecha(tarifa.vigenteDesde)}'
+        : '${Formatos.fecha(tarifa.vigenteDesde)} → ${Formatos.fecha(hasta.subtract(const Duration(days: 1)))}';
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 58,
-            child: Text(tarifa.porcentajeCorto, style: AppTextStyles.subtitulo.copyWith(fontSize: 16)),
-          ),
-          Expanded(
+      child: LayoutBuilder(
+        builder: (context, caja) {
+          final valor = ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 64),
             child: Text(
-              hasta == null
-                  ? 'Desde ${Formatos.fecha(tarifa.vigenteDesde)}'
-                  : '${Formatos.fecha(tarifa.vigenteDesde)} → ${Formatos.fecha(hasta.subtract(const Duration(days: 1)))}',
-              style: AppTextStyles.cuerpo,
+              tarifa.porcentajeCorto,
+              softWrap: false,
+              style: AppTextStyles.subtitulo.copyWith(fontSize: 16, fontFeatures: AppTextStyles.tabular),
             ),
-          ),
-          const SizedBox(width: 8),
-          InsigniaEstado(texto: texto, tipo: tipo),
-        ],
+          );
+          final fechas = Text(rango, style: AppTextStyles.cuerpo.copyWith(fontFeatures: AppTextStyles.tabular));
+          final insignia = InsigniaEstado(texto: texto, tipo: tipo);
+          if (caja.maxWidth < 340) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [valor, const Spacer(), insignia]),
+                const SizedBox(height: 2),
+                fechas,
+              ],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              valor,
+              const SizedBox(width: 8),
+              Expanded(child: fechas),
+              const SizedBox(width: 8),
+              insignia,
+            ],
+          );
+        },
       ),
     );
   }

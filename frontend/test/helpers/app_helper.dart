@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vuelos_app/config/app_router.dart';
 import 'package:vuelos_app/config/providers.dart';
+import 'package:vuelos_app/controllers/vuelos_controller.dart';
 import 'package:vuelos_app/pages/inicio_page.dart';
 import 'package:vuelos_app/main.dart';
 import 'package:vuelos_app/services/auth_service.dart';

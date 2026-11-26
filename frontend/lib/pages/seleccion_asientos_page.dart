@@ -11,9 +11,9 @@ import '../controllers/reserva_detalle_controller.dart';
 import '../controllers/reservar_controller.dart';
 import '../controllers/vuelo_detalle_controller.dart';
 import '../models/asientos.dart';
+import '../models/fallo.dart';
 import '../models/reserva.dart';
 import '../models/vuelo.dart';
-import '../services/api_exception.dart';
 import '../widgets/asiento_boton.dart';
 import '../widgets/aviso.dart';
 import '../widgets/boton_degradado.dart';
@@ -27,7 +27,8 @@ import '../widgets/tarjeta_vuelo.dart';
 
 /// Elegir asientos en el mapa del avión (V).
 ///
-/// Dos usos: reservar un vuelo ([vueloId]) o cambiar los asientos de una reserva ([reservaId]).
+/// En escritorio (`>= 960 px`) presenta una vista dividida: cabina 3 + pasillo + 3 a la
+/// izquierda y resumen/confirmación fijo a la derecha. En móvil/tablet mantiene el resumen anclado abajo.
 class SeleccionAsientosPage extends ConsumerWidget {
   const SeleccionAsientosPage({super.key, this.vueloId, this.reservaId})
       : assert((vueloId == null) != (reservaId == null), 'Indique vueloId (reservar) o reservaId (modificar).');
@@ -39,36 +40,53 @@ class SeleccionAsientosPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (reservaId == null) return _Mapa(vueloId: vueloId!);
 
-    // Modificar: primero se lee la reserva para saber el vuelo y los asientos actuales.
     final reserva = ref.watch(reservaDetalleControllerProvider(reservaId!));
+    final numero = Reserva.numeroDe(reservaId!);
+    final migasReserva = Migas([
+      const Miga('Mis reservas', ruta: AppRoutes.reservas),
+      Miga(numero, ruta: AppRoutes.reserva(reservaId!), etiquetaSemantica: 'Volver a la reserva $numero'),
+      const Miga('Cambiar asientos'),
+    ]);
+
     return reserva.when(
-      loading: () => const KunturScaffold(
+      loading: () => KunturScaffold(
         conAtras: true,
-        maxAncho: 1000,
-        body: Padding(padding: EdgeInsets.all(16), child: CargandoDetalleVista()),
+        maxAncho: 1120,
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [migasReserva, const SizedBox(height: 12), const CargandoDetalleVista()],
+        ),
       ),
       error: (e, _) => KunturScaffold(
         conAtras: true,
-        maxAncho: 1000,
-        body: Padding(
+        maxAncho: 1120,
+        body: ListView(
           padding: const EdgeInsets.all(16),
-          child: ErrorVista(
-            mensaje: mensajeDeError(e),
-            onReintentar: () => ref.invalidate(reservaDetalleControllerProvider(reservaId!)),
-          ),
+          children: [
+            migasReserva,
+            const SizedBox(height: 12),
+            ErrorVista(
+              mensaje: mensajeDeError(e),
+              onReintentar: () => ref.invalidate(reservaDetalleControllerProvider(reservaId!)),
+            ),
+          ],
         ),
       ),
       data: (r) => r.puedeEditarse()
           ? _Mapa(vueloId: r.vueloId, reserva: r)
-          : const KunturScaffold(
+          : KunturScaffold(
               conAtras: true,
-              maxAncho: 1000,
-              body: Padding(
-                padding: EdgeInsets.all(16),
-                child: AvisoInline(
-                  tipo: TipoAviso.info,
-                  texto: 'Esta reserva ya no se puede modificar (está cancelada o el vuelo ya partió).',
-                ),
+              maxAncho: 1120,
+              body: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  migasReserva,
+                  const SizedBox(height: 12),
+                  const AvisoInline(
+                    tipo: TipoAviso.info,
+                    texto: 'Esta reserva ya no se puede modificar (está cancelada o el vuelo ya partió).',
+                  ),
+                ],
               ),
             ),
     );
@@ -79,8 +97,6 @@ class _Mapa extends ConsumerStatefulWidget {
   const _Mapa({required this.vueloId, this.reserva});
 
   final int vueloId;
-
-  /// Si viene, se están cambiando los asientos de esta reserva.
   final Reserva? reserva;
 
   @override
@@ -95,7 +111,6 @@ class _MapaState extends ConsumerState<_Mapa> {
 
   bool get _editando => widget.reserva != null;
 
-  /// Asientos con los que empezó la reserva (al modificar). El mapa los muestra como libres para su dueño.
   Set<String> get _propios => widget.reserva?.asientos.toSet() ?? const {};
 
   bool get _sinCambios => _editando && _seleccion == SeleccionAsientos(_propios);
@@ -114,7 +129,6 @@ class _MapaState extends ConsumerState<_Mapa> {
     });
   }
 
-  /// Vuelve a dejar la selección como al entrar: en blanco al reservar, con los asientos originales al modificar.
   void _reiniciar() => setState(() {
         _seleccion = SeleccionAsientos(_propios);
         _error = null;
@@ -125,7 +139,6 @@ class _MapaState extends ConsumerState<_Mapa> {
     await ref.read(mapaAsientosControllerProvider(widget.vueloId).notifier).recargar();
     final mapa = ref.read(mapaAsientosControllerProvider(widget.vueloId)).value;
     if (mapa != null && mounted) {
-      // Si mientras tanto alguien tomó un asiento ya marcado, se quita de la selección.
       final tomados = _seleccion.elegidos.where((a) => mapa.ocupados.contains(a) && !_propios.contains(a));
       if (tomados.isNotEmpty) setState(() => _seleccion = _seleccion.sin(tomados));
     }
@@ -164,11 +177,10 @@ class _MapaState extends ConsumerState<_Mapa> {
       setState(() {
         _error = mensajeDeError(e);
         _conflicto = ocupados.isNotEmpty;
-        if (ocupados.isNotEmpty) _seleccion = _seleccion.sin(ocupados); // ya no están libres
+        if (ocupados.isNotEmpty) _seleccion = _seleccion.sin(ocupados);
       });
-      // Al reservar, el controlador ya vuelve a pedir el mapa (con éxito o sin él); al modificar lo hacemos aquí.
       if (_editando && e is ServerFailure && e.statusCode == 409) {
-        await _actualizarMapa(); // se ve lo que quedó libre
+        await _actualizarMapa();
       }
     } finally {
       if (mounted) setState(() => _enviando = false);
@@ -180,9 +192,8 @@ class _MapaState extends ConsumerState<_Mapa> {
     final vuelo = ref.watch(vueloDetalleControllerProvider(widget.vueloId));
     final mapa = ref.watch(mapaAsientosControllerProvider(widget.vueloId));
     final iva = ref.watch(ivaVigenteProvider).value;
-    ref.watch(reservarControllerProvider); // lo mantiene vivo mientras se reserva (guarda el error del servidor)
+    ref.watch(reservarControllerProvider);
 
-    // Con asientos elegidos (o cambios sin guardar) la flecha "Volver" pregunta antes de salir.
     final conCambios = !_enviando && (_editando ? !_sinCambios : !_seleccion.vacia);
 
     return PopScope(
@@ -194,9 +205,8 @@ class _MapaState extends ConsumerState<_Mapa> {
       },
       child: KunturScaffold(
         conAtras: true,
-        // Mientras hay asientos elegidos, el logo confirma antes de salir (context.go no pasa por PopScope).
         alTocarInicio: conCambios ? _salirAInicio : null,
-        maxAncho: 1000,
+        maxAncho: 1120,
         body: _contenido(vuelo, mapa, iva?.porcentaje, conCambios),
       ),
     );
@@ -214,83 +224,137 @@ class _MapaState extends ConsumerState<_Mapa> {
         icono: Icons.event_seat_outlined,
       );
 
-  Future<void> _salirAInicio() async {
-    if (await _confirmarSalida() && mounted) context.go(AppRoutes.vuelos);
+  Future<void> _salirARuta(String ruta) async {
+    if (await _confirmarSalida() && mounted) context.go(ruta);
   }
+
+  Future<void> _salirAInicio() => _salirARuta(AppRoutes.vuelos);
+
+  Widget _migas(Vuelo? v, bool conCambios) => Migas(
+        _editando
+            ? [
+                const Miga('Mis reservas', ruta: AppRoutes.reservas),
+                Miga(
+                  widget.reserva!.numero,
+                  ruta: AppRoutes.reserva(widget.reserva!.id),
+                  etiquetaSemantica: 'Volver a la reserva ${widget.reserva!.numero}',
+                ),
+                const Miga('Cambiar asientos'),
+              ]
+            : [
+                const Miga('Vuelos', ruta: AppRoutes.vuelos),
+                Miga(
+                  v?.codigo ?? 'Detalle del vuelo',
+                  ruta: AppRoutes.vuelo(widget.vueloId),
+                ),
+                const Miga('Elegir asientos'),
+              ],
+        onInterceptar: conCambios ? _salirARuta : null,
+      );
 
   Widget _contenido(AsyncValue<Vuelo> vuelo, AsyncValue<MapaAsientos> mapa, String? ivaPorcentaje, bool conCambios) {
     if ((vuelo.isLoading && !vuelo.hasValue) || (mapa.isLoading && !mapa.hasValue)) {
-      return const Padding(padding: EdgeInsets.all(16), child: CargandoDetalleVista());
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [_migas(vuelo.value, false), const SizedBox(height: 12), const CargandoDetalleVista()],
+      );
     }
     final fallo = (vuelo.hasValue ? null : vuelo.error) ?? (mapa.hasValue ? null : mapa.error);
     if (fallo != null) {
-      return Padding(
+      return ListView(
         padding: const EdgeInsets.all(16),
-        child: ErrorVista(
-          mensaje: mensajeDeError(fallo),
-          onReintentar: () {
-            ref.invalidate(vueloDetalleControllerProvider(widget.vueloId));
-            ref.invalidate(mapaAsientosControllerProvider(widget.vueloId));
-          },
-        ),
+        children: [
+          _migas(vuelo.value, false),
+          const SizedBox(height: 12),
+          ErrorVista(
+            mensaje: mensajeDeError(fallo),
+            onReintentar: () {
+              ref.invalidate(vueloDetalleControllerProvider(widget.vueloId));
+              ref.invalidate(mapaAsientosControllerProvider(widget.vueloId));
+            },
+          ),
+        ],
       );
     }
 
     final v = vuelo.value!;
     final m = mapa.value!;
-    // Al modificar, los asientos de la propia reserva figuran como ocupados en el servidor: para su dueño están libres.
     final ocupados = m.ocupados.difference(_propios);
     final actualizando = mapa.isLoading;
 
-    return Column(
+    final resumen = _Resumen(
+      vuelo: v,
+      seleccion: _seleccion,
+      reserva: widget.reserva,
+      ivaPorcentaje: ivaPorcentaje,
+      error: _error,
+      conflicto: _conflicto,
+      enviando: _enviando,
+      sinCambios: _sinCambios,
+      onReiniciar: _reiniciar,
+      onConfirmar: _confirmar,
+    );
+
+    final listaCabina = ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
       children: [
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            children: [
-              Migas(_editando
-                  ? [
-                      Miga('Mis reservas', ruta: conCambios ? null : AppRoutes.reservas),
-                      Miga(widget.reserva!.numero, ruta: conCambios ? null : AppRoutes.reserva(widget.reserva!.id)),
-                      const Miga('Cambiar asientos'),
-                    ]
-                  : [
-                      Miga('Vuelos', ruta: conCambios ? null : AppRoutes.vuelos),
-                      Miga(v.codigo, ruta: conCambios ? null : AppRoutes.vuelo(v.id)),
-                      const Miga('Elegir asientos'),
-                    ]),
-              const SizedBox(height: 10),
-              _CabeceraVuelo(vuelo: v, onActualizar: actualizando ? null : _actualizarMapa, libres: m.libres),
-              const SizedBox(height: 12),
-              Text(
-                _editando
-                    ? 'Toque un asiento para soltarlo o elegir otro. Los marcados en rojo son de otras personas.'
-                    : 'Toque los asientos que quiere (hasta ${SeleccionAsientos.maximo}). Los marcados en rojo ya están ocupados.',
-                style: AppTextStyles.cuerpo,
-              ),
-              const SizedBox(height: 10),
-              const _Leyenda(),
-              const SizedBox(height: 12),
-              Opacity(
-                opacity: actualizando ? 0.5 : 1,
-                child: _Cabina(mapa: m, ocupados: ocupados, seleccion: _seleccion, onTocar: _alternar),
-              ),
-            ],
-          ),
+        _migas(v, conCambios),
+        const SizedBox(height: 10),
+        _CabeceraVuelo(vuelo: v, onActualizar: actualizando ? null : _actualizarMapa, libres: m.libres),
+        const SizedBox(height: 12),
+        Text(
+          _editando
+              ? 'Toque un asiento para soltarlo o elegir otro. Los marcados en rojo son de otras personas.'
+              : 'Toque los asientos que quiere (hasta ${SeleccionAsientos.maximo}). Los marcados en rojo ya están ocupados.',
+          style: AppTextStyles.cuerpo,
         ),
-        _Resumen(
-          vuelo: v,
-          seleccion: _seleccion,
-          reserva: widget.reserva,
-          ivaPorcentaje: ivaPorcentaje,
-          error: _error,
-          conflicto: _conflicto,
-          enviando: _enviando,
-          sinCambios: _sinCambios,
-          onReiniciar: _reiniciar,
-          onConfirmar: _confirmar,
+        const SizedBox(height: 10),
+        const _Leyenda(),
+        const SizedBox(height: 12),
+        AnimatedOpacity(
+          opacity: actualizando ? 0.5 : 1,
+          duration: AppMotion.opacidadDe(context),
+          child: _Cabina(mapa: m, ocupados: ocupados, seleccion: _seleccion, onTocar: _alternar),
         ),
       ],
+    );
+
+    return LayoutBuilder(
+      builder: (context, caja) {
+        if (caja.maxWidth >= 960) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(flex: 7, child: listaCabina),
+              SizedBox(
+                width: 390,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(0, 12, 16, 20),
+                  child: _Resumen(
+                    vuelo: v,
+                    seleccion: _seleccion,
+                    reserva: widget.reserva,
+                    ivaPorcentaje: ivaPorcentaje,
+                    error: _error,
+                    conflicto: _conflicto,
+                    enviando: _enviando,
+                    sinCambios: _sinCambios,
+                    onReiniciar: _reiniciar,
+                    onConfirmar: _confirmar,
+                    comoTarjetaLateral: true,
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+        return Column(
+          children: [
+            Expanded(child: listaCabina),
+            resumen,
+          ],
+        );
+      },
     );
   }
 }
@@ -316,23 +380,32 @@ class _CabeceraVuelo extends StatelessWidget {
                     children: [
                       CodigoVuelo(vuelo.codigo),
                       const SizedBox(width: 8),
-                      Expanded(child: Text(Formatos.fecha(vuelo.fecha), style: AppTextStyles.cuerpo)),
+                      Expanded(
+                        child: Text(
+                          Formatos.fecha(vuelo.fecha),
+                          style: AppTextStyles.cuerpo.copyWith(fontFeatures: AppTextStyles.tabular),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text('${vuelo.origen} → ${vuelo.destino}', style: AppTextStyles.subtitulo),
                   const SizedBox(height: 2),
                   Text(
-                    '${Formatos.hora(vuelo.horaSalida)} · ${Formatos.dinero(vuelo.precioCentavos)} por asiento · $libres libres',
-                    style: AppTextStyles.nota,
+                    '${Formatos.hora(vuelo.horaSalida)} · ${Formatos.dinero(vuelo.precioCentavos)} por asiento · '
+                    '${Formatos.entero(libres)} ${libres == 1 ? 'libre' : 'libres'}',
+                    style: AppTextStyles.nota.copyWith(fontFeatures: AppTextStyles.tabular),
                   ),
                 ],
               ),
             ),
-            IconButton.outlined(
-              tooltip: 'Actualizar mapa',
-              onPressed: onActualizar,
-              icon: const Icon(Icons.refresh),
+            ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              child: IconButton.outlined(
+                tooltip: 'Actualizar mapa',
+                onPressed: onActualizar,
+                icon: const Icon(Icons.refresh),
+              ),
             ),
           ],
         ),
@@ -380,11 +453,7 @@ class _Muestra extends StatelessWidget {
       );
 }
 
-/// Las filas de asientos en la distribución visual **3 + pasillo + 3**.
-///
-/// El contrato del backend no cambia (A–D por fila lógica): la secuencia lineal
-/// [MapaAsientos.todos] se reparte en filas visuales de 6 asientos, 3 a cada
-/// lado del pasillo central, conservando los códigos reales de cada asiento.
+/// Las filas de asientos en distribución **3 + pasillo + 3** con separación táctil entre butacas.
 class _Cabina extends StatelessWidget {
   const _Cabina({required this.mapa, required this.ocupados, required this.seleccion, required this.onTocar});
 
@@ -393,20 +462,12 @@ class _Cabina extends StatelessWidget {
   final SeleccionAsientos seleccion;
   final ValueChanged<String> onTocar;
 
-  /// Asientos por lado del pasillo.
   static const int columnasPorLado = 3;
-
-  /// Asientos por fila visual: 3 + 3.
   static const int porFila = columnasPorLado * 2;
-
-  /// Ancho del pasillo central.
-  static const double _pasillo = 18;
-
-  /// Ancho del indicador de fila lógica (a la izquierda).
-  static const double _indicador = 26;
-
-  /// Holgura reservada para que la fila nunca desborde.
-  static const double _holgura = 8;
+  static const double _pasillo = 20;
+  static const double _indicador = 28;
+  static const double _espacioButaca = 2;
+  static const double _holgura = 12;
 
   static const List<String> _posicionesIzquierda = ['I', 'II', 'III'];
   static const List<String> _posicionesDerecha = ['IV', 'V', 'VI'];
@@ -417,26 +478,24 @@ class _Cabina extends StatelessWidget {
     final filasVisuales = (todos.length + porFila - 1) ~/ porFila;
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       decoration: AppDecorations.tarjeta,
       child: Column(
         children: [
-          // Proa isométrica 2.5D: sustituye la silueta plana de la cabina.
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 18),
-            child: ProaIsometricaAvion(alto: 54),
+            child: ProaIsometricaAvion(alto: 52),
           ),
           Text('Frente del avión', style: AppTextStyles.nota.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
           LayoutBuilder(
             builder: (context, caja) {
-              // 6 butacas (44–48) + pasillo (18) + indicador (26) + holgura (8).
-              final lado = ((caja.maxWidth - _pasillo - _indicador - _holgura) / porFila).clamp(44.0, 48.0);
-              final ancho = lado * porFila + _pasillo + _indicador;
+              const separaciones = _espacioButaca * 4;
+              final lado = ((caja.maxWidth - _pasillo - _indicador - separaciones - _holgura) / porFila)
+                  .clamp(44.0, 48.0);
+              final ancho = lado * porFila + _pasillo + _indicador + separaciones;
               final tablero = _tablero(lado, filasVisuales, todos);
               if (caja.maxWidth >= ancho) return Center(child: tablero);
-              // En anchos menores que el mínimo HIG (menos de 340 pt de pantalla)
-              // se escala el tablero para no desbordar el contenedor.
               return FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.topCenter,
@@ -457,37 +516,42 @@ class _Cabina extends StatelessWidget {
           Text(
             'Ventana · Pasillo · Ventana',
             textAlign: TextAlign.center,
-            style: AppTextStyles.nota.copyWith(fontSize: 11),
+            style: AppTextStyles.nota.copyWith(fontSize: 11.5),
           ),
           const SizedBox(height: 6),
           for (var fila = 0; fila < filasVisuales; fila++)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 1),
+              padding: const EdgeInsets.symmetric(vertical: 1.5),
               child: _fila(fila, lado, todos),
             ),
         ],
       );
 
-  /// Encabezado superior de las 6 posiciones (`I II III | IV V VI`).
   Widget _encabezado(double lado) {
     Widget posicion(String etiqueta) => SizedBox(
           width: lado,
           child: Center(
-            child: Text(etiqueta, style: AppTextStyles.nota.copyWith(fontWeight: FontWeight.w800, fontSize: 11)),
+            child: Text(etiqueta, style: AppTextStyles.nota.copyWith(fontWeight: FontWeight.w800, fontSize: 11.5)),
           ),
         );
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         const SizedBox(width: _indicador),
-        for (final etiqueta in _posicionesIzquierda) posicion(etiqueta),
+        for (var i = 0; i < _posicionesIzquierda.length; i++) ...[
+          if (i > 0) const SizedBox(width: _espacioButaca),
+          posicion(_posicionesIzquierda[i]),
+        ],
         SizedBox(
           width: _pasillo,
           child: Center(
             child: Text('|', style: AppTextStyles.nota.copyWith(color: AppColors.borde, fontWeight: FontWeight.w700)),
           ),
         ),
-        for (final etiqueta in _posicionesDerecha) posicion(etiqueta),
+        for (var i = 0; i < _posicionesDerecha.length; i++) ...[
+          if (i > 0) const SizedBox(width: _espacioButaca),
+          posicion(_posicionesDerecha[i]),
+        ],
       ],
     );
   }
@@ -498,7 +562,6 @@ class _Cabina extends StatelessWidget {
       for (var posicion = 0; posicion < porFila; posicion++)
         base + posicion < todos.length ? todos[base + posicion] : null,
     ];
-    // Fila lógica real del primer asiento de esta fila visual.
     final primerAsiento = numeros.firstWhere((numero) => numero != null)!;
     final filaLogica = int.parse(primerAsiento.substring(0, primerAsiento.length - 1));
 
@@ -507,10 +570,17 @@ class _Cabina extends StatelessWidget {
       children: [
         SizedBox(
           width: _indicador,
-          child: Text('$filaLogica', textAlign: TextAlign.center, style: AppTextStyles.nota),
+          child: Text(
+            '$filaLogica',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.nota.copyWith(fontFeatures: AppTextStyles.tabular),
+          ),
         ),
         for (var posicion = 0; posicion < porFila; posicion++) ...[
-          if (posicion == columnasPorLado) const SizedBox(width: _pasillo, height: 1),
+          if (posicion == columnasPorLado)
+            const SizedBox(width: _pasillo, height: 1)
+          else if (posicion > 0)
+            const SizedBox(width: _espacioButaca),
           _celda(numeros[posicion], lado),
         ],
       ],
@@ -546,6 +616,7 @@ class _Resumen extends StatelessWidget {
     required this.sinCambios,
     required this.onReiniciar,
     required this.onConfirmar,
+    this.comoTarjetaLateral = false,
   });
 
   final Vuelo vuelo;
@@ -558,8 +629,8 @@ class _Resumen extends StatelessWidget {
   final bool sinCambios;
   final VoidCallback onReiniciar;
   final VoidCallback onConfirmar;
+  final bool comoTarjetaLateral;
 
-  /// IVA = subtotal × porcentaje, redondeado al centavo (mitad hacia arriba), solo con enteros.
   static int _iva(int subtotal, String porcentaje) {
     final partes = porcentaje.split('.');
     final centesimas = int.parse(partes[0]) * 100 + int.parse((partes.length > 1 ? partes[1] : '').padRight(2, '0'));
@@ -569,7 +640,6 @@ class _Resumen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final editando = reserva != null;
-    // Al modificar se conservan el precio y el IVA con los que se reservó; al reservar, los vigentes.
     final unitario = editando ? reserva!.subtotalCentavos ~/ reserva!.cantidad : vuelo.precioCentavos;
     final porcentaje = editando ? reserva!.ivaPorcentaje : ivaPorcentaje;
     final subtotal = unitario * seleccion.cantidad;
@@ -577,96 +647,116 @@ class _Resumen extends StatelessWidget {
     final lista = seleccion.vacia ? 'Ninguno' : seleccion.ordenados.join(', ');
     final puedeConfirmar = !seleccion.vacia && !sinCambios && !enviando;
 
+    final contenido = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (comoTarjetaLateral) ...[
+          const Text('Resumen de selección', style: AppTextStyles.subtitulo),
+          const SizedBox(height: 12),
+        ],
+        if (error != null) ...[
+          AvisoInline(tipo: conflicto ? TipoAviso.info : TipoAviso.error, texto: error!),
+          const SizedBox(height: 10),
+        ],
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AnimatedSize(
+                    duration: AppMotion.mediaDe(context),
+                    curve: AppMotion.curvaSalidaFuerte,
+                    alignment: Alignment.topLeft,
+                    child: Text(
+                      'Asientos (${seleccion.cantidad} de ${SeleccionAsientos.maximo}): $lista',
+                      style: AppTextStyles.cuerpo.copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontFeatures: AppTextStyles.tabular,
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  if (iva == null)
+                    Text(
+                      'Subtotal ${Formatos.dinero(subtotal)} · el IVA se calcula al confirmar',
+                      style: AppTextStyles.nota.copyWith(fontFeatures: AppTextStyles.tabular),
+                    )
+                  else
+                    Text(
+                      'Subtotal ${Formatos.dinero(subtotal)} + IVA ${Formatos.porcentaje(porcentaje!)} ${Formatos.dinero(iva)}',
+                      style: AppTextStyles.nota.copyWith(fontFeatures: AppTextStyles.tabular),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              flex: 0,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: OdometroCinetico(
+                  texto: Formatos.dinero(subtotal + (iva ?? 0)),
+                  estilo: AppTextStyles.moneda.copyWith(fontSize: 24, color: AppColors.azul),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        LayoutBuilder(
+          builder: (context, caja) {
+            final reiniciar = TextButton.icon(
+              onPressed: enviando || (seleccion.vacia && !editando) || sinCambios ? null : onReiniciar,
+              icon: const Icon(Icons.restart_alt),
+              label: Text(editando ? 'Restablecer' : 'Reiniciar selección'),
+            );
+            final confirmar = BotonDegradado(
+              texto: editando ? 'Guardar cambios' : 'Confirmar reserva',
+              cargando: enviando,
+              onPressed: puedeConfirmar ? onConfirmar : null,
+            );
+            if (comoTarjetaLateral || caja.maxWidth < 390) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [confirmar, const SizedBox(height: 6), reiniciar],
+              );
+            }
+            return Row(
+              children: [
+                reiniciar,
+                const SizedBox(width: 8),
+                Expanded(child: confirmar),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+
+    if (comoTarjetaLateral) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: AppDecorations.tarjeta,
+        child: contenido,
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
       decoration: BoxDecoration(
         color: AppColors.superficie,
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, -4))],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (error != null) ...[
-            AvisoInline(tipo: conflicto ? TipoAviso.info : TipoAviso.error, texto: error!),
-            const SizedBox(height: 10),
-          ],
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // La línea de asientos se reacomoda con AnimatedSize (Reduce Motion
-                    // la deja quieta); hay un solo Text, así find.text sigue encontrándolo.
-                    AnimatedSize(
-                      duration: AppMotion.mediaDe(context),
-                      curve: AppMotion.curvaEntrada,
-                      alignment: Alignment.topLeft,
-                      child: Text(
-                        'Asientos (${seleccion.cantidad} de ${SeleccionAsientos.maximo}): $lista',
-                        style: AppTextStyles.cuerpo.copyWith(fontWeight: FontWeight.w600),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (iva == null)
-                      Text('Subtotal ${Formatos.dinero(subtotal)} · el IVA se calcula al confirmar', style: AppTextStyles.nota)
-                    else
-                      Text(
-                        'Subtotal ${Formatos.dinero(subtotal)} + IVA ${Formatos.porcentaje(porcentaje!)} ${Formatos.dinero(iva)}',
-                        style: AppTextStyles.nota,
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              // Total cinético: cada cambio de la selección reasienta el monto sin desbordar.
-              Flexible(
-                flex: 0,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerRight,
-                  child: OdometroCinetico(
-                    texto: Formatos.dinero(subtotal + (iva ?? 0)),
-                    estilo: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.azul),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          // En pantallas angostas las acciones se apilan: nunca desbordan.
-          LayoutBuilder(
-            builder: (context, caja) {
-              final reiniciar = TextButton.icon(
-                onPressed: enviando || (seleccion.vacia && !editando) || sinCambios ? null : onReiniciar,
-                icon: const Icon(Icons.restart_alt),
-                label: Text(editando ? 'Restablecer' : 'Reiniciar selección'),
-              );
-              final confirmar = BotonDegradado(
-                texto: editando ? 'Guardar cambios' : 'Confirmar reserva',
-                cargando: enviando,
-                onPressed: puedeConfirmar ? onConfirmar : null,
-              );
-              if (caja.maxWidth < 390) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [confirmar, reiniciar],
-                );
-              }
-              return Row(
-                children: [
-                  reiniciar,
-                  const SizedBox(width: 8),
-                  Expanded(child: confirmar),
-                ],
-              );
-            },
-          ),
+        border: const Border(top: BorderSide(color: AppColors.borde)),
+        boxShadow: [
+          BoxShadow(color: AppColors.azulNoche.withValues(alpha: 0.08), blurRadius: 14, offset: const Offset(0, -4)),
         ],
       ),
+      child: contenido,
     );
   }
 }

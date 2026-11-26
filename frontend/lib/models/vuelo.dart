@@ -397,24 +397,29 @@ class Formatos {
     return decimales.isEmpty ? '${partes[0]} %' : '${partes[0]}.$decimales %';
   }
 
-  /// Formato monetario internacional estándar:
-  /// Símbolo + Espacio + Miles con coma + Decimales con punto:
-  /// 7550 -> "$ 75.50"  /  1000000 -> "$ 10,000.00"  /  2240000 -> "$ 22,400.00".
-  static String dinero(int centavos) {
-    final signo = centavos < 0 ? '-' : '';
-    final absCentavos = centavos.abs();
-    final enteros = (absCentavos ~/ 100).toString();
-    final decimales = _dos(absCentavos % 100);
-
-    // Formatear miles con coma
+  /// Entero con separador de miles con coma: `1284` -> `"1,284"`.
+  static String entero(int valor) {
+    final signo = valor < 0 ? '-' : '';
+    final digitos = valor.abs().toString();
     final buffer = StringBuffer();
-    final longitud = enteros.length;
+    final longitud = digitos.length;
     for (var i = 0; i < longitud; i++) {
       if (i > 0 && (longitud - i) % 3 == 0) {
         buffer.write(',');
       }
-      buffer.write(enteros[i]);
+      buffer.write(digitos[i]);
     }
-    return '\$ $signo${buffer.toString()}.$decimales';
+    return '$signo${buffer.toString()}';
+  }
+
+  /// Formato monetario internacional estándar:
+  /// Símbolo + Espacio + Miles con coma + Decimales con punto:
+  /// 7550 -> "$ 75.50"  /  1000000 -> "$ 10,000.00"  /  -7550 -> "-$ 75.50".
+  static String dinero(int centavos) {
+    final signo = centavos < 0 ? '-' : '';
+    final absCentavos = centavos.abs();
+    final enteros = entero(absCentavos ~/ 100);
+    final decimales = _dos(absCentavos % 100);
+    return '$signo\$ $enteros.$decimales';
   }
 }

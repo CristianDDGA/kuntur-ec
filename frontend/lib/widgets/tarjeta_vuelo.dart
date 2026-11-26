@@ -1,132 +1,145 @@
 import 'package:flutter/material.dart';
 
+import '../config/app_motion.dart';
 import '../config/app_theme.dart';
 import '../models/vuelo.dart';
 import 'etiqueta_asientos.dart';
 import 'isometric_kuntur.dart';
-import 'kinetic_type.dart';
 
-/// Un vuelo en la lista: ruta, horario, precio y disponibilidad.
-class TarjetaVuelo extends StatelessWidget {
+/// Un vuelo en la lista: ruta, horario, precio tabular y disponibilidad.
+///
+/// Unificado con `AppColors` y `AppDecorations.tarjeta` (contraste >= 5.19:1),
+/// compresión táctil GPU (`scale 0.985`) y semántica de botón único sin duplicados anidados.
+class TarjetaVuelo extends StatefulWidget {
   const TarjetaVuelo({super.key, required this.vuelo, required this.onTap});
 
   final Vuelo vuelo;
   final VoidCallback onTap;
 
   @override
+  State<TarjetaVuelo> createState() => _TarjetaVueloState();
+}
+
+class _TarjetaVueloState extends State<TarjetaVuelo> {
+  bool _presionado = false;
+
+  @override
   Widget build(BuildContext context) {
+    final vuelo = widget.vuelo;
     return Semantics(
       button: true,
-      label: 'Vuelo ${vuelo.codigo} de ${vuelo.origen} a ${vuelo.destino}',
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 14,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
+      label: 'Vuelo ${vuelo.codigo} de ${vuelo.origen} a ${vuelo.destino}, ${Formatos.dinero(vuelo.precioCentavos)}',
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _presionado ? 0.985 : 1.0,
+        duration: AppMotion.presionDe(context, presionado: _presionado),
+        curve: AppMotion.curvaTactil,
+        child: Container(
+          decoration: AppDecorations.tarjeta,
+          child: Material(
+            color: Colors.transparent,
             borderRadius: BorderRadius.circular(16),
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      CodigoVuelo(vuelo.codigo),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          Formatos.fecha(vuelo.fecha),
-                          style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: widget.onTap,
+              onHighlightChanged: (v) {
+                if (_presionado != v) setState(() => _presionado = v);
+              },
+              hoverColor: AppColors.infoSuave.withValues(alpha: 0.45),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        CodigoVuelo(vuelo.codigo),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            Formatos.fecha(vuelo.fecha),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.cuerpo.copyWith(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              fontFeatures: AppTextStyles.tabular,
+                            ),
+                          ),
                         ),
-                      ),
-                      EtiquetaAsientos(vuelo: vuelo),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  RutaVuelo(vuelo: vuelo),
-                  const Divider(height: 24, color: Color(0xFFF1F5F9)),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final esEstrecho = constraints.maxWidth < 540;
-                      if (esEstrecho) {
+                        const SizedBox(width: 8),
+                        EtiquetaAsientos(vuelo: vuelo),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    RutaVuelo(vuelo: vuelo),
+                    const Divider(height: 24, color: AppColors.divisor),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final esEstrecho = constraints.maxWidth < 540;
+                        final precio = Text(
+                          Formatos.dinero(vuelo.precioCentavos),
+                          softWrap: false,
+                          style: AppTextStyles.moneda.copyWith(fontSize: 22),
+                        );
+
+                        if (esEstrecho) {
+                          return Row(
+                            children: [
+                              const Expanded(
+                                child: Text('Por persona', style: AppTextStyles.nota),
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerRight,
+                                  child: precio,
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+
                         return Row(
                           children: [
-                            const Expanded(child: Text('Por persona', style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)))),
+                            const Icon(Icons.luggage_outlined, size: 16, color: AppColors.textoSecundario),
+                            const SizedBox(width: 6),
+                            const Expanded(
+                              child: Text(
+                                'Equipaje de mano incluido',
+                                style: AppTextStyles.nota,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                             const SizedBox(width: 8),
+                            const Text('Por persona', style: AppTextStyles.nota),
+                            const SizedBox(width: 10),
                             Flexible(
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerRight,
-                                child: OdometroCinetico(
-                                  texto: Formatos.dinero(vuelo.precioCentavos),
-                                  estilo: const TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w900,
-                                    color: Color(0xFF0F172A),
-                                  ),
+                              flex: 0,
+                              child: FittedBox(fit: BoxFit.scaleDown, child: precio),
+                            ),
+                            const SizedBox(width: 14),
+                            // Acción visual integrada (la tarjeta completa posee el Semantics/onTap único).
+                            ExcludeSemantics(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: AppColors.azul,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Text(
+                                  'Seleccionar',
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
                                 ),
                               ),
                             ),
                           ],
                         );
-                      }
-
-                      return Row(
-                        children: [
-                          const Icon(Icons.luggage_outlined, size: 16, color: Color(0xFF64748B)),
-                          const SizedBox(width: 6),
-                          const Expanded(
-                            child: Text(
-                              'Equipaje de mano incluido',
-                              style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Text('Por persona', style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            flex: 0,
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: OdometroCinetico(
-                                texto: Formatos.dinero(vuelo.precioCentavos),
-                                estilo: const TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w900,
-                                  color: Color(0xFF0F172A),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          FilledButton(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.azul,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
-                            onPressed: onTap,
-                            child: const Text('Seleccionar', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ],
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -136,7 +149,7 @@ class TarjetaVuelo extends StatelessWidget {
   }
 }
 
-/// Código del vuelo en una pastilla azul.
+/// Código del vuelo en una pastilla azul con numerales tabulares.
 class CodigoVuelo extends StatelessWidget {
   const CodigoVuelo(this.codigo, {super.key});
 
@@ -148,12 +161,17 @@ class CodigoVuelo extends StatelessWidget {
         decoration: BoxDecoration(color: AppColors.azul, borderRadius: BorderRadius.circular(8)),
         child: Text(
           codigo,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            fontSize: 13,
+            fontFeatures: AppTextStyles.tabular,
+          ),
         ),
       );
 }
 
-/// "08:00 Quito ——✈—— 08:45 Esmeraldas", con la duración encima de la línea.
+/// "08:00 Quito ——✈—— 08:45 Esmeraldas", con la duración encima del arco.
 class RutaVuelo extends StatelessWidget {
   const RutaVuelo({super.key, required this.vuelo});
 
@@ -168,9 +186,11 @@ class RutaVuelo extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 10),
               child: Column(
                 children: [
-                  Text(Formatos.duracion(vuelo.duracion), style: AppTextStyles.nota),
-                  // Arco de vuelo isométrico 2.5D en lugar del divisor plano.
-                  const ArcoVueloIsometrico(alto: 46),
+                  Text(
+                    Formatos.duracion(vuelo.duracion),
+                    style: AppTextStyles.nota.copyWith(fontFeatures: AppTextStyles.tabular),
+                  ),
+                  const ArcoVueloIsometrico(alto: 44),
                 ],
               ),
             ),
@@ -190,15 +210,29 @@ class _Extremo extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Flexible(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 132),
+          constraints: const BoxConstraints(maxWidth: 136),
           child: Column(
             crossAxisAlignment: alinear,
             children: [
               FittedBox(
                 fit: BoxFit.scaleDown,
-                child: Text(hora, style: AppTextStyles.subtitulo.copyWith(fontSize: 22)),
+                child: Text(
+                  hora,
+                  style: AppTextStyles.subtitulo.copyWith(
+                    fontSize: 22,
+                    fontFeatures: AppTextStyles.tabular,
+                  ),
+                ),
               ),
-              Text(ciudad, style: AppTextStyles.cuerpo, overflow: TextOverflow.ellipsis, maxLines: 1),
+              Tooltip(
+                message: ciudad,
+                child: Text(
+                  ciudad,
+                  style: AppTextStyles.cuerpo,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
             ],
           ),
         ),

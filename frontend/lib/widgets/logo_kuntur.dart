@@ -66,7 +66,7 @@ class MarcaKuntur extends StatelessWidget {
         ],
       ),
     );
-    final logo = LogoKuntur(tamano: tamanoLogo);
+    final logo = ExcludeSemantics(child: LogoKuntur(tamano: tamanoLogo));
     return vertical
         ? Column(mainAxisSize: MainAxisSize.min, children: [logo, SizedBox(height: tamanoLogo * 0.25), nombre])
         : Row(mainAxisSize: MainAxisSize.min, children: [logo, SizedBox(width: tamanoLogo * 0.25), nombre]);

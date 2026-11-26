@@ -9,9 +9,9 @@ import '../controllers/crear_vuelo_controller.dart';
 import '../controllers/gestion_vuelos_controller.dart';
 import '../controllers/vuelo_detalle_controller.dart';
 import '../models/avion.dart';
+import '../models/fallo.dart';
 import '../models/validadores_vuelo.dart';
 import '../models/vuelo.dart';
-import '../services/api_exception.dart';
 import '../widgets/aviso.dart';
 import '../widgets/boton_degradado.dart';
 import '../widgets/campo_selector.dart';
@@ -27,7 +27,6 @@ import '../widgets/migas.dart';
 import '../widgets/navegacion_principal.dart';
 import '../widgets/selectores_fecha_hora.dart';
 
-/// Ciudades frecuentes del Ecuador como sugerencia rápida (nunca impiden escribir otra).
 const List<String> _ciudadesFrecuentes = [
   'Quito',
   'Guayaquil',
@@ -39,12 +38,11 @@ const List<String> _ciudadesFrecuentes = [
   'Ibarra',
 ];
 
-/// Formulario "Nuevo vuelo" y "Editar vuelo" (V): las mismas reglas en los dos casos. Solo el
-/// administrador llega aquí (lo garantiza el router y, en última instancia, el servidor con 403).
+/// Formulario "Nuevo vuelo" y "Editar vuelo" (V).
+/// Todos los controles se bloquean durante el envío y las migas confirman antes de descartar cambios.
 class CrearVueloPage extends ConsumerStatefulWidget {
   const CrearVueloPage({super.key, this.vueloId});
 
-  /// `null` = crear un vuelo nuevo; si no, se edita ese vuelo.
   final int? vueloId;
 
   @override
@@ -60,28 +58,28 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
   DateTime? _fecha;
   Duration? _salida;
   Duration? _llegada;
-
-  /// Vuelo que se está editando, tal como llegó del servidor (null al crear o mientras carga).
   Vuelo? _original;
 
   bool get _editando => widget.vueloId != null;
-
-  /// Con asientos vendidos no se pueden cambiar la ruta ni el avión (el servidor también lo impide).
   bool get _rutaBloqueada => _original?.tieneReservas ?? false;
 
-  /// Llena el formulario con el vuelo a editar (una sola vez, o de nuevo al pedir "Recargar").
+  static String _centavosAInput(int centavos) {
+    final enteros = centavos ~/ 100;
+    final decimales = (centavos % 100).toString().padLeft(2, '0');
+    return '$enteros.$decimales';
+  }
+
   void _cargar(Vuelo vuelo) {
     _original = vuelo;
     _origen.text = vuelo.origen;
     _destino.text = vuelo.destino;
-    _precio.text = Formatos.dinero(vuelo.precioCentavos).replaceAll(RegExp(r'[^0-9.]'), '');
+    _precio.text = _centavosAInput(vuelo.precioCentavos);
     _fecha = vuelo.fecha;
     _salida = vuelo.horaSalida;
     _llegada = vuelo.horaLlegada;
-    _avion = null; // se elige en el selector cuando llegue la lista de aviones
+    _avion = null;
   }
 
-  /// Vuelve a leer el vuelo (p. ej. si otro administrador lo cambió: 409).
   void _recargar() {
     ref.invalidate(vueloDetalleControllerProvider(widget.vueloId!));
     ref.invalidate(editarVueloControllerProvider);
@@ -91,13 +89,11 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
   @override
   void initState() {
     super.initState();
-    // PopScope necesita saber si hay datos escritos para preguntar antes de salir.
     for (final c in [_origen, _destino, _precio]) {
       c.addListener(_alCambiar);
     }
     final id = widget.vueloId;
     if (id != null) {
-      // Cuando llega el vuelo (o llega de nuevo tras "Recargar") se llena el formulario.
       ref.listenManual(vueloDetalleControllerProvider(id), (_, estado) {
         final vuelo = estado.value;
         if (vuelo == null || _original != null) return;
@@ -121,7 +117,6 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
     super.dispose();
   }
 
-  /// Hay algo escrito o elegido (o cambiado, al editar): salir sin guardar perdería el formulario.
   bool get _sucio {
     final o = _original;
     if (_editando) {
@@ -169,14 +164,16 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
       mostrarAviso(context, 'No hay cambios que guardar.');
       return;
     }
-    // Cambiar el horario de un vuelo con pasajeros les afecta: se confirma antes.
     final cambiaHorario =
         _fecha != original.fecha || _salida != original.horaSalida || _llegada != original.horaLlegada;
     if (original.tieneReservas && cambiaHorario) {
+      final vendidos = original.asientosVendidos == 1
+          ? '1 asiento vendido'
+          : '${Formatos.entero(original.asientosVendidos)} asientos vendidos';
       final seguir = await mostrarConfirmacionKuntur(
         context,
         titulo: '¿Cambiar el horario?',
-        mensaje: 'El vuelo ${original.codigo} tiene ${original.asientosVendidos} asiento(s) vendido(s). '
+        mensaje: 'El vuelo ${original.codigo} tiene $vendidos. '
             'Los pasajeros verán el nuevo horario en su reserva: '
             '${Formatos.fecha(_fecha!)}, ${Formatos.hora(_salida!)} → ${Formatos.hora(_llegada!)}.',
         textoConfirmar: 'Sí, cambiar',
@@ -200,7 +197,7 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
           ),
         );
     if (vuelo != null && mounted) {
-      setState(() => _original = vuelo); // ya no hay cambios pendientes: se puede salir sin preguntar
+      setState(() => _original = vuelo);
       mostrarAviso(context, 'Vuelo ${vuelo.codigo} actualizado correctamente.');
       context.pop();
     }
@@ -208,7 +205,6 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
 
   Future<DateTime?> _elegirFecha() => elegirFechaDeVuelo(context, inicial: _fecha);
 
-  /// Si el vuelo es hoy se propone la próxima hora completa; si no, las 08:00.
   Duration _salidaSugerida() {
     final ahora = DateTime.now();
     final f = _fecha;
@@ -217,7 +213,6 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
     return ahora.hour < 23 ? Duration(hours: ahora.hour + 1) : const Duration(hours: 23, minutes: 59);
   }
 
-  /// Selector de hora en formato 24 h. Si aún no hay hora, propone [sugerida].
   Future<Duration?> _elegirHora(Duration? actual, String ayuda, {Duration sugerida = const Duration(hours: 8)}) async {
     final inicial = actual ?? sugerida;
     final hora = await elegirHoraKuntur(
@@ -229,8 +224,6 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
     return hora == null ? null : Duration(hours: hora.hour, minutes: hora.minute);
   }
 
-  /// Toca una ciudad sugerida: llena el primer campo vacío (origen y luego destino).
-  /// Si ambos ya tienen texto no pisa nada.
   void _sugerirCiudad(String ciudad) {
     if (_origen.text.trim().isEmpty) {
       setState(() => _origen.text = ciudad);
@@ -239,7 +232,6 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
     }
   }
 
-  /// Duración entre salida y llegada (si la llegada cruza la medianoche, suma un día).
   String? get _duracionTexto {
     final salida = _salida;
     final llegada = _llegada;
@@ -251,25 +243,21 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
     return resto == 0 ? '$horas h' : '$horas h $resto min';
   }
 
-  /// Filas de la cabina **3 + pasillo + 3** del avión elegido (6 asientos por fila visual), o `null`
-  /// mientras no se haya elegido avión.
   int? get _filasCabina {
     final capacidad = _avion?.capacidad ?? _original?.capacidad;
     return capacidad == null ? null : (capacidad / 6).ceil();
   }
 
-  /// Una ciudad frecuente resalta cuando ya es el origen o el destino escrito.
   bool _ciudadElegida(String ciudad) {
     final nombre = ciudad.toLowerCase();
     return _origen.text.trim().toLowerCase() == nombre || _destino.text.trim().toLowerCase() == nombre;
   }
 
-  /// Tarjeta de vista previa en vivo: ruta cinética, duración y cabina 3+3.
   Widget _vistaPrevia() {
     final duracion = _duracionTexto;
     final filas = _filasCabina;
     return MarcoIsometrico25D(
-      radio: 16,
+      radio: 14,
       color: AppColors.infoSuave,
       relleno: const EdgeInsets.all(14),
       child: Column(
@@ -296,7 +284,7 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
                 const SizedBox(width: 6),
                 Semantics(
                   label: 'Duración estimada',
-                  child: Text(duracion, style: AppTextStyles.cuerpo),
+                  child: Text(duracion, style: AppTextStyles.cuerpo.copyWith(fontFeatures: AppTextStyles.tabular)),
                 ),
               ],
             ),
@@ -304,8 +292,8 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
           if (filas != null) ...[
             const SizedBox(height: 6),
             Text(
-              'Cabina 3+3 · $filas filas',
-              style: AppTextStyles.etiqueta.copyWith(color: AppColors.azul),
+              'Cabina 3+3 · $filas ${filas == 1 ? 'fila' : 'filas'}',
+              style: AppTextStyles.etiqueta.copyWith(color: AppColors.azul, fontFeatures: AppTextStyles.tabular),
             ),
           ],
         ],
@@ -313,8 +301,7 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
     );
   }
 
-  /// Chip de ciudad frecuente con respuesta líquida cuando ya está elegida.
-  Widget _chipCiudad(String ciudad) {
+  Widget _chipCiudad(String ciudad, {required bool habilitado}) {
     final activa = _ciudadElegida(ciudad);
     return CapsulaLiquidMorph(
       activa: activa,
@@ -322,7 +309,7 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
       colorActiva: AppColors.amarillo.withValues(alpha: 0.35),
       child: ActionChip(
         label: Text(ciudad),
-        onPressed: () => _sugerirCiudad(ciudad),
+        onPressed: habilitado ? () => _sugerirCiudad(ciudad) : null,
         backgroundColor: activa ? Colors.transparent : AppColors.infoSuave,
         side: BorderSide.none,
       ),
@@ -344,15 +331,15 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
     if (salir && mounted) context.pop();
   }
 
-  /// El logo de la barra también navega: con datos escritos se confirma antes.
-  Future<void> _salirAInicio() async {
+  Future<void> _salirARuta(String ruta) async {
     if (!_sucio || await _confirmarSalidaSinGuardar()) {
-      if (mounted) context.go(AppRoutes.vuelos);
+      if (mounted) context.go(ruta);
     }
   }
 
-  /// Selector del avión: la capacidad del vuelo es la del avión (se cargan por CSV).
-  Widget _campoAvion(AsyncValue<List<Avion>> aviones) {
+  Future<void> _salirAInicio() => _salirARuta(AppRoutes.vuelos);
+
+  Widget _campoAvion(AsyncValue<List<Avion>> aviones, {required bool enviando}) {
     return aviones.when(
       loading: () => const InputDecorator(
         decoration: InputDecoration(labelText: 'Avión', prefixIcon: Icon(Icons.airplanemode_active)),
@@ -375,16 +362,13 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
                 texto: 'Aún no hay aviones. Importe un CSV para poder crear vuelos.',
               ),
               TextButton(
-                onPressed: () => context.push(AppRoutes.importarAviones),
+                onPressed: enviando ? null : () => context.push(AppRoutes.importarAviones),
                 child: const Text('Importar aviones'),
               ),
             ],
           );
         }
-        // Al recargar la lista se conserva el avión elegido; al editar se parte del avión actual.
         final elegidoId = _avion?.id ?? _original?.avionId;
-        // Al editar, el avión solo se exige si se puede cambiar: con asientos vendidos el selector
-        // está bloqueado y el servidor conserva el actual; un vuelo antiguo sin avión puede seguir sin él.
         final obligatorio = !_editando || (_original?.avionId != null && !_rutaBloqueada);
         return DropdownButtonFormField<Avion>(
           key: ValueKey(('avion', _original?.version)),
@@ -400,14 +384,13 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
           items: [
             for (final a in lista) DropdownMenuItem(value: a, child: Text(a.etiqueta, overflow: TextOverflow.ellipsis)),
           ],
-          onChanged: _rutaBloqueada ? null : (a) => setState(() => _avion = a),
+          onChanged: _rutaBloqueada || enviando ? null : (a) => setState(() => _avion = a),
           validator: (a) => a == null && obligatorio ? 'Elija el avión del vuelo.' : null,
         );
       },
     );
   }
 
-  /// El servidor decide con la hora de Ecuador; aquí solo se evita mostrar un formulario inútil.
   static bool _yaPartio(Vuelo v) => !v.fecha.add(v.horaSalida).isAfter(DateTime.now());
 
   Widget _marcoEdicion(Widget contenido) => KunturScaffold(
@@ -468,7 +451,6 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
     final enviando = estado.isLoading;
     final fallo = estado.hasError && !enviando ? estado.error : null;
     final error = fallo == null ? null : mensajeDeError(fallo);
-    // 409 al editar: otro administrador cambió el vuelo mientras tanto; se ofrece recargarlo.
     final desactualizado = _editando && fallo is ServerFailure && fallo.statusCode == 409;
 
     if (_editando && _original == null) return _cargandoEdicion();
@@ -479,7 +461,7 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
       etiqueta: 'Origen',
       controlador: _origen,
       icono: Icons.flight_takeoff,
-      enabled: !_rutaBloqueada,
+      enabled: !_rutaBloqueada && !enviando,
       inputFormatters: ValidadoresVuelo.entradaCiudad,
       textInputAction: TextInputAction.next,
       validador: (v) => ValidadoresVuelo.ciudad(v, nombre: 'El origen'),
@@ -488,7 +470,7 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
       etiqueta: 'Destino',
       controlador: _destino,
       icono: Icons.flight_land,
-      enabled: !_rutaBloqueada,
+      enabled: !_rutaBloqueada && !enviando,
       inputFormatters: ValidadoresVuelo.entradaCiudad,
       textInputAction: TextInputAction.next,
       validador: (v) => ValidadoresVuelo.destinoDistinto(v, _origen.text),
@@ -498,13 +480,14 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
       controlador: _precio,
       icono: Icons.attach_money,
       mostrarLimpiar: true,
+      enabled: !enviando,
       hint: '75.50',
-      ayuda: 'Máximo \$10000, hasta 2 decimales.',
+      ayuda: 'Máximo ${Formatos.dinero(ValidadoresVuelo.precioMaxCentavos)}, hasta 2 decimales.',
       tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: ValidadoresVuelo.entradaPrecio,
       validador: ValidadoresVuelo.precio,
     );
-    final avion = _campoAvion(ref.watch(avionesProvider));
+    final avion = _campoAvion(ref.watch(avionesProvider), enviando: enviando);
     final fecha = CampoSelector<DateTime>(
       etiqueta: 'Fecha',
       icono: Icons.calendar_month_outlined,
@@ -513,6 +496,7 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
       elegir: _elegirFecha,
       alElegir: (f) => setState(() => _fecha = f),
       validador: ValidadoresVuelo.fecha,
+      habilitado: !enviando,
       errorEnVivo: _fecha == null ? null : ValidadoresVuelo.fecha(_fecha),
     );
     final salida = CampoSelector<Duration>(
@@ -523,7 +507,7 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
       elegir: () => _elegirHora(_salida, 'Hora de salida', sugerida: _salidaSugerida()),
       alElegir: (h) => setState(() => _salida = h),
       validador: (v) => ValidadoresVuelo.salida(v, _fecha),
-      // Hoy no se puede elegir una hora que ya pasó: se avisa apenas se elige, no al enviar.
+      habilitado: !enviando,
       errorEnVivo: _salida == null ? null : ValidadoresVuelo.salida(_salida, _fecha),
     );
     final llegada = CampoSelector<Duration>(
@@ -534,10 +518,11 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
       elegir: () => _elegirHora(
         _llegada,
         'Hora de llegada',
-        sugerida: (_salida ?? const Duration(hours: 7)) + const Duration(hours: 1), // propone 1 h después de la salida
+        sugerida: (_salida ?? const Duration(hours: 7)) + const Duration(hours: 1),
       ),
       alElegir: (h) => setState(() => _llegada = h),
       validador: (v) => ValidadoresVuelo.llegada(v, _salida),
+      habilitado: !enviando,
       errorEnVivo: _llegada == null ? null : ValidadoresVuelo.llegada(_llegada, _salida),
     );
 
@@ -549,21 +534,22 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
       },
       child: KunturScaffold(
         conAtras: true,
-        // Mientras hay datos sin guardar se oculta la navegación inferior:
-        // con `context.go` no pasaría por PopScope y se perdería el formulario.
         seccion: _sucio ? null : Seccion.administracion,
         alTocarInicio: _sucio ? _salirAInicio : null,
-        maxAncho: 800,
+        maxAncho: 820,
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Migas([
-                Miga('Administración', ruta: _sucio ? null : AppRoutes.admin),
-                if (_editando) Miga('Gestionar vuelos', ruta: _sucio ? null : AppRoutes.gestionVuelos),
-                Miga(_editando ? 'Editar ${original?.codigo ?? ''}' : 'Nuevo vuelo'),
-              ]),
+              Migas(
+                [
+                  const Miga('Administración', ruta: AppRoutes.admin),
+                  if (_editando) const Miga('Gestionar vuelos', ruta: AppRoutes.gestionVuelos),
+                  Miga(_editando ? 'Editar ${original?.codigo ?? ''}' : 'Nuevo vuelo'),
+                ],
+                onInterceptar: _sucio && !enviando ? _salirARuta : null,
+              ),
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(22),
@@ -581,6 +567,12 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
                             ])
                           : Column(children: [a, const SizedBox(height: 14), b]);
                       final duracion = _duracionTexto;
+                      final vendidosTexto = original == null
+                          ? ''
+                          : original.asientosVendidos == 1
+                              ? '1 asiento vendido'
+                              : '${Formatos.entero(original.asientosVendidos)} asientos vendidos';
+
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -599,9 +591,8 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
                             const SizedBox(height: 12),
                             AvisoInline(
                               tipo: TipoAviso.info,
-                              texto: 'Este vuelo tiene ${original!.asientosVendidos} asiento(s) vendido(s): solo puede '
-                                  'cambiar la fecha, las horas y el precio. Para cambiar la ruta o el avión, cancélelo '
-                                  'y cree otro.',
+                              texto: 'Este vuelo tiene $vendidosTexto: solo puede cambiar la fecha, las horas y el precio. '
+                                  'Para cambiar la ruta o el avión, cancélelo y cree otro.',
                             ),
                           ],
                           const SizedBox(height: 16),
@@ -611,12 +602,13 @@ class _CrearVueloPageState extends ConsumerState<CrearVueloPage> {
                           if (!_rutaBloqueada) ...[
                             const SizedBox(height: 10),
                             const Text('Ciudades frecuentes', style: AppTextStyles.nota),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 6),
                             Wrap(
                               spacing: 6,
-                              runSpacing: 2,
+                              runSpacing: 4,
                               children: [
-                                for (final ciudad in _ciudadesFrecuentes) _chipCiudad(ciudad),
+                                for (final ciudad in _ciudadesFrecuentes)
+                                  _chipCiudad(ciudad, habilitado: !enviando),
                               ],
                             ),
                           ],

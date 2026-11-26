@@ -1,20 +1,23 @@
-import '../services/api_exception.dart';
 import '../services/rest_client.dart';
+import 'fallo.dart';
+import 'vuelo.dart';
 
 /// Destino de la portada: ciudad con vuelos próximos y su tarifa más baja (`GET /vuelos/destinos`).
 class DestinoPopular {
-  const DestinoPopular({required this.ciudad, required this.precioMinimo, required this.vuelos});
+  const DestinoPopular({required this.ciudad, required this.precioMinimoCentavos, required this.vuelos});
 
   factory DestinoPopular.fromJson(JsonMap json) {
     final ciudad = json['destino'];
-    final precio = double.tryParse('${json['precio_minimo']}');
+    final centavos = Formatos.centavosDe(json['precio_minimo']);
     final vuelos = json['vuelos'];
-    if (ciudad is! String || precio == null || vuelos is! int) throw const InvalidResponseFailure();
-    return DestinoPopular(ciudad: ciudad, precioMinimo: precio, vuelos: vuelos);
+    if (ciudad is! String || centavos == null || vuelos is! int) throw const InvalidResponseFailure();
+    return DestinoPopular(ciudad: ciudad, precioMinimoCentavos: centavos, vuelos: vuelos);
   }
 
   final String ciudad;
-  final double precioMinimo;
+
+  /// Tarifa mínima en centavos enteros: nunca se usa `double` para dinero.
+  final int precioMinimoCentavos;
   final int vuelos;
 
   /// Código y lema conocidos de las ciudades del país; para otra ciudad se deducen del nombre.
@@ -35,5 +38,6 @@ class DestinoPopular {
     return (letras.length >= 3 ? letras.substring(0, 3) : letras).toUpperCase();
   }
 
-  String get lema => _catalogo[ciudad.toLowerCase()]?.$2 ?? (vuelos == 1 ? '1 vuelo programado' : '$vuelos vuelos programados');
+  String get lema =>
+      _catalogo[ciudad.toLowerCase()]?.$2 ?? (vuelos == 1 ? '1 vuelo programado' : '${Formatos.entero(vuelos)} vuelos programados');
 }

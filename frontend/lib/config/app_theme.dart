@@ -1,18 +1,18 @@
 import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 
-/// Identidad visual "Ecuador".
+/// Identidad visual "Ecuador" — Kuntur EC.
 ///
-/// Los colores salen de la bandera (azul, amarillo y rojo) usados con criterio:
-/// el azul es el color de marca, el amarillo es el acento y el rojo queda para
-/// errores y detalles. Los tonos fríos y los fondos "niebla de páramo" vienen de
-/// los Andes. (APE8 usa tonos tierra; esta app parte de su estructura pero con
-/// otra paleta y otro carácter.)
+/// Los colores provienen de la bandera (azul, amarillo y rojo) con criterio de
+/// contención operativa: el azul es el color de marca, el amarillo el acento de
+/// alta atención y el rojo queda reservado a estados destructivos y errores.
+/// Todas las combinaciones de texto sobre superficie/fondo superan WCAG AA (>= 4.5:1).
 class AppColors {
   const AppColors._();
 
   // Bandera
   static const Color azul = Color(0xFF2A4365);
+  static const Color azulHover = Color(0xFF233856);
   static const Color amarillo = Color(0xFFE9A820);
   static const Color rojo = Color(0xFFB5382C);
 
@@ -21,16 +21,17 @@ class AppColors {
   static const Color cielo = Color(0xFF5B7694);
   static const Color nieve = Color(0xFFFFFFFF);
 
-  // Fondos y superficies
+  // Fondos y superficies cálidas (niebla de páramo)
   static const Color fondo = Color(0xFFF7F3EC);
   static const Color superficie = Color(0xFFFFFFFF);
+  static const Color superficieSutil = Color(0xFFFAF7F2);
 
-  // Textos
-  static const Color textoPrincipal = Color(0xFF20262E);
-  static const Color textoSecundario = Color(0xFF56606B);
-  static const Color textoSuave = Color(0xFF656E77);
+  // Textos (contrastes verificados sobre #FFFFFF y #F7F3EC)
+  static const Color textoPrincipal = Color(0xFF20262E); // > 13:1
+  static const Color textoSecundario = Color(0xFF56606B); // 6.45:1 sobre blanco
+  static const Color textoSuave = Color(0xFF656E77); // 5.19:1 sobre blanco
 
-  // Bordes
+  // Bordes y divisores
   static const Color borde = Color(0xFFE3DBCD);
   static const Color divisor = Color(0xFFECE5D9);
 
@@ -41,7 +42,7 @@ class AppColors {
   static const Color errorSuave = Color(0xFFF8E8E5);
   static const Color aviso = Color(0xFF8A5F00);
   static const Color avisoSuave = Color(0xFFFBF1D8);
-  // Azul informativo oscurecido: 6.7:1 sobre infoSuave (antes 4.55:1, al límite).
+  // Azul informativo oscurecido: 6.7:1 sobre infoSuave.
   static const Color info = Color(0xFF2E5278);
   static const Color infoSuave = Color(0xFFE8EDF3);
 }
@@ -50,7 +51,6 @@ class AppGradients {
   const AppGradients._();
 
   static const LinearGradient boton = LinearGradient(
-    // Plano a propósito: un solo color, sin brillo de degradado.
     colors: [AppColors.azul, AppColors.azul],
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
@@ -73,11 +73,14 @@ class AppGradients {
 class AppTextStyles {
   const AppTextStyles._();
 
+  /// Numerales tabulares para evitar saltos horizontales en montos, horarios y contadores.
+  static const List<FontFeature> tabular = [FontFeature.tabularFigures()];
+
   static const TextStyle titulo = TextStyle(
     fontSize: 28,
     fontWeight: FontWeight.w800,
     color: AppColors.textoPrincipal,
-    letterSpacing: -0.4,
+    letterSpacing: -0.5,
     height: 1.15,
   );
 
@@ -85,22 +88,23 @@ class AppTextStyles {
     fontSize: 19,
     fontWeight: FontWeight.w700,
     color: AppColors.textoPrincipal,
+    letterSpacing: -0.2,
     height: 1.25,
   );
 
-  // Cuerpo a 15 pt con interlineado holgado: lectura cómoda sin fatiga.
-  // Es una desviación deliberada del cuerpo por defecto de Apple (17 pt): la app
-  // mantiene su escala y la compensa con interlineado 1.5 (el mínimo HIG es 11 pt).
-  // El contraste se verificó por separado (textoSecundario sobre fondo ≥ 6:1).
   static const TextStyle cuerpo = TextStyle(
     fontSize: 15,
     color: AppColors.textoSecundario,
     height: 1.5,
   );
 
-  static const TextStyle nota = TextStyle(fontSize: 12.5, color: AppColors.textoSuave, height: 1.35);
+  static const TextStyle nota = TextStyle(
+    fontSize: 12.5,
+    color: AppColors.textoSuave,
+    height: 1.35,
+  );
 
-  /// Etiquetas de campo y encabezados pequeños en mayúsculas discretas.
+  /// Etiquetas de campo y encabezados discretos.
   static const TextStyle etiqueta = TextStyle(
     fontSize: 12.5,
     fontWeight: FontWeight.w700,
@@ -109,33 +113,57 @@ class AppTextStyles {
   );
 
   static const TextStyle boton = TextStyle(
-    fontSize: 16,
+    fontSize: 15.5,
     fontWeight: FontWeight.w700,
     color: Colors.white,
-    letterSpacing: 0.4,
+    letterSpacing: 0.15,
+  );
+
+  /// Cifras monetarias y totales con numerales tabulares.
+  static const TextStyle moneda = TextStyle(
+    fontSize: 22,
+    fontWeight: FontWeight.w800,
+    color: AppColors.textoPrincipal,
+    letterSpacing: -0.3,
+    fontFeatures: tabular,
+  );
+
+  /// Códigos de vuelo, factura y datos numéricos alineados.
+  static const TextStyle codigo = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w800,
+    color: AppColors.azul,
+    letterSpacing: 0.3,
+    fontFeatures: tabular,
   );
 }
 
 class AppDecorations {
   const AppDecorations._();
 
+  /// Tarjeta estándar del sistema: radio limpio de 16 pt y borde definido sin doble elevación fantasma.
   static BoxDecoration tarjeta = BoxDecoration(
     color: AppColors.superficie,
-    borderRadius: BorderRadius.circular(20),
-    border: Border.all(color: AppColors.borde.withValues(alpha: 0.6)),
+    borderRadius: BorderRadius.circular(16),
+    border: Border.all(color: AppColors.borde.withValues(alpha: 0.85)),
     boxShadow: [
       BoxShadow(
-        color: Colors.black.withValues(alpha: 0.06),
-        blurRadius: 24,
-        offset: const Offset(0, 8),
+        color: AppColors.azulNoche.withValues(alpha: 0.045),
+        blurRadius: 12,
+        offset: const Offset(0, 3),
       ),
     ],
   );
+
+  /// Superficie sutil para paneles secundarios, resúmenes y bloques agrupados.
+  static BoxDecoration panelSutil = BoxDecoration(
+    color: AppColors.superficieSutil,
+    borderRadius: BorderRadius.circular(14),
+    border: Border.all(color: AppColors.borde.withValues(alpha: 0.7)),
+  );
 }
 
-/// Transición de ruta que se anula cuando el sistema pide "Reducir movimiento"
-/// (Apple HIG, `accessibility.md › Cognitive`: reducir animaciones automáticas,
-/// incluidas las de cambio de pantalla).
+/// Transición de ruta que se anula cuando el sistema pide "Reducir movimiento".
 class _TransicionQueRespetaElMovimiento extends PageTransitionsBuilder {
   const _TransicionQueRespetaElMovimiento(this.base);
 
@@ -156,12 +184,13 @@ class _TransicionQueRespetaElMovimiento extends PageTransitionsBuilder {
 
 class AppTheme {
   const AppTheme._();
-  /// La app usa un solo tema claro (los colores de marca no se invierten).
+
+  /// Tema claro andino de Kuntur EC.
   static final ThemeData light = _build();
 
   static ThemeData _build() {
     OutlineInputBorder borde(Color color, [double ancho = 1]) => OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: color, width: ancho),
         );
 
@@ -169,6 +198,9 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.light,
       scaffoldBackgroundColor: AppColors.fondo,
+      focusColor: AppColors.azul.withValues(alpha: 0.14),
+      hoverColor: AppColors.azul.withValues(alpha: 0.05),
+      splashColor: AppColors.azul.withValues(alpha: 0.08),
       colorScheme: const ColorScheme.light(
         primary: AppColors.azul,
         onPrimary: Colors.white,
@@ -181,6 +213,11 @@ class AppTheme {
         error: AppColors.error,
         onError: Colors.white,
         outline: AppColors.borde,
+      ),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: AppColors.azul,
+        selectionColor: AppColors.amarillo.withValues(alpha: 0.35),
+        selectionHandleColor: AppColors.azul,
       ),
       appBarTheme: const AppBarTheme(
         elevation: 0,
@@ -202,7 +239,7 @@ class AppTheme {
         labelStyle: const TextStyle(color: AppColors.textoSuave),
         floatingLabelStyle: const TextStyle(color: AppColors.azul, fontWeight: FontWeight.w600),
         hintStyle: const TextStyle(color: AppColors.textoSuave),
-        errorMaxLines: 3, // los mensajes largos se ven completos en pantallas angostas
+        errorMaxLines: 3,
         helperMaxLines: 2,
         errorStyle: const TextStyle(color: AppColors.error, fontWeight: FontWeight.w500),
         prefixIconColor: AppColors.textoSuave,
@@ -212,24 +249,29 @@ class AppTheme {
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.azul,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          minimumSize: const Size(44, 46),
+          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 20),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.azul,
-          side: const BorderSide(color: AppColors.azul, width: 1.5),
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          side: const BorderSide(color: AppColors.azul, width: 1.4),
+          minimumSize: const Size(44, 46),
+          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 20),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.azul,
-          textStyle: const TextStyle(fontWeight: FontWeight.w700),
+          minimumSize: const Size(44, 44),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          textStyle: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
         ),
       ),
       segmentedButtonTheme: SegmentedButtonThemeData(
@@ -244,7 +286,7 @@ class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.superficie,
-        indicatorColor: AppColors.amarillo.withValues(alpha: 0.55),
+        indicatorColor: AppColors.amarillo.withValues(alpha: 0.45),
         height: 68,
         labelTextStyle: WidgetStateProperty.resolveWith(
           (estados) => TextStyle(
@@ -259,8 +301,6 @@ class AppTheme {
           ),
         ),
       ),
-      // Transiciones suaves y coherentes entre rutas (fade-slide de Material 3 en
-      // Android/Web/Escritorio y deslizamiento nativo en iOS).
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
           TargetPlatform.android: _TransicionQueRespetaElMovimiento(FadeForwardsPageTransitionsBuilder()),
@@ -284,7 +324,7 @@ class AppTheme {
       dialogTheme: DialogThemeData(
         backgroundColor: AppColors.superficie,
         surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         titleTextStyle: AppTextStyles.subtitulo.copyWith(fontSize: 19),
         contentTextStyle: AppTextStyles.cuerpo,
       ),
@@ -293,7 +333,7 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
